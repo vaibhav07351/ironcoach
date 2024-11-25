@@ -38,3 +38,28 @@ func (s *TrainerService) RegisterTrainer(trainer models.Trainer) error {
 	return s.repository.CreateTrainer(trainer)
 
 }
+
+func (s *TrainerService) LoginTrainer(email, password string) (token string,err error){
+	
+	//Find Trainer by email
+	trainer, err := s.repository.FindByEmail(email)
+	if err!=nil || trainer.Email ==""{
+		err=errors.New("invalid email or password")
+		return
+	} 
+	
+	//verify password
+	if !utils.CheckPassword(trainer.Password,password){
+		err=errors.New("invalid email or password")
+		return
+	}
+
+	//Generate JWT token
+	token, err = utils.GenerateJWT(trainer.Email)
+	if err!=nil{
+		err=errors.New("failed to generate token")
+		return
+	}
+
+	return 
+}
