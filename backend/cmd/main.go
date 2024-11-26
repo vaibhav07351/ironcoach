@@ -14,7 +14,9 @@ func main(){
 	router:=gin.Default()
 	 // Register trainer routes
 	 routes.RegisterTrainerRoutes(router)
-
+	 routes.RegisterTraineeRoutes(router)
+	 routes.RegisterWorkoutLogRoutes(router)
+	 
 	router.GET("/",func(c *gin.Context){
 		c.JSON(200, gin.H{
 			"message":"Hello, Gym trainer App!",
