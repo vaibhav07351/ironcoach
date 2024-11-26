@@ -80,3 +80,16 @@ func (ctrl *WorkoutLogController) DeleteWorkoutLog(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Workout log deleted successfully"})
 }
+
+
+func (ctrl *WorkoutLogController) GetTraineeProgress(c *gin.Context) {
+    traineeID := c.Param("trainee_id")
+
+    progress, err := ctrl.service.GetTraineeProgress(traineeID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch progress"})
+        return
+    }
+
+    c.JSON(http.StatusOK, progress)
+}

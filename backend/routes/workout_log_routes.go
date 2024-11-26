@@ -15,4 +15,6 @@ func RegisterWorkoutLogRoutes(router *gin.Engine) {
     protected.GET("/:trainee_id", workoutLogController.GetWorkoutLogs)
 	protected.PUT("/:log_id", workoutLogController.UpdateWorkoutLog)
 	protected.DELETE("/:log_id", workoutLogController.DeleteWorkoutLog)
+	protected.GET("/:trainee_id/progress", workoutLogController.GetTraineeProgress)
+
 }

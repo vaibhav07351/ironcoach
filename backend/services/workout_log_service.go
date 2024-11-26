@@ -48,3 +48,43 @@ func (s *WorkoutLogService) UpdateWorkoutLog(logID string, update map[string]int
 func (s *WorkoutLogService) DeleteWorkoutLog(logID string) error {
 	return s.repository.DeleteWorkoutLog(logID)
 }
+
+
+func (s *WorkoutLogService) GetTraineeProgress(traineeID string) (map[string]interface{}, error) {
+    logs, err := s.repository.GetWorkoutLogsByTrainee(traineeID)
+    if err != nil {
+        return nil, err
+    }
+
+    // Initialize stats
+    progress := make(map[string]interface{})
+    exerciseStats := make(map[string]map[string]float64)
+
+    // Calculate metrics for each exercise
+    for _, log := range logs {
+        for _, workout := range log.Workouts {
+            if _, exists := exerciseStats[workout.Exercise]; !exists {
+                exerciseStats[workout.Exercise] = map[string]float64{
+                    "total_weight": 0,
+                    "total_reps":   0,
+                    "entry_count":  0,
+                }
+            }
+            for i, reps := range workout.Reps {
+                exerciseStats[workout.Exercise]["total_weight"] += workout.Weight[i] * float64(reps)
+                exerciseStats[workout.Exercise]["total_reps"] += float64(reps)
+                exerciseStats[workout.Exercise]["entry_count"]++
+            }
+        }
+    }
+
+    // Summarize stats
+    for exercise, stats := range exerciseStats {
+        progress[exercise] = map[string]float64{
+            "average_weight": stats["total_weight"] / stats["entry_count"],
+            "average_reps":   stats["total_reps"] / stats["entry_count"],
+        }
+    }
+
+    return progress, nil
+}
