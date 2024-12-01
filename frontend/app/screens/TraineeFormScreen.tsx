@@ -28,7 +28,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
 
         if (trainee) {
             // Update trainee
-            fetch(`http://localhost:8080/trainees/${trainee.id}`, {
+            fetch(`http://192.168.1.10:8080/trainees/${trainee.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -47,7 +47,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 .catch(() => Alert.alert('Error', 'Failed to update trainee.'));
         } else {
             // Add new trainee
-            fetch('http://localhost:8080/trainees', {
+            fetch('http://192.168.1.10:8080/trainees', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -1,73 +1,46 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { View, StyleSheet, FlatList } from 'react-native';
+import Card from '../../components/Card';
+import Button from '../../components/Button';
+import { Colors, Spacing } from '../../constants/theme';
 import { RootStackParamList } from '../types/navigation';
-import { Trainee } from '../types/trainee';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-// Define Props for the Screen
 type Props = NativeStackScreenProps<RootStackParamList, 'Trainees'>;
+type Trainee = { id: string; name: string; weight: number; height: number };
 
 export default function TraineeListScreen({ navigation }: Props) {
-    const [trainees, setTrainees] = useState<Trainee[]>([]); // State with typed array
+    const [trainees, setTrainees] = useState<Trainee[]>([]);
 
     useEffect(() => {
-        fetch('http://localhost:8080/trainees', {
-            headers: {
-                Authorization: 'Bearer YOUR_JWT_TOKEN',
-            },
-        })
+        fetch('http://192.168.1.10:8080/trainees/')
             .then((res) => res.json())
             .then((data) => setTrainees(data))
-            .catch((error) => console.error(error));
+            .catch((err) => console.error(err));
     }, []);
-
-    const renderTrainee = ({ item }: { item: Trainee }) => (
-        <TouchableOpacity
-            style={styles.traineeCard}
-            onPress={() => navigation.navigate('TraineeForm', { trainee: item })}>
-            <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.details}>Weight: {item.weight}kg</Text>
-            <Text style={styles.details}>Height: {item.height}cm</Text>
-        </TouchableOpacity>
-    );
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Trainees</Text>
             <FlatList
                 data={trainees}
-                renderItem={renderTrainee}
                 keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.list}
+                renderItem={({ item }) => (
+                    <Card
+                        title={item.name}
+                        subtitle={`Weight: ${item.weight}kg, Height: ${item.height}cm`}
+                        onPress={() => navigation.navigate('WorkoutLogs', { trainee: item })}
+                    />
+                )}
             />
-            <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => navigation.navigate('TraineeForm', {})}>
-                <Text style={styles.addButtonText}>+ Add Trainee</Text>
-            </TouchableOpacity>
+            <Button title="+ Add Trainee" onPress={() => navigation.navigate('TraineeForm', {})} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16 },
-    title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
-    list: { paddingBottom: 16 },
-    traineeCard: {
-        padding: 16,
-        backgroundColor: '#f1f1f1',
-        borderRadius: 8,
-        marginBottom: 12,
+    container: {
+        flex: 1,
+        backgroundColor: Colors.background,
+        padding: Spacing.medium,
     },
-    name: { fontSize: 18, fontWeight: 'bold' },
-    details: { fontSize: 14, color: '#555' },
-    addButton: {
-        position: 'absolute',
-        bottom: 16,
-        right: 16,
-        backgroundColor: '#6200ee',
-        padding: 12,
-        borderRadius: 50,
-    },
-    addButtonText: { color: '#fff', fontSize: 16 },
 });

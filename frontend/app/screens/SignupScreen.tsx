@@ -7,39 +7,49 @@ import { RootStackParamList } from '../types/navigation';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
-export default function LoginScreen() {
+export default function SignupScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [name, setName] = useState('');
     const navigation = useNavigation<NavigationProp>();
 
-    const handleLogin = async () => {
+    const handleSignup = async () => {
         try {
-            const response = await fetch('http://192.168.1.10:8080/login', {
+            const response = await fetch('http://192.168.1.10:8080/registerTrainer', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ name, email, password}),
             });
+            const data = await response.json();
+
             if (!response.ok) {
-                throw new Error('Invalid credentials');
+                throw new Error(data.error || 'Signup failed');
             }
-            const { token } = await response.json();
-            await AsyncStorage.setItem('token', token);
-            Alert.alert('Login Successful', 'Welcome back!');
-            navigation.navigate('Dashboard'); // Navigate after successful login
+            // const { token } = await response.json();
+            // await AsyncStorage.setItem('token', token);
+            // Alert.alert('Signup Successful', 'Your account has been created.');
+            Alert.alert('Signup Successful', data.message || 'Your account has been created.');
+            navigation.navigate('Login'); // Navigate to the dashboard after signup
         } catch (error: unknown) {
             if (error instanceof Error) {
-                Alert.alert('Login Failed', error.message);
+                Alert.alert('Signup Failed', error.message);
             } else {
-                Alert.alert('Login Failed', 'An unknown error occurred.');
+                Alert.alert('Signup Failed', 'An unknown error occurred.');
             }
         }
     };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Login</Text>
+            <Text style={styles.title}>Signup</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="Name"
+                value={name}
+                onChangeText={setName}
+            />
             <TextInput
                 style={styles.input}
                 placeholder="Email"
@@ -54,15 +64,16 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 secureTextEntry
             />
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                <Text style={styles.buttonText}>Login</Text>
+            <TouchableOpacity style={styles.button} onPress={handleSignup}>
+                <Text style={styles.buttonText}>Signup</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-                <Text style={styles.linkText}>Don't have an account? Sign up</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <Text style={styles.linkText}>Already have an account? Login</Text>
             </TouchableOpacity>
         </View>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 16, justifyContent: 'center' },

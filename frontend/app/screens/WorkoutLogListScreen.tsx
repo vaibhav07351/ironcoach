@@ -20,7 +20,7 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
 
     useEffect(() => {
         // Fetch workout logs for the trainee
-        fetch(`http://localhost:8080/workout_logs/${trainee.id}`, {
+        fetch(`http://192.168.1.10:8080/workout_logs/${trainee.id}`, {
             headers: {
                 Authorization: 'Bearer YOUR_JWT_TOKEN',
             },

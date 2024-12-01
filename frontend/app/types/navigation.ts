@@ -7,5 +7,5 @@ export type RootStackParamList = {
     TraineeForm: { trainee?: any }; // Pass trainee for editing
     WorkoutLogs: { trainee: any }; // Pass trainee to show their workout logs
     WorkoutLogForm: { workoutLog?: any; trainee: any }; // Pass optional workoutLog and required trainee
-
+    Signup: undefined;
 };

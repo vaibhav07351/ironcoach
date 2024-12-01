@@ -8,7 +8,7 @@ import { RootStackParamList } from './types/navigation';
 import TraineeFormScreen from './screens/TraineeFormScreen';
 import WorkoutLogListScreen from './screens/WorkoutLogListScreen';
 import WorkoutLogFormScreen from './screens/WorkoutLogFormScreen';
-
+import SignupScreen from './screens/SignupScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -21,7 +21,7 @@ export default function AppNavigation() {
                 <Stack.Screen name="TraineeForm" component={TraineeFormScreen} />
                 <Stack.Screen name="WorkoutLogs" component={WorkoutLogListScreen} />
                 <Stack.Screen name="WorkoutLogForm" component={WorkoutLogFormScreen} />
-
+                <Stack.Screen name="Signup" component={SignupScreen} />
             </Stack.Navigator>
 
     );

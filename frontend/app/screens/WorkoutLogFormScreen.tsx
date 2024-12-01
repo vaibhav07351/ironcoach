@@ -34,7 +34,7 @@ export default function WorkoutLogFormScreen({ route, navigation }: Props) {
 
         if (workoutLog) {
             // Update existing log
-            fetch(`http://localhost:8080/workout_logs/${workoutLog.id}`, {
+            fetch(`http://192.168.1.10:8080/workout_logs/${workoutLog.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ export default function WorkoutLogFormScreen({ route, navigation }: Props) {
                 .catch(() => Alert.alert('Error', 'Failed to update workout log.'));
         } else {
             // Add new log
-            fetch(`http://localhost:8080/workout_logs`, {
+            fetch(`http://192.168.1.10:8080/workout_logs`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
