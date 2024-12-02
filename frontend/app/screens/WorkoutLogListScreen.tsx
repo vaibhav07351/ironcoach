@@ -22,7 +22,7 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
         // Fetch workout logs for the trainee
         fetch(`http://192.168.1.10:8080/workout_logs/${trainee.id}`, {
             headers: {
-                Authorization: 'Bearer YOUR_JWT_TOKEN',
+                Authorization: 'YOUR_JWT_TOKEN',
             },
         })
             .then((res) => res.json())

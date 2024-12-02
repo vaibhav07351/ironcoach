@@ -5,6 +5,7 @@ import Button from '../../components/Button';
 import { Colors, Spacing } from '../../constants/theme';
 import { RootStackParamList } from '../types/navigation';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trainees'>;
 type Trainee = { id: string; name: string; weight: number; height: number };
@@ -13,10 +14,35 @@ export default function TraineeListScreen({ navigation }: Props) {
     const [trainees, setTrainees] = useState<Trainee[]>([]);
 
     useEffect(() => {
-        fetch('http://192.168.1.10:8080/trainees/')
-            .then((res) => res.json())
-            .then((data) => setTrainees(data))
-            .catch((err) => console.error(err));
+        const fetchTrainees = async () => {
+            try {
+                // Retrieve the token from AsyncStorage
+                const token = await AsyncStorage.getItem('token');
+                console.log("token: ", token)
+                if (!token) {
+                    console.error('No token found');
+                    return;
+                }
+    
+                const response = await fetch('http://192.168.1.10:8080/trainees/', {
+                    headers: {
+                        Authorization: `${token}`, // Include the token in the Authorization header
+                    },
+                });
+    
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+    
+                const data = await response.json();
+                console.log('Fetched trainees:', data); // Log the fetched data
+                setTrainees(data);
+            } catch (err) {
+                console.error('Fetch error:', err);
+            }
+        };
+    
+        fetchTrainees();
     }, []);
 
     return (

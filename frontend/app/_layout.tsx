@@ -9,11 +9,12 @@ import TraineeFormScreen from './screens/TraineeFormScreen';
 import WorkoutLogListScreen from './screens/WorkoutLogListScreen';
 import WorkoutLogFormScreen from './screens/WorkoutLogFormScreen';
 import SignupScreen from './screens/SignupScreen';
-
+import { AuthProvider } from './contexts/AuthContext';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigation() {
     return (
+          <AuthProvider>
             <Stack.Navigator initialRouteName="Login">
                 <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
                 <Stack.Screen name="Dashboard" component={DashboardScreen} />
@@ -23,6 +24,6 @@ export default function AppNavigation() {
                 <Stack.Screen name="WorkoutLogForm" component={WorkoutLogFormScreen} />
                 <Stack.Screen name="Signup" component={SignupScreen} />
             </Stack.Navigator>
-
+          </AuthProvider>
     );
 }

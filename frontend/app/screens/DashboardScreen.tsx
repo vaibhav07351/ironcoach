@@ -1,18 +1,29 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useContext, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import { RootStackParamList } from '../types/navigation';
+import { AuthContext } from '../contexts/AuthContext';
 
-// Define the type for your navigation stack
-type RootStackParamList = {
-    Dashboard: undefined; // No params expected
-    Trainees: undefined;  // No params expected
-    WorkoutLogs: undefined; // No params expected
-};
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Dashboard'>;
 
-// Define props for DashboardScreen
-type Props = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
+export default function DashboardScreen() {
+    const { isAuthenticated, logout } = useContext(AuthContext);
+    const navigation = useNavigation<NavigationProp>();
 
-export default function DashboardScreen({ navigation }: Props) {
+    useEffect(() => {
+        if (!isAuthenticated) {
+            Alert.alert('Session Expired', 'Please log in to continue.');
+            navigation.navigate('Login');
+        }
+    }, [isAuthenticated]);
+
+    const handleLogout = () => {
+        logout();
+        Alert.alert('Logged Out', 'You have been logged out successfully.');
+        navigation.navigate('Login');
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Dashboard</Text>
@@ -23,8 +34,13 @@ export default function DashboardScreen({ navigation }: Props) {
             </TouchableOpacity>
             <TouchableOpacity
                 style={styles.card}
-                onPress={() => navigation.navigate('WorkoutLogs')}>
+                onPress={() =>
+                    navigation.navigate('WorkoutLogs', { trainee: { id: '1', name: 'John Doe' } })
+                }>
                 <Text style={styles.cardText}>Workout Logs</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                <Text style={styles.logoutButtonText}>Logout</Text>
             </TouchableOpacity>
         </View>
     );
@@ -48,5 +64,16 @@ const styles = StyleSheet.create({
     },
     cardText: {
         fontSize: 18,
+    },
+    logoutButton: {
+        marginTop: 16,
+        padding: 12,
+        backgroundColor: '#d9534f',
+        borderRadius: 8,
+    },
+    logoutButtonText: {
+        color: '#fff',
+        textAlign: 'center',
+        fontSize: 16,
     },
 });

@@ -38,7 +38,7 @@ export default function WorkoutLogFormScreen({ route, navigation }: Props) {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: 'Bearer YOUR_JWT_TOKEN',
+                    Authorization: 'YOUR_JWT_TOKEN',
                 },
                 body: JSON.stringify(newWorkoutLog),
             })
@@ -57,7 +57,7 @@ export default function WorkoutLogFormScreen({ route, navigation }: Props) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: 'Bearer YOUR_JWT_TOKEN',
+                    Authorization: 'YOUR_JWT_TOKEN',
                 },
                 body: JSON.stringify({ ...newWorkoutLog, trainee_id: trainee.id }),
             })

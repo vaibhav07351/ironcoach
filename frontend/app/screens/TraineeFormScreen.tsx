@@ -32,7 +32,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: 'Bearer YOUR_JWT_TOKEN',
+                    Authorization: 'YOUR_JWT_TOKEN',
                 },
                 body: JSON.stringify(traineeData),
             })
@@ -47,11 +47,11 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 .catch(() => Alert.alert('Error', 'Failed to update trainee.'));
         } else {
             // Add new trainee
-            fetch('http://192.168.1.10:8080/trainees', {
+            fetch('http://192.168.1.10:8080/trainees/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: 'Bearer YOUR_JWT_TOKEN',
+                    Authorization: 'YOUR_JWT_TOKEN',
                 },
                 body: JSON.stringify(traineeData),
             })

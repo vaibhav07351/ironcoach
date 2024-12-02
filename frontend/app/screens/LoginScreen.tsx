@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
+import { AuthContext } from '../contexts/AuthContext'; // Import AuthContext
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -11,6 +11,8 @@ export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const navigation = useNavigation<NavigationProp>();
+
+    const { login } = useContext(AuthContext); // Use login function from AuthContext
 
     const handleLogin = async () => {
         try {
@@ -21,11 +23,17 @@ export default function LoginScreen() {
                 },
                 body: JSON.stringify({ email, password }),
             });
+
             if (!response.ok) {
                 throw new Error('Invalid credentials');
             }
+
             const { token } = await response.json();
-            await AsyncStorage.setItem('token', token);
+            console.log('login token:', token);
+
+            // Call login function from AuthContext
+            await login(token);
+
             Alert.alert('Login Successful', 'Welcome back!');
             navigation.navigate('Dashboard'); // Navigate after successful login
         } catch (error: unknown) {
