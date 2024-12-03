@@ -1,1 +1,1 @@
-IronCoach-> 1 stop App for Trainer
+IronCoach-> 1 stop App for Trainers

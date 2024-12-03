@@ -1,19 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutLogForm'>;
 
 export default function WorkoutLogFormScreen({ route, navigation }: Props) {
     const { workoutLog, trainee } = route.params || {};
+
+    // Pre-fill fields if `workoutLog` exists
     const [date, setDate] = useState(workoutLog?.date || '');
     const [exercise, setExercise] = useState('');
     const [sets, setSets] = useState('');
     const [reps, setReps] = useState('');
     const [weight, setWeight] = useState('');
 
-    const handleSubmit = () => {
+    useEffect(() => {
+        if (workoutLog) {
+            // Pre-fill the form fields based on the first workout
+            const firstWorkout = workoutLog.workouts[0] || {};
+            setExercise(firstWorkout.exercise || '');
+            setSets(firstWorkout.sets?.toString() || '');
+            setReps(firstWorkout.reps?.join(', ') || '');
+            setWeight(firstWorkout.weight?.join(', ') || '');
+        }
+    }, [workoutLog]);
+
+    const handleSubmit = async () => {
         if (!date || !exercise || !sets || !reps || !weight) {
             Alert.alert('Validation Error', 'All fields are required.');
             return;
@@ -32,44 +46,40 @@ export default function WorkoutLogFormScreen({ route, navigation }: Props) {
             ],
         };
 
-        if (workoutLog) {
-            // Update existing log
-            fetch(`http://192.168.1.10:8080/workout_logs/${workoutLog.id}`, {
-                method: 'PUT',
+        const url = workoutLog
+            ? `http://192.168.1.10:8080/workout_logs/${workoutLog.id}`
+            : `http://192.168.1.10:8080/workout_logs`;
+
+        const method = workoutLog ? 'PUT' : 'POST';
+
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) {
+                Alert.alert('Error', 'User is not authenticated. Please log in again.');
+                return;
+            }
+
+            const response = await fetch(url, {
+                method,
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: 'YOUR_JWT_TOKEN',
-                },
-                body: JSON.stringify(newWorkoutLog),
-            })
-                .then((res) => {
-                    if (res.ok) {
-                        Alert.alert('Success', 'Workout log updated successfully.');
-                        navigation.goBack();
-                    } else {
-                        Alert.alert('Error', 'Failed to update workout log.');
-                    }
-                })
-                .catch(() => Alert.alert('Error', 'Failed to update workout log.'));
-        } else {
-            // Add new log
-            fetch(`http://192.168.1.10:8080/workout_logs`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: 'YOUR_JWT_TOKEN',
+                    Authorization: `${token}`,
                 },
                 body: JSON.stringify({ ...newWorkoutLog, trainee_id: trainee.id }),
-            })
-                .then((res) => {
-                    if (res.ok) {
-                        Alert.alert('Success', 'Workout log added successfully.');
-                        navigation.goBack();
-                    } else {
-                        Alert.alert('Error', 'Failed to add workout log.');
-                    }
-                })
-                .catch(() => Alert.alert('Error', 'Failed to add workout log.'));
+            });
+
+            if (response.ok) {
+                Alert.alert(
+                    'Success',
+                    workoutLog ? 'Workout log updated successfully.' : 'Workout log added successfully.'
+                );
+                navigation.goBack();
+            } else {
+                Alert.alert('Error', 'Failed to save workout log. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error saving workout log:', error);
+            Alert.alert('Error', 'Failed to save workout log. Please try again.');
         }
     };
 
