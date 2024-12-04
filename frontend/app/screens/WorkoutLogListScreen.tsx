@@ -14,6 +14,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { RootStackParamList } from '../types/navigation';
+import { ActivityIndicator,Switch } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext'; // Import ThemeContext
 
 type WorkoutLog = {
     id: string;
@@ -33,8 +35,21 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
     const [sortOption, setSortOption] = useState<'date' | 'weight' | null>(null);
     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
     const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const { theme, toggleTheme } = useTheme(); // Access theme and toggle function  
+    const isDarkMode = theme === 'dark'; // Determine the current mode
+    const styles = createStyles(isDarkMode); // Dynamically create styles
+    const [isDropdownVisible, setDropdownVisible] = useState(false); // State for dropdown visibility
+  
+    const resetFilters = () => {
+        setStartDate(null);
+        setEndDate(null);
+        setExerciseFilter('');
+        setSortOption(null);
+    };
 
     const fetchWorkoutLogs = async () => {
+        setIsLoading(true);
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
@@ -57,8 +72,11 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
             setWorkoutLogs(data);
         } catch (error) {
             console.error('Error fetching workout logs:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
+
 
     useFocusEffect(
         useCallback(() => {
@@ -155,75 +173,108 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
         </View>
     );
 
+    if (isLoading) {
+        return <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />;
+    }
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Workout Logs for {trainee.name}</Text>
 
-            {/* Filter by Exercise */}
-            <TextInput
-                style={styles.input}
-                placeholder="Filter by Exercise"
-                value={exerciseFilter}
-                onChangeText={setExerciseFilter}
-            />
-
-            {/* Filter by Date */}
-            <Text style={styles.filterLabel}>Start Date:</Text>
-            <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-                <Text style={styles.datePickerText}>
-                    {startDate ? startDate.toDateString() : 'Select Start Date'}
+            <View style={styles.switchContainer}>
+                <Text style={styles.switchLabel}>
+                    {isDarkMode ? 'Dark Mode' : 'Light Mode'}
                 </Text>
-            </TouchableOpacity>
-            {showStartDatePicker && (
-                <DateTimePicker
-                    value={startDate || new Date()}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                    onChange={(event, selectedDate) => {
-                        setShowStartDatePicker(false);
-                        if (selectedDate) setStartDate(selectedDate);
-                    }}
-                />
-            )}
-
-            <Text style={styles.filterLabel}>End Date:</Text>
-            <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-                <Text style={styles.datePickerText}>
-                    {endDate ? endDate.toDateString() : 'Select End Date'}
-                </Text>
-            </TouchableOpacity>
-            {showEndDatePicker && (
-                <DateTimePicker
-                    value={endDate || new Date()}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                    onChange={(event, selectedDate) => {
-                        setShowEndDatePicker(false);
-                        if (selectedDate) setEndDate(selectedDate);
-                    }}
-                />
-            )}
-
-            {/* Sorting Options */}
-            <Text style={styles.filterLabel}>Sort By:</Text>
-            <View style={styles.sortButtons}>
-                <TouchableOpacity
-                    style={[
-                        styles.sortButton,
-                        sortOption === 'date' && styles.selectedSortButton,
-                    ]}
-                    onPress={() => setSortOption('date')}>
-                    <Text style={styles.sortButtonText}>Date</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[
-                        styles.sortButton,
-                        sortOption === 'weight' && styles.selectedSortButton,
-                    ]}
-                    onPress={() => setSortOption('weight')}>
-                    <Text style={styles.sortButtonText}>Total Weight</Text>
-                </TouchableOpacity>
+                 <Switch value={isDarkMode} onValueChange={toggleTheme} />
             </View>
+
+             {/* Dropdown Toggle Button */}
+            <TouchableOpacity
+                style={styles.dropdownToggle}
+                onPress={() => setDropdownVisible((prev) => !prev)}>
+                <Text style={styles.dropdownToggleText}>
+                    {isDropdownVisible ? 'Hide Filters & Sorting' : 'Show Filters & Sorting'}
+                </Text>
+            </TouchableOpacity>
+
+            
+            {/* Filters & Sorting Section */}
+            {isDropdownVisible && (
+                <View style={styles.dropdown}>
+                    {/* Reset Filters */}
+                    <View style={styles.resetContainer}>
+                        <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
+                            <Text style={styles.resetButtonText}>Reset Filters</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Filter by Exercise */}
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Filter by Exercise"
+                        value={exerciseFilter}
+                        onChangeText={setExerciseFilter}
+                    />
+
+                    {/* Filter by Date */}
+                    <Text style={styles.filterLabel}>Start Date:</Text>
+                    <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
+                        <Text style={styles.datePickerText}>
+                            {startDate ? startDate.toDateString() : 'Select Start Date'}
+                        </Text>
+                    </TouchableOpacity>
+                    {showStartDatePicker && (
+                        <DateTimePicker
+                            value={startDate || new Date()}
+                            mode="date"
+                            display="default"
+                            onChange={(event, selectedDate) => {
+                                setShowStartDatePicker(false);
+                                if (selectedDate) setStartDate(selectedDate);
+                            }}
+                        />
+                    )}
+
+                    <Text style={styles.filterLabel}>End Date:</Text>
+                    <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
+                        <Text style={styles.datePickerText}>
+                            {endDate ? endDate.toDateString() : 'Select End Date'}
+                        </Text>
+                    </TouchableOpacity>
+                    {showEndDatePicker && (
+                        <DateTimePicker
+                            value={endDate || new Date()}
+                            mode="date"
+                            display="default"
+                            onChange={(event, selectedDate) => {
+                                setShowEndDatePicker(false);
+                                if (selectedDate) setEndDate(selectedDate);
+                            }}
+                        />
+                    )}
+
+                    {/* Sorting Options */}
+                    <Text style={styles.filterLabel}>Sort By:</Text>
+                    <View style={styles.sortButtons}>
+                        <TouchableOpacity
+                            style={[
+                                styles.sortButton,
+                                sortOption === 'date' && styles.selectedSortButton,
+                            ]}
+                            onPress={() => setSortOption('date')}>
+                            <Text style={styles.sortButtonText}>Date</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[
+                                styles.sortButton,
+                                sortOption === 'weight' && styles.selectedSortButton,
+                            ]}
+                            onPress={() => setSortOption('weight')}>
+                            <Text style={styles.sortButtonText}>Total Weight</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
 
             {/* Workout Logs */}
             <FlatList
@@ -236,82 +287,159 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
             {/* Add Button */}
             <TouchableOpacity
                 style={styles.addButton}
-                onPress={() => navigation.navigate('WorkoutLogForm', { trainee })}>
+                onPress={() => navigation.navigate('WorkoutCategories', { traineeId: trainee.id })}>
                 <Text style={styles.addButtonText}>+ Add Workout Log</Text>
             </TouchableOpacity>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16 },
-    title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
-    list: { paddingBottom: 16 },
-    logCard: {
-        padding: 16,
-        backgroundColor: '#f1f1f1',
-        borderRadius: 8,
-        marginBottom: 12,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    date: { fontSize: 18, fontWeight: 'bold' },
-    details: { fontSize: 14, color: '#555' },
-    input: {
-        padding: 12,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        marginBottom: 12,
-    },
-    filterLabel: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginVertical: 8,
-    },
-    datePickerText: {
-        fontSize: 16,
-        padding: 12,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        marginBottom: 12,
-    },
-    sortButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginBottom: 16,
-    },
-    sortButton: {
-        padding: 10,
-        backgroundColor: '#ccc',
-        borderRadius: 8,
-    },
-    selectedSortButton: {
-        backgroundColor: '#6200ee',
-    },
-    sortButtonText: {
-        color: '#fff',
-    },
-    addButton: {
-        position: 'absolute',
-        bottom: 16,
-        right: 16,
-        backgroundColor: '#6200ee',
-        padding: 12,
-        borderRadius: 50,
-    },
-    addButtonText: { color: '#fff', fontSize: 16 },
-    deleteButton: {
-        backgroundColor: '#d9534f',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 4,
-    },
-    deleteButtonText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
-});
+const createStyles = (isDarkMode: boolean) =>
+    StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: isDarkMode ? '#000' : '#fff',
+            padding: 16,
+        },
+        switchContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+        },
+        switchLabel: {
+            fontSize: 16,
+            color: isDarkMode ? '#fff' : '#000',
+            marginRight: 8,
+        },
+        resetContainer: {
+            alignItems: 'flex-end',
+            marginBottom: 16,
+        },
+        resetButton: {
+            backgroundColor: '#ff6347', // A bright color for visibility
+            paddingVertical: 5,
+            paddingHorizontal: 10,
+            borderRadius: 8,
+        },
+        resetButtonText: {
+            color: '#fff',
+            fontSize: 13,
+            fontWeight: 'bold',
+        },
+        dropdownToggle: {
+            backgroundColor: '#6200ee',
+            paddingVertical: 10,
+            paddingHorizontal: 20,
+            borderRadius: 8,
+            marginBottom: 16,
+            alignItems: 'center',
+        },
+        dropdownToggleText: {
+            color: '#fff',
+            fontSize: 16,
+            fontWeight: 'bold',
+        },
+        dropdown: {
+            backgroundColor: isDarkMode ? '#222' : '#f9f9f9',
+            padding: 16,
+            borderRadius: 8,
+            marginBottom: 16,
+        },
+        
+        header: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 16,
+        },
+        title: {
+            fontSize: 24,
+            fontWeight: 'bold',
+            color: isDarkMode ? '#fff' : '#000',
+            marginBottom: 16,
+        },
+        list: {
+            paddingBottom: 16,
+        },
+        logCard: {
+            padding: 16,
+            backgroundColor: isDarkMode ? '#222' : '#f1f1f1',
+            borderRadius: 8,
+            marginBottom: 12,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        date: {
+            fontSize: 18,
+            fontWeight: 'bold',
+            color: isDarkMode ? '#fff' : '#000',
+        },
+        details: {
+            fontSize: 14,
+            color: isDarkMode ? '#aaa' : '#555',
+        },
+        input: {
+            padding: 12,
+            borderWidth: 1,
+            borderColor: isDarkMode ? '#555' : '#ccc',
+            borderRadius: 8,
+            marginBottom: 12,
+            color: isDarkMode ? '#fff' : '#000',
+            backgroundColor: isDarkMode ? '#333' : '#fff',
+        },
+        filterLabel: {
+            fontSize: 16,
+            fontWeight: 'bold',
+            color: isDarkMode ? '#fff' : '#000',
+            marginVertical: 8,
+        },
+        datePickerText: {
+            fontSize: 16,
+            padding: 12,
+            borderWidth: 1,
+            borderColor: isDarkMode ? '#555' : '#ccc',
+            borderRadius: 8,
+            marginBottom: 12,
+            color: isDarkMode ? '#fff' : '#000',
+            backgroundColor: isDarkMode ? '#333' : '#fff',
+        },
+        sortButtons: {
+            flexDirection: 'row',
+            justifyContent: 'space-around',
+            marginBottom: 16,
+        },
+        sortButton: {
+            padding: 10,
+            backgroundColor: isDarkMode ? '#555' : '#ccc',
+            borderRadius: 8,
+        },
+        selectedSortButton: {
+            backgroundColor: isDarkMode ? '#bb86fc' : '#6200ee',
+        },
+        sortButtonText: {
+            color: '#fff',
+        },
+        addButton: {
+            position: 'absolute',
+            bottom: 16,
+            right: 16,
+            backgroundColor: '#6200ee',
+            padding: 12,
+            borderRadius: 50,
+        },
+        addButtonText: {
+            color: '#fff',
+            fontSize: 16,
+        },
+        deleteButton: {
+            backgroundColor: '#d9534f',
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            borderRadius: 4,
+        },
+        deleteButtonText: {
+            color: '#fff',
+            fontSize: 14,
+            fontWeight: 'bold',
+        },
+    });

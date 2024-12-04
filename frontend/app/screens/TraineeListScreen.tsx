@@ -6,15 +6,18 @@ import { Colors, Spacing } from '../../constants/theme';
 import { RootStackParamList } from '../types/navigation';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ActivityIndicator } from 'react-native';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trainees'>;
 type Trainee = { id: string; name: string; weight: number; height: number };
 
 export default function TraineeListScreen({ navigation }: Props) {
     const [trainees, setTrainees] = useState<Trainee[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         const fetchTrainees = async () => {
+            setIsLoading(true);
             try {
                 // Retrieve the token from AsyncStorage
                 const token = await AsyncStorage.getItem('token');
@@ -39,13 +42,17 @@ export default function TraineeListScreen({ navigation }: Props) {
                 setTrainees(data);
             } catch (err) {
                 console.error('Fetch error:', err);
+            }finally {
+                setIsLoading(false);
             }
         };
     
         fetchTrainees();
     }, []);
 
-    return (
+    return isLoading ? (
+        <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />
+    ) : (
         <View style={styles.container}>
             <FlatList
                 data={trainees}
