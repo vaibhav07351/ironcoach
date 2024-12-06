@@ -28,12 +28,17 @@ func (c *CategoryController) AddCategory(ctx *gin.Context) {
     }
 
     if err := c.service.AddCategory(category); err != nil {
+        if err.Error() == "category already exists" {
+            ctx.JSON(http.StatusConflict, gin.H{"error": "Category already exists"})
+            return
+        }
         ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add category"})
         return
     }
 
     ctx.JSON(http.StatusOK, gin.H{"message": "Category added successfully"})
 }
+
 
 func (c *CategoryController) GetCategories(ctx *gin.Context) {
     categories, err := c.service.GetCategories()

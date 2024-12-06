@@ -27,12 +27,22 @@ func (c *ExerciseController) AddExercise(ctx *gin.Context) {
     }
 
     if err := c.service.AddExercise(exercise); err != nil {
+        if err.Error() == "category does not exist" {
+            ctx.JSON(http.StatusNotFound, gin.H{"error": "Category does not exist"})
+            return
+        }
+        if err.Error() == "exercise already exists in this category" {
+            ctx.JSON(http.StatusConflict, gin.H{"error": "Exercise already exists in this category"})
+            return
+        }
         ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add exercise"})
         return
     }
 
     ctx.JSON(http.StatusOK, gin.H{"message": "Exercise added successfully"})
 }
+
+
 
 func (c *ExerciseController) GetExercisesByCategory(ctx *gin.Context) {
     category := ctx.Param("category")

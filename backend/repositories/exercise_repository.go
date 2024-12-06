@@ -72,3 +72,18 @@ func (r *ExerciseRepository) DeleteExercise(id string) error {
     _, err = r.collection.DeleteOne(ctx, bson.M{"_id": objectId})
     return err
 }
+
+func (r *ExerciseRepository) DeleteExercisesByCategory(category string) error {
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
+    _, err := r.collection.DeleteMany(ctx, bson.M{"category": category})
+    return err
+}
+
+func (r *ExerciseRepository) IsExerciseExists(name string, category string) (bool, error) {
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
+
+    count, err := r.collection.CountDocuments(ctx, bson.M{"name": name, "category": category})
+    return count > 0, err
+}
