@@ -1,25 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
-import { ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutCategories'>;
 
 export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
     const { traineeId } = route.params; // Get traineeId
     const [isLoading, setIsLoading] = useState(false);
-    const [categories, setCategories] = useState<string[]>([
-        'Abs',
-        'Back',
-        'Biceps',
-        'Cardio',
-        'Chest',
-        'Legs',
-        'Shoulders',
-        'Triceps',
-    ]);
+    const [categories, setCategories] = useState<string[]>([]);
 
     const fetchCategories = async () => {
         setIsLoading(true);
@@ -40,18 +31,20 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
             }
 
             const data = await response.json();
-            setCategories((prev) => [...prev, ...data.map((cat: any) => cat.name)]);
+            setCategories(data.map((cat: any) => cat.name)); // Update categories list
         } catch (error) {
             console.error('Error fetching categories:', error);
-        }finally {
+        } finally {
             setIsLoading(false);
         }
-
     };
 
-    useEffect(() => {
-        fetchCategories();
-    }, []);
+    // Fetch categories every time the screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            fetchCategories();
+        }, [])
+    );
 
     const handleCategorySelect = (category: string) => {
         navigation.navigate('WorkoutExercises', { category, traineeId });

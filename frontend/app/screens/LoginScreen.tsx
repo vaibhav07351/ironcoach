@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -47,33 +47,52 @@ export default function LoginScreen() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Login</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-            />
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                <Text style={styles.buttonText}>Login</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-                <Text style={styles.linkText}>Don't have an account? Sign up</Text>
-            </TouchableOpacity>
+            <View style={styles.formContainer}>
+                <Text style={styles.title}>Login</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                />
+                <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                />
+                <TouchableOpacity style={styles.button} onPress={handleLogin}>
+                    <Text style={styles.buttonText}>Login</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+                    <Text style={styles.linkText}>Don't have an account? Sign up</Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+                <Text style={styles.footerText}>Developed by Vaibhav Bhardwaj</Text>
+                <Text style={styles.footerText}>For inquiries, feel free to reach out at:</Text>
+                <TouchableOpacity onPress={() => Linking.openURL('mailto:vaibhav07351@gmail.com')}>
+                    <Text style={[styles.footerText, styles.footerLink]}>vaibhav07351@gmail.com</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16, justifyContent: 'center' },
+    container: {
+        flex: 1,
+        padding: 16,
+        justifyContent: 'space-between', // This will push the footer to the bottom
+    },
+    formContainer: {
+        flex: 1,
+        justifyContent: 'center', // Centers the form content
+    },
     title: { fontSize: 24, fontWeight: 'bold', marginBottom: 24, textAlign: 'center' },
     input: {
         padding: 12,
@@ -90,4 +109,25 @@ const styles = StyleSheet.create({
     },
     buttonText: { color: '#fff', textAlign: 'center', fontSize: 16 },
     linkText: { color: '#6200ee', textAlign: 'center' },
+    footer: {
+        alignItems: 'center',
+        marginTop: 20, // Add some space between the form and the footer
+        paddingVertical: 8,
+        // backgroundColor: '#f9f9f9', // Light background color for footer
+        borderTopWidth: 1,
+        borderTopColor: '#ddd', // Subtle border at the top
+        width: '100%', // Ensure footer spans the full width
+    },
+    footerText: {
+        fontSize: 14,
+        color: '#555', // A softer gray for the text
+        fontWeight: '500', // Slightly lighter font weight for a modern feel
+        textAlign: 'center',
+        marginBottom: 1, // Adds spacing between footer lines
+    },
+    footerLink: {
+        color: '#6200ee', // Keep the link color consistent with buttons
+        fontWeight: '600',
+        textDecorationLine: 'underline', // Adds underline for links
+    },
 });

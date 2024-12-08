@@ -1,104 +1,208 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
-import { Trainee } from '../types/trainee';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Define Props for the Screen
 type Props = NativeStackScreenProps<RootStackParamList, 'TraineeForm'>;
 
 export default function TraineeFormScreen({ route, navigation }: Props) {
-    const { trainee } = route.params || {}; // Get trainee if editing
+    const { trainee, traineeId } = route.params || {}; // Handle both trainee and traineeId
     const [name, setName] = useState(trainee?.name || '');
+    const [dob, setDob] = useState(trainee?.dob || '');
+    const [gender, setGender] = useState(trainee?.gender || '');
     const [weight, setWeight] = useState(trainee?.weight?.toString() || '');
     const [height, setHeight] = useState(trainee?.height?.toString() || '');
+    const [bmi, setBmi] = useState(trainee?.bmi?.toString() || '');
+    const [startDate, setStartDate] = useState(trainee?.start_date || '');
+    const [goals, setGoals] = useState(trainee?.goals || '');
+    const [notes, setNotes] = useState(trainee?.notes || '');
+    const [activeStatus, setActiveStatus] = useState(trainee?.active_status ?? true); // Active status toggle state
+    const [progressMetrics, setProgressMetrics] = useState<string>(JSON.stringify(trainee?.progress_metrics || {}));
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = () => {
-        if (!name || !weight || !height) {
-            Alert.alert('Validation Error', 'All fields are required.');
+    useEffect(() => {
+        if (traineeId && !trainee) {
+            fetchTrainee();
+        }
+    }, [traineeId]);
+
+    const fetchTrainee = async () => {
+        setIsLoading(true);
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) {
+                console.error('No token found. Redirecting to login.');
+                navigation.navigate('Login');
+                return;
+            }
+
+            const response = await fetch(`http://192.168.1.10:8080/trainees/${traineeId}`, {
+                headers: { Authorization: `${token}` },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch trainee details');
+            }
+
+            const data = await response.json();
+            setName(data.name);
+            setDob(data.dob);
+            setGender(data.gender);
+            setWeight(data.weight.toString());
+            setHeight(data.height.toString());
+            setBmi(data.bmi?.toString() || '');
+            setStartDate(data.start_date);
+            setGoals(data.goals);
+            setNotes(data.notes);
+            setActiveStatus(data.active_status);
+            setProgressMetrics(JSON.stringify(data.progress_metrics || {}));
+        } catch (error) {
+            console.error('Error fetching trainee:', error);
+            Alert.alert('Error', 'Failed to load trainee details.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSubmit = async () => {
+        if (!name || !dob || !gender || !weight || !height) {
+            Alert.alert('Validation Error', 'Please fill all mandatory fields marked with *.');
             return;
         }
 
-        const traineeData: Trainee = {
-            id: trainee?.id || '', // Use existing ID if editing
+        const traineeData = {
+            id: traineeId || trainee?.id || '',
             name,
+            dob,
+            gender,
             weight: parseFloat(weight),
             height: parseFloat(height),
+            bmi: bmi ? parseFloat(bmi) : undefined,
+            start_date: startDate,
+            goals,
+            notes,
+            active_status: activeStatus, // Include activeStatus here
+            progress_metrics: progressMetrics ? JSON.parse(progressMetrics) : undefined,
         };
 
-        if (trainee) {
-            // Update trainee
-            fetch(`http://192.168.1.10:8080/trainees/${trainee.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: 'YOUR_JWT_TOKEN',
-                },
-                body: JSON.stringify(traineeData),
-            })
-                .then((res) => {
-                    if (res.ok) {
-                        Alert.alert('Success', 'Trainee updated successfully.');
-                        navigation.goBack();
-                    } else {
-                        Alert.alert('Error', 'Failed to update trainee.');
-                    }
-                })
-                .catch(() => Alert.alert('Error', 'Failed to update trainee.'));
-        } else {
-            // Add new trainee
-            fetch('http://192.168.1.10:8080/trainees/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: 'YOUR_JWT_TOKEN',
-                },
-                body: JSON.stringify(traineeData),
-            })
-                .then((res) => {
-                    if (res.ok) {
-                        Alert.alert('Success', 'Trainee added successfully.');
-                        navigation.goBack();
-                    } else {
-                        Alert.alert('Error', 'Failed to add trainee.');
-                    }
-                })
-                .catch(() => Alert.alert('Error', 'Failed to add trainee.'));
+        const token = await AsyncStorage.getItem('token');
+        if (!token) {
+            console.error('No token found. Redirecting to login.');
+            navigation.navigate('Login');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const response = await fetch(
+                `http://192.168.1.10:8080/trainees/${traineeId || ''}`,
+                {
+                    method: traineeId || trainee ? 'PUT' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `${token}`,
+                    },
+                    body: JSON.stringify(traineeData),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(traineeId ? 'Failed to update trainee' : 'Failed to add trainee');
+            }
+
+            Alert.alert('Success', traineeId ? 'Trainee updated successfully.' : 'Trainee added successfully.');
+            navigation.goBack();
+        } catch (error) {
+            console.error('Error submitting trainee:', error);
+            Alert.alert('Error', traineeId ? 'Failed to update trainee.' : 'Failed to add trainee.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>{trainee ? 'Edit Trainee' : 'Add Trainee'}</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Name"
-                value={name}
-                onChangeText={setName}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Weight (kg)"
-                value={weight}
-                onChangeText={setWeight}
-                keyboardType="numeric"
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Height (cm)"
-                value={height}
-                onChangeText={setHeight}
-                keyboardType="numeric"
-            />
-            <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                <Text style={styles.buttonText}>{trainee ? 'Update' : 'Add'} Trainee</Text>
-            </TouchableOpacity>
-        </View>
+        <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+            <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16 }}>
+                {isLoading ? (
+                    <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 200 }} />
+                ) : (
+                    <>
+                        <Text style={styles.title}>{traineeId || trainee ? 'Edit Trainee' : 'Add Trainee'}</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Name *"
+                            value={name}
+                            onChangeText={setName}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Date of Birth (DD-MM-YYYY) *"
+                            value={dob}
+                            onChangeText={setDob}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Gender *"
+                            value={gender}
+                            onChangeText={setGender}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Weight (kg) *"
+                            value={weight}
+                            onChangeText={setWeight}
+                            keyboardType="numeric"
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Height (cm) *"
+                            value={height}
+                            onChangeText={setHeight}
+                            keyboardType="numeric"
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Enrollment Date (DD-MM-YYYY)"
+                            value={startDate}
+                            onChangeText={setStartDate}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Goals"
+                            value={goals}
+                            onChangeText={setGoals}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Notes"
+                            value={notes}
+                            onChangeText={setNotes}
+                        />
+                        
+                        {/* Active Status Switch */}
+                        <View style={styles.switchContainer}>
+                            <Text style={styles.switchLabel}>Trainee Active Status</Text>
+                            <Switch
+                                value={activeStatus}
+                                onValueChange={setActiveStatus}
+                            />
+                        </View>
+
+                        <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+                            <Text style={styles.buttonText}>{traineeId || trainee ? 'Update' : 'Add'} Trainee</Text>
+                        </TouchableOpacity>
+                    </>
+                )}
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16, justifyContent: 'center' },
     title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
     input: {
         padding: 12,
@@ -112,6 +216,17 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 8,
         marginTop: 16,
+        marginBottom: 10,  // Added margin to make sure the button is not too close to the bottom
     },
     buttonText: { color: '#fff', fontSize: 16, textAlign: 'center' },
+    switchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    switchLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginRight: 10,
+    },
 });

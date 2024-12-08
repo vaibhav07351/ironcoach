@@ -6,6 +6,8 @@ export const Colors = {
     textPrimary: '#000000',
     textSecondary: '#6e6e6e',
     error: '#b00020',
+    activeCard: '#d4edda', // Green color for active
+    inactiveCard: '#f8d7da', // Red color for inactive
 };
 
 export const Fonts = {

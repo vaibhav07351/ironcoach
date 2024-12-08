@@ -14,8 +14,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { RootStackParamList } from '../types/navigation';
-import { ActivityIndicator,Switch } from 'react-native';
+import { ActivityIndicator, Switch } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext'; // Import ThemeContext
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type WorkoutLog = {
     id: string;
@@ -36,11 +37,13 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
     const [showEndDatePicker, setShowEndDatePicker] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const { theme, toggleTheme } = useTheme(); // Access theme and toggle function  
-    const isDarkMode = theme === 'dark'; // Determine the current mode
-    const styles = createStyles(isDarkMode); // Dynamically create styles
-    const [isDropdownVisible, setDropdownVisible] = useState(false); // State for dropdown visibility
-  
+    const { theme, toggleTheme } = useTheme();
+    const isDarkMode = theme === 'dark';
+    const styles = createStyles(isDarkMode);
+    const [isDropdownVisible, setDropdownVisible] = useState(false);
+    const [showTodayOnly, setShowTodayOnly] = useState(false);
+
+
     const resetFilters = () => {
         setStartDate(null);
         setEndDate(null);
@@ -69,14 +72,14 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
             }
 
             const data = await response.json();
-            setWorkoutLogs(data);
+            setWorkoutLogs(Array.isArray(data) ? data : []); // Ensure `workoutLogs` is always an array
         } catch (error) {
             console.error('Error fetching workout logs:', error);
+            setWorkoutLogs([]); // Fallback to empty array
         } finally {
             setIsLoading(false);
         }
     };
-
 
     useFocusEffect(
         useCallback(() => {
@@ -84,14 +87,23 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
         }, [trainee])
     );
 
+    // Today's logs
+    const dateInIST = new Date();
+    dateInIST.setMinutes(dateInIST.getMinutes() + 330); // Add 330 minutes (5 hours 30 minutes)
+
+    const todayDate = dateInIST.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    const todayLogs = workoutLogs.filter((log) => log.date === todayDate);
+   
+
     const filteredLogs = workoutLogs.filter((log) => {
         const logDate = new Date(log.date);
-
+    
         const matchesDate =
             (!startDate || logDate >= startDate) && (!endDate || logDate <= endDate);
         const matchesExercise =
-            !exerciseFilter || log.workouts.some((workout) => workout.exercise.includes(exerciseFilter));
-
+            !exerciseFilter ||
+            (log.workouts || []).some((workout) => workout.exercise.includes(exerciseFilter));
+    
         return matchesDate && matchesExercise;
     });
 
@@ -100,18 +112,20 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
             return new Date(b.date).getTime() - new Date(a.date).getTime(); // Newest first
         }
         if (sortOption === 'weight') {
-            const totalWeightA = a.workouts.reduce(
-                (sum, w) => sum + w.weight.reduce((s, w) => s + w, 0),
+            const totalWeightA = (a.workouts || []).reduce(
+                (sum, w) => sum + (w.weight || []).reduce((s, w) => s + w, 0),
                 0
             );
-            const totalWeightB = b.workouts.reduce(
-                (sum, w) => sum + w.weight.reduce((s, w) => s + w, 0),
+            const totalWeightB = (b.workouts || []).reduce(
+                (sum, w) => sum + (w.weight || []).reduce((s, w) => s + w, 0),
                 0
             );
             return totalWeightB - totalWeightA; // Heaviest first
         }
         return 0;
     });
+
+    const logsToDisplay = showTodayOnly ? todayLogs : sortedLogs;
 
     const handleDelete = async (logId: string) => {
         Alert.alert(
@@ -156,44 +170,59 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
         );
     };
 
-    const renderWorkoutLog = ({ item }: { item: WorkoutLog }) => (
-        <View style={styles.logCard}>
+    // Function to format date from YYYY-MM-DD to DD-MM-YYYY
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString); // Convert to Date object
+        const day = String(date.getDate()).padStart(2, '0'); // Get day with leading zero if needed
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Get month with leading zero (months are 0-indexed)
+        const year = date.getFullYear(); // Get full year
+        return `${day}-${month}-${year}`; // Return in DD-MM-YYYY format
+    };
+    
+    const renderWorkoutLog = ({ item }: { item: WorkoutLog }) => {
+        const workouts = item.workouts || []; // Ensure workouts is always an array
+        return (
             <TouchableOpacity
-                onPress={() => navigation.navigate('WorkoutLogForm', { workoutLog: item, trainee })}>
+                style={styles.logCard}
+                onPress={() => navigation.navigate('WorkoutLogForm', { workoutLog: item, trainee })}
+            >
                 <View>
-                    <Text style={styles.date}>Date: {item.date}</Text>
-                    <Text style={styles.details}>Exercises: {item.workouts.length}</Text>
+                    {item.workouts.map((workout, index) => (
+                        <View key={index} style={styles.workoutDetails}>
+                            <Text style={styles.exerciseName}>{workout.exercise}</Text>
+                            <Text style={styles.sets}>Sets: {workout.sets}</Text>
+                            <Text style={styles.sets}>Date: {formatDate(item.date)}</Text>
+                 
+                        </View>
+                    ))}
                 </View>
+
+                <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDelete(item.id)}
+                >
+                    <Icon name="trash-can-outline" size={24} color="#ff3b30" />
+                </TouchableOpacity>
             </TouchableOpacity>
-            <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDelete(item.id)}>
-                <Text style={styles.deleteButtonText}>Delete</Text>
-            </TouchableOpacity>
-        </View>
-    );
+        );
+    };
+    
 
     if (isLoading) {
         return <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />;
     }
-
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Workout Logs for {trainee.name}</Text>
 
-            <View style={styles.switchContainer}>
-                <Text style={styles.switchLabel}>
-                    {isDarkMode ? 'Dark Mode' : 'Light Mode'}
-                </Text>
-                 <Switch value={isDarkMode} onValueChange={toggleTheme} />
-            </View>
+
 
              {/* Dropdown Toggle Button */}
             <TouchableOpacity
                 style={styles.dropdownToggle}
                 onPress={() => setDropdownVisible((prev) => !prev)}>
                 <Text style={styles.dropdownToggleText}>
-                    {isDropdownVisible ? 'Hide Filters & Sorting' : 'Show Filters & Sorting'}
+                    {isDropdownVisible ? 'Hide Filters & Sorting' : 'Advance Filters'}
                 </Text>
             </TouchableOpacity>
 
@@ -201,6 +230,15 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
             {/* Filters & Sorting Section */}
             {isDropdownVisible && (
                 <View style={styles.dropdown}>
+
+                    {/* Light/Dark Mode */}
+                    <View style={styles.switchContainer}>
+                        <Text style={styles.switchLabel}>
+                            {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+                        </Text>
+                        <Switch value={isDarkMode} onValueChange={toggleTheme} />
+                    </View>
+
                     {/* Reset Filters */}
                     <View style={styles.resetContainer}>
                         <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
@@ -278,10 +316,10 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
 
             {/* Workout Logs */}
             <FlatList
-                data={sortedLogs}
+                data={logsToDisplay}
                 renderItem={renderWorkoutLog}
                 keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.list}
+                ListEmptyComponent={<Text style={styles.emptyMessage}>Workout Log Empty</Text>}
             />
 
             {/* Add Button */}
@@ -300,6 +338,24 @@ const createStyles = (isDarkMode: boolean) =>
             flex: 1,
             backgroundColor: isDarkMode ? '#000' : '#fff',
             padding: 16,
+        },
+        workoutDetails: {
+            marginBottom: 8,
+        },
+        exerciseName: {
+            fontSize: 18,
+            fontWeight: 'bold',
+            color: isDarkMode ? '#fff' : '#000',
+        },
+        sets: {
+            fontSize: 14,
+            color: isDarkMode ? '#aaa' : '#555',
+        },
+        emptyMessage: {
+            fontSize: 23,
+            color: isDarkMode ? '#aaa' : '#555',
+            textAlign: 'center',
+            marginTop: 50,
         },
         switchContainer: {
             flexDirection: 'row',
@@ -432,10 +488,9 @@ const createStyles = (isDarkMode: boolean) =>
             fontSize: 16,
         },
         deleteButton: {
-            backgroundColor: '#d9534f',
-            paddingVertical: 8,
-            paddingHorizontal: 12,
-            borderRadius: 4,
+            padding: 8,
+            justifyContent: 'center',
+            alignItems: 'center',
         },
         deleteButtonText: {
             color: '#fff',
