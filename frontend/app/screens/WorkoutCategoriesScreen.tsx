@@ -50,22 +50,28 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
         navigation.navigate('WorkoutExercises', { category, traineeId });
     };
 
-    return isLoading ? (
-        <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />
-    ) : (
+    return (
         <View style={styles.container}>
             <Text style={styles.title}>Select a Category</Text>
-            <FlatList
-                data={categories}
-                keyExtractor={(item) => item}
-                renderItem={({ item }) => (
-                    <TouchableOpacity
-                        style={styles.categoryCard}
-                        onPress={() => handleCategorySelect(item)}>
-                        <Text style={styles.categoryText}>{item}</Text>
-                    </TouchableOpacity>
-                )}
-            />
+            {isLoading ? (
+                <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />
+            ) : categories.length === 0 ? (
+                <View style={styles.noDataContainer}>
+                    <Text style={styles.noDataText}>No categories available.</Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={categories}
+                    keyExtractor={(item) => item}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity
+                            style={styles.categoryCard}
+                            onPress={() => handleCategorySelect(item)}>
+                            <Text style={styles.categoryText}>{item}</Text>
+                        </TouchableOpacity>
+                    )}
+                />
+            )}
             <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => navigation.navigate('AddCustomCategory', { traineeId })}>
@@ -73,6 +79,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
             </TouchableOpacity>
         </View>
     );
+    
 }
 
 const styles = StyleSheet.create({
@@ -85,7 +92,7 @@ const styles = StyleSheet.create({
     },
     categoryCard: {
         padding: 16,
-        backgroundColor: '#f1f1f1',
+        backgroundColor: '#E9E9E9',
         borderRadius: 8,
         marginBottom: 12,
         alignItems: 'center',
@@ -100,4 +107,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     addButtonText: { color: '#fff', fontSize: 16 },
+    noDataContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    noDataText: {
+        fontSize: 16,
+        color: '#555',
+        textAlign: 'center',
+    },
 });

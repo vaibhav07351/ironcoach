@@ -13,7 +13,6 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
     const [exercises, setExercises] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Fetch exercises from the backend
     const fetchExercises = async () => {
         setIsLoading(true);
         try {
@@ -35,7 +34,13 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
             }
 
             const data = await response.json();
-            setExercises(data.map((exercise: any) => exercise.name)); // Extract exercise names
+
+            // Handle case where data is null or empty
+            if (!data || data.length === 0) {
+                setExercises([]); // Set to an empty array
+            } else {
+                setExercises(data.map((exercise: any) => exercise.name)); // Extract exercise names
+            }
         } catch (error) {
             console.error('Error fetching exercises:', error);
         } finally {
@@ -49,7 +54,6 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
         }, [category])
     );
 
-    // Fetch exercises on mount
     useEffect(() => {
         fetchExercises();
     }, [category]);
@@ -61,21 +65,25 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>{category} Exercises</Text>
-            {isLoading ? (
-                <ActivityIndicator size="large" color="#6200ee" />
-            ) : (
-                <FlatList
-                    data={exercises}
-                    keyExtractor={(item) => item}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity
-                            style={styles.exerciseCard}
-                            onPress={() => handleExerciseSelect(item)}>
-                            <Text style={styles.exerciseText}>{item}</Text>
-                        </TouchableOpacity>
-                    )}
-                />
-            )}
+            <View style={styles.content}>
+                {isLoading ? (
+                    <ActivityIndicator size="large" color="#6200ee" />
+                ) : exercises.length === 0 ? (
+                    <Text style={styles.noExerciseText}>No exercises added for this category.</Text>
+                ) : (
+                    <FlatList
+                        data={exercises}
+                        keyExtractor={(item) => item}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity
+                                style={styles.exerciseCard}
+                                onPress={() => handleExerciseSelect(item)}>
+                                <Text style={styles.exerciseText}>{item}</Text>
+                            </TouchableOpacity>
+                        )}
+                    />
+                )}
+            </View>
             <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => navigation.navigate('AddCustomExercise', { category, traineeId })}>
@@ -86,28 +94,53 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16 },
+    container: {
+        // backgroundColor:'#0000FF',
+        flex: 1,
+        padding: 16,
+        justifyContent: 'space-between', // Ensures space distribution between elements
+    },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
         marginBottom: 16,
         textAlign: 'center',
     },
+    content: {
+        // backgroundColor:'#FFFF00',
+        flex: 1,
+        // textAlign: 'center',
+        justifyContent: 'center', // Center content vertically
+        // alignItems: 'center', // Center content horizontally
+        paddingBottom:70,
+    },
     exerciseCard: {
         padding: 16,
-        backgroundColor: '#f1f1f1',
+        backgroundColor: '#E9E9E9',
         borderRadius: 8,
         marginBottom: 12,
         alignItems: 'center',
     },
-    exerciseText: { fontSize: 18, fontWeight: 'bold' },
+    exerciseText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    noExerciseText: {
+        fontSize: 18,
+        fontWeight: '500',
+        textAlign: 'center',
+        color: '#888',
+        marginVertical: 20,
+    },
     addButton: {
-        marginTop: 20,
         backgroundColor: '#6200ee',
         paddingVertical: 12,
         paddingHorizontal: 16,
         borderRadius: 8,
         alignItems: 'center',
     },
-    addButtonText: { color: '#fff', fontSize: 16 },
+    addButtonText: {
+        color: '#fff',
+        fontSize: 16,
+    },
 });

@@ -8,6 +8,8 @@ import {
     TextInput,
     Alert,
     Platform,
+    ScrollView,
+    KeyboardAvoidingView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -39,8 +41,8 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
     const [isLoading, setIsLoading] = useState(false);
     const { theme, toggleTheme } = useTheme();
     const isDarkMode = theme === 'dark';
-    const styles = createStyles(isDarkMode);
     const [isDropdownVisible, setDropdownVisible] = useState(false);
+    const styles = createStyles(isDarkMode,isDropdownVisible);
     const [showTodayOnly, setShowTodayOnly] = useState(false);
 
 
@@ -212,6 +214,11 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
         return <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />;
     }
     return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* <ScrollView contentContainerStyle={{ flexGrow: 1 }}> */}
+
         <View style={styles.container}>
             <Text style={styles.title}>Workout Logs for {trainee.name}</Text>
 
@@ -222,14 +229,14 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
                 style={styles.dropdownToggle}
                 onPress={() => setDropdownVisible((prev) => !prev)}>
                 <Text style={styles.dropdownToggleText}>
-                    {isDropdownVisible ? 'Hide Filters & Sorting' : 'Advance Filters'}
+                    {isDropdownVisible ? 'Hide Advance Filters' : 'Advance Filters'}
                 </Text>
             </TouchableOpacity>
 
             
             {/* Filters & Sorting Section */}
             {isDropdownVisible && (
-                <View style={styles.dropdown}>
+                <ScrollView contentContainerStyle={styles.dropdown}>
 
                     {/* Light/Dark Mode */}
                     <View style={styles.switchContainer}>
@@ -239,12 +246,6 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
                         <Switch value={isDarkMode} onValueChange={toggleTheme} />
                     </View>
 
-                    {/* Reset Filters */}
-                    <View style={styles.resetContainer}>
-                        <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
-                            <Text style={styles.resetButtonText}>Reset Filters</Text>
-                        </TouchableOpacity>
-                    </View>
 
                     {/* Filter by Exercise */}
                     <TextInput
@@ -311,7 +312,15 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
                             <Text style={styles.sortButtonText}>Total Weight</Text>
                         </TouchableOpacity>
                     </View>
-                </View>
+                    
+                    {/* Reset Filters */}
+                    <View style={styles.resetContainer}>
+                        <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
+                            <Text style={styles.resetButtonText}>Reset Filters</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                </ScrollView>
             )}
 
             {/* Workout Logs */}
@@ -329,10 +338,12 @@ export default function WorkoutLogListScreen({ route, navigation }: Props) {
                 <Text style={styles.addButtonText}>+ Add Workout Log</Text>
             </TouchableOpacity>
         </View>
+    {/* </ScrollView> */}
+</KeyboardAvoidingView>
     );
 }
 
-const createStyles = (isDarkMode: boolean) =>
+const createStyles = (isDarkMode: boolean, isDropdownVisible: boolean) =>
     StyleSheet.create({
         container: {
             flex: 1,
@@ -382,7 +393,7 @@ const createStyles = (isDarkMode: boolean) =>
             fontWeight: 'bold',
         },
         dropdownToggle: {
-            backgroundColor: '#6200ee',
+            backgroundColor: isDropdownVisible ? '#4CAF50' : '#1976D2',
             paddingVertical: 10,
             paddingHorizontal: 20,
             borderRadius: 8,
@@ -390,12 +401,12 @@ const createStyles = (isDarkMode: boolean) =>
             alignItems: 'center',
         },
         dropdownToggleText: {
-            color: '#fff',
+            color: '#FFFFFF',
             fontSize: 16,
             fontWeight: 'bold',
         },
         dropdown: {
-            backgroundColor: isDarkMode ? '#222' : '#f9f9f9',
+            backgroundColor: isDarkMode ? '#222' : '#B6B6B6',
             padding: 16,
             borderRadius: 8,
             marginBottom: 16,
@@ -420,6 +431,7 @@ const createStyles = (isDarkMode: boolean) =>
             padding: 16,
             backgroundColor: isDarkMode ? '#222' : '#f1f1f1',
             borderRadius: 8,
+            marginTop:7,
             marginBottom: 12,
             flexDirection: 'row',
             justifyContent: 'space-between',
