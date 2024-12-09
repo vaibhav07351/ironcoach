@@ -1,17 +1,20 @@
 export type RootStackParamList = {
-
     Dashboard: undefined; // Dashboard screen
-    Login: undefined; // Login screen    
+    Login: undefined; // Login screen
     Signup: undefined; // Signup screen
-    Trainees: undefined; // List of trainees
+    Trainees: { status: true | false }; // List of trainees based on status
+    TraineeDetail: { trainee: Trainee }; // Trainee detail with tabs
     TraineeForm: { trainee?: any; traineeId?: string }; // Include optional traineeId
-    WorkoutLogs: { trainee: any }; // List of workout logs for a trainee
-    WorkoutLogForm: { workoutLog?: any; trainee: any }; // Old workout log form (can be removed if not needed)
+    WorkoutLogs: { trainee: Trainee }; // List of workout logs for a trainee
+    WorkoutLogForm: { workoutLog?: any; trainee: any }; // Edit/Add workout log (new design)
     
-    // New Flow for Adding Workout Logs
+    // Flow for Adding Workout Logs
     WorkoutCategories: { traineeId: string }; // Categories screen
     AddCustomCategory: { traineeId: string }; // Add a custom category
     WorkoutExercises: { category: string; traineeId: string }; // Exercises under a category
     AddCustomExercise: { category: string; traineeId: string }; // Add a custom exercise under a category
     AddExerciseForm: { exercise: string; traineeId: string }; // Add exercise details
-    };
+
+    // Trainer Profile
+    TrainerProfile: { trainerId: string }; // Trainer profile screen
+};

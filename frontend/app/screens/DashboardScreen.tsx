@@ -1,22 +1,54 @@
-import React, { useContext, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from 'react-native';
-import { Colors, Spacing } from '../../constants/theme';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
+import React, { useContext, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Linking } from 'react-native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { AuthContext } from '../contexts/AuthContext';
+import { Spacing } from '@/constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Dashboard'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
-export default function DashboardScreen() {
-    const { isAuthenticated, logout } = useContext(AuthContext); // Assuming trainerName is provided by context
-    const navigation = useNavigation<NavigationProp>();
+type TrainerDetails = {
+    name: string;
+    email: string;
+    specialization?: string;
+};
+
+export default function DashboardScreen({ navigation }: Props) {
+    const { isAuthenticated, logout } = useContext(AuthContext); // Assuming trainerId is in AuthContext
+    const [trainerDetails, setTrainerDetails] = useState<TrainerDetails | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         if (!isAuthenticated) {
             Alert.alert('Session Expired', 'Please log in to continue.');
             navigation.navigate('Login');
+            return;
         }
+
+        const fetchTrainerDetails = async () => {
+            try {
+                const response = await fetch(`http://192.168.1.10:8080/getTrainerDetails`, {
+                    headers: {
+                        Authorization: `${await AsyncStorage.getItem('token')}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch trainer details');
+                }
+
+                const data = await response.json();
+                setTrainerDetails(data);
+            } catch (error) {
+                console.error('Error fetching trainer details:', error);
+                Alert.alert('Error', 'Failed to fetch trainer details.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchTrainerDetails();
     }, [isAuthenticated]);
 
     const handleLogout = () => {
@@ -25,27 +57,51 @@ export default function DashboardScreen() {
         navigation.navigate('Login');
     };
 
+    if (isLoading) {
+        return <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />;
+    }
+
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Welcome, Trainer!</Text>
-            <Text style={styles.greeting}>It's a great day to inspire your trainees and help them achieve their goals!</Text>
+            <Text style={styles.greeting}>
+                Welcome, {trainerDetails?.name || 'Trainer'}!
+            </Text>
+
+            <TouchableOpacity
+                style={styles.profileButton}
+                onPress={() => {
+                    if (trainerDetails?.email) {
+                        navigation.navigate('TrainerProfile', { trainerId: trainerDetails.email });
+                    } else {
+                        Alert.alert('Error', 'Trainer ID is not available.');
+                    }
+                }}>
+                <Text style={styles.profileButtonText}>My Profile</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
                 style={styles.card}
-                onPress={() => navigation.navigate('Trainees')}>
-                <Text style={styles.cardText}>View Trainees</Text>
+                onPress={() => navigation.navigate('Trainees', { status: true })}>
+                <Text style={styles.cardText}>Active Trainees</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+                style={styles.card}
+                onPress={() => navigation.navigate('Trainees', { status: false })}>
+                <Text style={styles.cardText}>Inactive Trainees</Text>
+            </TouchableOpacity>
+
 
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                 <Text style={styles.logoutButtonText}>Logout</Text>
             </TouchableOpacity>
-
             {/* Footer */}
             <View style={styles.footer}>
                 <Text style={styles.footerText}>Developed by Vaibhav Bhardwaj</Text>
                 <Text style={styles.footerText}>For inquiries, feel free to reach out at:</Text>
                 <TouchableOpacity onPress={() => Linking.openURL('mailto:vaibhav07351@gmail.com')}>
-                    <Text style={[styles.footerText, styles.footerLink]}>vaibhav07351@gmail.com</Text>
+                    <Text style={[styles.footerText, styles.footerLink]}>
+                        vaibhav07351@gmail.com
+                    </Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -104,7 +160,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 20, // Add some space between the form and the footer
         paddingVertical: 8,
-        // backgroundColor: '#f9f9f9', // Light background color for footer
         borderTopWidth: 1,
         borderTopColor: '#ddd', // Subtle border at the top
         width: '100%', // Ensure footer spans the full width
@@ -121,4 +176,12 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         textDecorationLine: 'underline', // Adds underline for links
     },
+    profileButton: {
+        marginTop: 20,
+        backgroundColor: '#007bff',
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    profileButtonText: { color: '#fff', fontSize: 16 },
 });

@@ -40,3 +40,35 @@ func (r *TrainerRepository) FindByEmail(email string) (models.Trainer, error) {
 	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&trainer)
 	return trainer, err
 }
+
+
+func (r *TrainerRepository) GetTrainers() ([]models.Trainer, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cursor, err := r.collection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var trainers []models.Trainer
+	for cursor.Next(ctx) {
+		var trainer models.Trainer
+		if err := cursor.Decode(&trainer); err != nil {
+			return nil, err
+		}
+		trainers = append(trainers, trainer)
+	}
+	return trainers, nil
+}
+
+
+// In `trainer_repository.go`
+func (r *TrainerRepository) GetTrainerByID(id string) (models.Trainer, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	
+    var trainer models.Trainer
+    err := r.collection.FindOne(ctx, bson.M{"email": id}).Decode(&trainer)
+    return trainer, err
+}

@@ -12,8 +12,8 @@ func RegisterTrainerRoutes(router *gin.Engine){
 	//Public routes
 	trainerController := controllers.NewTrainerController()
 	router.POST("/registerTrainer",trainerController.RegisterTrainer)
-
 	router.POST("/login", trainerController.LoginTrainer)
+	router.GET("/getTrainers", trainerController.GetTrainers)
 
 	//Protected Routes
 	protected := router.Group("/").Use(middlewares.AuthMiddleware())
@@ -22,7 +22,7 @@ func RegisterTrainerRoutes(router *gin.Engine){
 		c.JSON(200, gin.H{"message": "Access granted", "email":email})
 	})
 
+	protected.GET("/getTrainerDetails", trainerController.GetTrainerDetails)
 
 
-	
 }

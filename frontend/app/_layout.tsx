@@ -14,6 +14,8 @@ import AddExerciseFormScreen from './screens/AddExerciseFormScreen';
 import AddCustomCategoryScreen from './screens/AddCustomCategoryScreen';
 import WorkoutExercisesScreen from './screens/WorkoutExercisesScreen';
 import AddCustomExerciseScreen from './screens/AddCustomExerciseScreen';
+import TraineeDetailScreen from './screens/TraineeDetailScreen';
+import TrainerProfileScreen from './screens/TrainerProfileScreen';
 
 
 import { AuthProvider } from './contexts/AuthContext';
@@ -38,6 +40,8 @@ export default function AppNavigation() {
                 <Stack.Screen name="WorkoutExercises" component={WorkoutExercisesScreen} />
                 <Stack.Screen name="AddCustomExercise" component={AddCustomExerciseScreen} />
                 <Stack.Screen name="AddExerciseForm" component={AddExerciseFormScreen} />
+                <Stack.Screen name="TraineeDetail" component={TraineeDetailScreen} />
+                <Stack.Screen name="TrainerProfile" component={TrainerProfileScreen} />
             </Stack.Navigator>
           </AuthProvider>
       </ThemeProvider>

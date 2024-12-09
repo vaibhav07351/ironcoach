@@ -1,74 +1,74 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
-import Card from '../../components/Card';
-import Button from '../../components/Button';
-import { Colors, Spacing } from '../../constants/theme';
-import { RootStackParamList } from '../types/navigation';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Button } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native'; // Import useFocusEffect
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types/navigation';
+import { Trainee } from '../types/trainee';
+import { Colors, Spacing } from '../../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trainees'>;
-type Trainee = { id: string; name: string; weight: number; height: number };
 
-export default function TraineeListScreen({ navigation }: Props) {
+export default function TraineeListScreen({ route, navigation }: Props) {
+    const { status } = route.params; // "active" or "inactive"
     const [trainees, setTrainees] = useState<Trainee[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
-    const fetchTrainees = useCallback(async () => {
+    const fetchTrainees = async () => {
         setIsLoading(true);
         try {
-            // Retrieve the token from AsyncStorage
             const token = await AsyncStorage.getItem('token');
-            console.log("token: ", token)
             if (!token) {
-                console.error('No token found');
+                console.error('No token found. Redirecting to login.');
+                navigation.navigate('Login');
                 return;
             }
 
-            const response = await fetch('http://192.168.1.10:8080/trainees/', {
-                headers: {
-                    Authorization: `${token}`, // Include the token in the Authorization header
-                },
+            const response = await fetch(`http://192.168.1.10:8080/trainees?active_status=${status}`, {
+                headers: { Authorization: `${token}` },
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error('Failed to fetch trainees');
             }
 
             const data = await response.json();
-            // console.log('Fetched trainees:', data); // Log the fetched data
-            setTrainees(data);
-        } catch (err) {
-            console.error('Fetch error:', err);
+            setTrainees(data); // Assuming the API returns an array of Trainee objects
+        } catch (error) {
+            console.error('Error fetching trainees:', error);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    };
 
-    // Use useFocusEffect to trigger data refresh when the screen is focused
-    useFocusEffect(
-        useCallback(() => {
-            fetchTrainees();
-        }, [fetchTrainees])
-    );
+    useEffect(() => {
+        fetchTrainees();
+    }, [status]);
 
-    return isLoading ? (
-        <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />
-    ) : (
+    const handleTraineeSelect = (trainee: Trainee) => {
+        navigation.navigate('TraineeDetail', { trainee });
+    };
+
+    if (isLoading) {
+        return <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />;
+    }
+
+    return (
         <View style={styles.container}>
+            <Text style={styles.title}>
+                {status === true ? 'Active Trainees' : 'Inactive Trainees'}
+            </Text>
             <FlatList
                 data={trainees}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
-                    <Card
-                        title={item.name}
-                        subtitle={`Weight: ${item.weight}kg, Height: ${item.height}cm`}
-                        onPress={() => navigation.navigate('WorkoutLogs', { trainee: item })}
-                    />
+                    <TouchableOpacity
+                        style={styles.card}
+                        onPress={() => handleTraineeSelect(item)}>
+                        <Text style={styles.cardText}>{item.name}</Text>
+                    </TouchableOpacity>
                 )}
             />
-            <Button title="+ Add Trainee" onPress={() => navigation.navigate('TraineeForm', {})} />
+             <Button title="+ Add Trainee" onPress={() => navigation.navigate('TraineeForm', {})} />
         </View>
     );
 }
@@ -79,4 +79,15 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.background,
         padding: Spacing.medium,
     },
+    title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' },
+    card: {
+        padding: 17,
+        backgroundColor: '#E9E9E9',
+        borderRadius: 8,
+        marginBottom: 12,
+        alignItems: 'center',
+        textAlign: 'center',
+        justifyContent: 'center',
+    },
+    cardText: { fontSize: 18, color: '#333' },
 });

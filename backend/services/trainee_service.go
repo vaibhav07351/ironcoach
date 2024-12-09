@@ -22,8 +22,8 @@ func (s *TraineeService) AddTrainee(trainee models.Trainee) error {
 }
 
 // Get all trainees for a trainer
-func (s *TraineeService) GetTraineesByTrainer(trainerID string) ([]models.Trainee, error) {
-    return s.repository.GetTraineesByTrainer(trainerID)
+func (s *TraineeService) GetTraineesByTrainer(trainerID string, status string) ([]models.Trainee, error) {
+    return s.repository.GetTraineesByTrainer(trainerID, status)
 }
 
 // Update a trainee

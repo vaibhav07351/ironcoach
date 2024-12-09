@@ -61,3 +61,24 @@ func (ctrl *TrainerController) LoginTrainer(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": token})
 
 }
+
+//Get Trainers
+func (c *TrainerController) GetTrainers(ctx *gin.Context) {
+    trainers, err := c.service.GetTrainers()
+    if err != nil {
+        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve categories"})
+        return
+    }
+
+    ctx.JSON(http.StatusOK, trainers)
+}
+
+func (c *TrainerController) GetTrainerDetails(ctx *gin.Context) {
+	trainerID := ctx.MustGet("email").(string)
+    trainer, err := c.service.GetTrainerByID(trainerID)
+    if err != nil {
+        ctx.JSON(http.StatusNotFound, gin.H{"error": "Trainer not found"})
+        return
+    }
+    ctx.JSON(http.StatusOK, trainer)
+}

@@ -45,9 +45,10 @@ func (ctrl *TraineeController) AddTrainee(c *gin.Context) {
 
 // Get trainees for a trainer
 func (ctrl *TraineeController) GetTrainees(c *gin.Context) {
+    status := c.Query("active_status") // Get query parameter
     trainerID := c.MustGet("email").(string)
 
-    trainees, err := ctrl.service.GetTraineesByTrainer(trainerID)
+    trainees, err := ctrl.service.GetTraineesByTrainer(trainerID,status)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch trainees"})
         return

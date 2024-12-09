@@ -63,3 +63,14 @@ func (s *TrainerService) LoginTrainer(email, password string) (token string,err 
 
 	return 
 }
+
+
+func (s *TrainerService) GetTrainers() ([]models.Trainer, error) {
+    return s.repository.GetTrainers()
+}
+
+
+func (s *TrainerService) GetTrainerByID(id string) (models.Trainer, error) {
+    return s.repository.GetTrainerByID(id)
+}
+

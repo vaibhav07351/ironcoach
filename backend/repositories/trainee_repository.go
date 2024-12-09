@@ -5,6 +5,7 @@ import (
 	"errors"
 	"ironcoach/database"
 	"ironcoach/models"
+	"strconv"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -33,28 +34,44 @@ func (r *TraineeRepository) CreateTrainee(trainee models.Trainee) error {
 	return err
 }
 
-// List trainees for a specific trainer
-func (r *TraineeRepository) GetTraineesByTrainer(trainerID string) ([]models.Trainee, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+func (r *TraineeRepository) GetTraineesByTrainer(trainerID string, status string) ([]models.Trainee, error) {
+    ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+    defer cancel()
 
-	var trainees []models.Trainee
-	cursor, err := r.collection.Find(ctx, bson.M{"trainer_id": trainerID})
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
+    var trainees []models.Trainee
 
-	for cursor.Next(ctx) {
-		var trainee models.Trainee
-		if err := cursor.Decode(&trainee); err != nil {
-			return nil, err
-		}
-		trainees = append(trainees, trainee)
-	}
+    // Build the query based on the inputs
+    query := bson.M{"trainer_id": trainerID}
 
-	return trainees, nil
+    // Convert `status` string to boolean if it's not empty
+    if status != "" {
+        activeStatus, err := strconv.ParseBool(status)
+        if err != nil {
+            return nil, err // Handle invalid status values gracefully
+        }
+        query["active_status"] = activeStatus
+    }
+
+    // Perform the query
+    cursor, err := r.collection.Find(ctx, query)
+    if err != nil {
+        return nil, err
+    }
+    defer cursor.Close(ctx)
+
+    // Decode the results
+    for cursor.Next(ctx) {
+        var trainee models.Trainee
+        if err := cursor.Decode(&trainee); err != nil {
+            return nil, err
+        }
+        trainees = append(trainees, trainee)
+    }
+
+    return trainees, nil
 }
+
+
 
 // Update a trainee
 func (r *TraineeRepository) UpdateTrainee(id string, update map[string]interface{}) error {
