@@ -121,10 +121,10 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
     
             Alert.alert('Success', 'Workout log added successfully!');
             navigation.reset({
-                index: 1, // Position in the stack
+                // index: 1, // Position in the stack
                 routes: [
-                    { name: 'Dashboard' }, // Replace with your stack's initial route if needed
-                    { name: 'WorkoutLogs', params: { trainee: { id: traineeId } } },
+                    { name: 'TraineeDetail', params: { trainee: { id: traineeId } } }, // Replace with your stack's initial route if needed
+                    // { name: 'WorkoutLogs', params: { trainee: { id: traineeId } } },
                 ],
             });
         } catch (error) {

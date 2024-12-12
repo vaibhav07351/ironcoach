@@ -9,15 +9,21 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TraineeForm'>;
 export default function TraineeFormScreen({ route, navigation }: Props) {
     const { trainee, traineeId } = route.params || {}; // Handle both trainee and traineeId
     const [name, setName] = useState(trainee?.name || '');
+    const [phoneNumber, setPhoneNumber] = useState(trainee?.phone_number || '');
     const [dob, setDob] = useState(trainee?.dob || '');
     const [gender, setGender] = useState(trainee?.gender || '');
+    const [profession, setProfession] = useState(trainee?.profession || '');
     const [weight, setWeight] = useState(trainee?.weight?.toString() || '');
     const [height, setHeight] = useState(trainee?.height?.toString() || '');
     const [bmi, setBmi] = useState(trainee?.bmi?.toString() || '');
     const [startDate, setStartDate] = useState(trainee?.start_date || '');
+    const [membershipType, setMembershipType] = useState(trainee?.membership_type || '');
+    const [emergencyContact, setEmergencyContact] = useState(trainee?.emergency_contact || '');
+    const [medicalHistory, setMedicalHistory] = useState(trainee?.medical_history || '');
+    const [socialHandle, setSocialHandle] =  useState(trainee?.social_handle || '');
     const [goals, setGoals] = useState(trainee?.goals || '');
     const [notes, setNotes] = useState(trainee?.notes || '');
-    const [activeStatus, setActiveStatus] = useState(trainee?.active_status ?? true); // Active status toggle state
+    const [activeStatus, setActiveStatus] = useState(trainee?.active_status ?? true);
     const [progressMetrics, setProgressMetrics] = useState<string>(JSON.stringify(trainee?.progress_metrics || {}));
     const [isLoading, setIsLoading] = useState(false);
 
@@ -47,12 +53,18 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
 
             const data = await response.json();
             setName(data.name);
+            setPhoneNumber(data.phone_number || '');
             setDob(data.dob);
             setGender(data.gender);
+            setProfession(data.profession);
             setWeight(data.weight.toString());
             setHeight(data.height.toString());
             setBmi(data.bmi?.toString() || '');
             setStartDate(data.start_date);
+            setMembershipType(data.membership_type);
+            setEmergencyContact(data.emergency_contact);
+            setMedicalHistory(data.medical_history);
+            setSocialHandle(data.social_handle);
             setGoals(data.goals);
             setNotes(data.notes);
             setActiveStatus(data.active_status);
@@ -74,15 +86,21 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
         const traineeData = {
             id: traineeId || trainee?.id || '',
             name,
+            phone_number: phoneNumber,
             dob,
             gender,
+            profession,
             weight: parseFloat(weight),
             height: parseFloat(height),
             bmi: bmi ? parseFloat(bmi) : undefined,
             start_date: startDate,
+            membership_type: membershipType,
+            emergency_contact: emergencyContact,
+            medical_history: medicalHistory,
+            social_handle: socialHandle,
             goals,
             notes,
-            active_status: activeStatus, // Include activeStatus here
+            active_status: activeStatus,
             progress_metrics: progressMetrics ? JSON.parse(progressMetrics) : undefined,
         };
 
@@ -152,6 +170,19 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                         />
                         <TextInput
                             style={styles.input}
+                            placeholder="Profession"
+                            value={profession}
+                            onChangeText={setProfession}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Phone Number *"
+                            value={phoneNumber}
+                            onChangeText={setPhoneNumber}
+                            keyboardType="phone-pad"
+                        />
+                        <TextInput
+                            style={styles.input}
                             placeholder="Weight (kg) *"
                             value={weight}
                             onChangeText={setWeight}
@@ -172,6 +203,30 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                         />
                         <TextInput
                             style={styles.input}
+                            placeholder="Membership Type"
+                            value={membershipType}
+                            onChangeText={setMembershipType}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Emergency Contact"
+                            value={emergencyContact}
+                            onChangeText={setEmergencyContact}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Medical History"
+                            value={medicalHistory}
+                            onChangeText={setMedicalHistory}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Social Handle"
+                            value={socialHandle}
+                            onChangeText={setSocialHandle}
+                        />
+                        <TextInput
+                            style={styles.input}
                             placeholder="Goals"
                             value={goals}
                             onChangeText={setGoals}
@@ -182,7 +237,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                             value={notes}
                             onChangeText={setNotes}
                         />
-                        
+
                         {/* Active Status Switch */}
                         <View style={styles.switchContainer}>
                             <Text style={styles.switchLabel}>Trainee Active Status</Text>

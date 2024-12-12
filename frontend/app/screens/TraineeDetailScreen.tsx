@@ -25,9 +25,9 @@ export default function TraineeDetailScreen({ route }: Props) {
             screenOptions={({ route }) => ({
                 tabBarIcon: ({ color, size }) => {
                     let iconName = '';
-                    if (route.name === 'WorkoutLogs') iconName = 'home';
+                    if (route.name === 'AboutTrainee') iconName = 'account';
+                    else if (route.name === 'WorkoutLogs') iconName = 'home';
                     else if (route.name === 'DietEntry') iconName = 'food';
-                    else if (route.name === 'AboutTrainee') iconName = 'account';
                     else if (route.name === 'Progress') iconName = 'chart-line';
                     return <Icon name={iconName} color={color} size={size} />;
                 },
@@ -37,13 +37,14 @@ export default function TraineeDetailScreen({ route }: Props) {
             })}
         >
             <Tab.Screen
-                name="WorkoutLogs"
-                component={withTrainee(WorkoutLogListScreen, trainee)} // Wrap ProgressScreen
-            />
-            <Tab.Screen
                 name="AboutTrainee"
                 component={withTrainee(AboutTraineeScreen, trainee)} // Wrap AboutTraineeScreen
             />
+            <Tab.Screen
+                name="WorkoutLogs"
+                component={withTrainee(WorkoutLogListScreen, trainee)} // Wrap ProgressScreen
+            />
+
             <Tab.Screen
                 name="DietEntry"
                 component={withTrainee(DietEntryScreen, trainee)} // Wrap DietEntryScreen

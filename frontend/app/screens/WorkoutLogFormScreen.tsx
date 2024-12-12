@@ -129,8 +129,8 @@ export default function WorkoutLogFormScreen({ route, navigation }: Props) {
 
             Alert.alert('Success', 'Workout log saved successfully!');
             navigation.reset({
-                index: 1,
-                routes: [{ name: 'Dashboard' }, { name: 'WorkoutLogs', params: { trainee } }],
+                // index: 1,
+                routes: [{ name: 'TraineeDetail' , params: { trainee } }],
             });
         } catch (error) {
             console.error('Error saving workout log:', error);
