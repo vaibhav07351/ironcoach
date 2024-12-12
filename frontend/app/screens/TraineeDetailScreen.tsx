@@ -1,59 +1,57 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { TabView, SceneMap } from 'react-native-tab-view';
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import AboutTraineeScreen from '../screens/AboutTraineeScreen';
+import DietEntryScreen from '../screens/DietEntryScreen';
+import ProgressScreen from '../screens/ProgressScreen';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
+import WorkoutLogListScreen from './WorkoutLogListScreen';
+
+const Tab = createBottomTabNavigator();
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TraineeDetail'>;
 
+// Higher-Order Component to inject props
+const withTrainee = (Component: React.ComponentType<any>, trainee: any) => {
+    return (props: any) => <Component {...props} trainee={trainee} />;
+};
+
 export default function TraineeDetailScreen({ route }: Props) {
     const { trainee } = route.params;
-    const [index, setIndex] = useState(1);
-    const [routes] = useState([
-        { key: 'about', title: 'About' },
-        { key: 'logs', title: 'Workout Logs' },
-        { key: 'progress', title: 'Progress' },
-    ]);
-
-    const AboutTrainee = () => (
-        <View style={styles.tabContainer}>
-            <Text style={styles.text}>Name: {trainee.name}</Text>
-            <Text style={styles.text}>Height: {trainee.height} cm</Text>
-            <Text style={styles.text}>Weight: {trainee.weight} kg</Text>
-        </View>
-    );
-
-    const WorkoutLogs = () => (
-        <View style={styles.tabContainer}>
-            <Text style={styles.text}>Workout Logs Screen</Text>
-        </View>
-    );
-
-    const Progress = () => (
-        <View style={styles.tabContainer}>
-            <Text style={styles.text}>Workout Progress Screen</Text>
-        </View>
-    );
-
-    const renderScene = SceneMap({
-        about: AboutTrainee,
-        logs: WorkoutLogs,
-        progress: Progress,
-    });
 
     return (
-        <TabView
-            navigationState={{ index, routes }}
-            renderScene={renderScene}
-            onIndexChange={setIndex}
-            initialLayout={{ width: 300 }}
-            style={styles.tabView}
-        />
+        <Tab.Navigator
+            screenOptions={({ route }) => ({
+                tabBarIcon: ({ color, size }) => {
+                    let iconName = '';
+                    if (route.name === 'WorkoutLogs') iconName = 'home';
+                    else if (route.name === 'DietEntry') iconName = 'food';
+                    else if (route.name === 'AboutTrainee') iconName = 'account';
+                    else if (route.name === 'Progress') iconName = 'chart-line';
+                    return <Icon name={iconName} color={color} size={size} />;
+                },
+                tabBarActiveTintColor: '#6200ee',
+                tabBarInactiveTintColor: 'gray',
+                headerShown: false,
+            })}
+        >
+            <Tab.Screen
+                name="WorkoutLogs"
+                component={withTrainee(WorkoutLogListScreen, trainee)} // Wrap ProgressScreen
+            />
+            <Tab.Screen
+                name="AboutTrainee"
+                component={withTrainee(AboutTraineeScreen, trainee)} // Wrap AboutTraineeScreen
+            />
+            <Tab.Screen
+                name="DietEntry"
+                component={withTrainee(DietEntryScreen, trainee)} // Wrap DietEntryScreen
+            />
+            <Tab.Screen
+                name="Progress"
+                component={withTrainee(ProgressScreen, trainee)} // Wrap ProgressScreen
+            />
+        </Tab.Navigator>
     );
 }
-
-const styles = StyleSheet.create({
-    tabView: { flex: 1 },
-    tabContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    text: { fontSize: 18 },
-});

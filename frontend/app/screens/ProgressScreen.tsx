@@ -1,41 +1,78 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
-import { Colors, Spacing } from '../../constants/theme';
 
 export default function ProgressScreen() {
-    const data = {
-        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-        datasets: [
-            {
-                data: [50, 60, 70, 80],
-                strokeWidth: 2,
-            },
-        ],
+    const [weight, setWeight] = useState('');
+    const [weights, setWeights] = useState<number[]>([]);
+    const [dates, setDates] = useState<string[]>([]);
+
+    const handleAddWeight = () => {
+        if (weight.trim() === '') return;
+        const today = new Date();
+        const date = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+        setWeights((prev) => [...prev, parseFloat(weight)]);
+        setDates((prev) => [...prev, date]);
+        setWeight('');
     };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Progress Over Time</Text>
-            <LineChart
-                data={data}
-                width={Dimensions.get('window').width - 32} // Full width minus padding
-                height={220}
-                chartConfig={{
-                    backgroundColor: Colors.background,
-                    backgroundGradientFrom: Colors.primary,
-                    backgroundGradientTo: Colors.secondary,
-                    color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                }}
-                style={styles.chart}
+            <Text style={styles.title}>Weight Progress</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="Enter Weight (kg)"
+                value={weight}
+                onChangeText={setWeight}
+                keyboardType="numeric"
             />
+            <TouchableOpacity style={styles.addButton} onPress={handleAddWeight}>
+                <Text style={styles.addButtonText}>Add Weight</Text>
+            </TouchableOpacity>
+            {weights.length > 0 && (
+                <LineChart
+                    data={{
+                        labels: dates,
+                        datasets: [{ data: weights }],
+                    }}
+                    width={Dimensions.get('window').width - 40}
+                    height={220}
+                    yAxisSuffix="kg"
+                    chartConfig={{
+                        backgroundColor: '#6200ee',
+                        backgroundGradientFrom: '#6200ee',
+                        backgroundGradientTo: '#8e44ad',
+                        decimalPlaces: 2,
+                        color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                        labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                        style: { borderRadius: 16 },
+                        propsForDots: { r: '6', strokeWidth: '2', stroke: '#ffa726' },
+                    }}
+                    style={styles.chart}
+                />
+            )}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: Spacing.medium, backgroundColor: Colors.background },
-    title: { fontSize: 24, color: Colors.textPrimary, marginBottom: Spacing.medium },
-    chart: { borderRadius: Spacing.small },
+    container: { flex: 1, padding: 16, alignItems: 'center' },
+    title: { fontSize: 20, fontWeight: 'bold', marginBottom: 16 },
+    input: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 8,
+        padding: 8,
+        width: '80%',
+        marginBottom: 16,
+    },
+    addButton: {
+        backgroundColor: '#6200ee',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 16,
+    },
+    addButtonText: { color: 'white', fontWeight: 'bold' },
+    chart: { marginVertical: 16, borderRadius: 16 },
 });

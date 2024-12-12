@@ -16,7 +16,8 @@ import WorkoutExercisesScreen from './screens/WorkoutExercisesScreen';
 import AddCustomExerciseScreen from './screens/AddCustomExerciseScreen';
 import TraineeDetailScreen from './screens/TraineeDetailScreen';
 import TrainerProfileScreen from './screens/TrainerProfileScreen';
-
+import AboutTraineeScreen from './screens/AboutTraineeScreen';
+import ProgressScreen from './screens/ProgressScreen';
 
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -33,7 +34,7 @@ export default function AppNavigation() {
                 <Stack.Screen name="Dashboard" component={DashboardScreen} />
                 <Stack.Screen name="Trainees" component={TraineeListScreen} />
                 <Stack.Screen name="TraineeForm" component={TraineeFormScreen} />
-                <Stack.Screen name="WorkoutLogs" component={WorkoutLogListScreen} />
+                {/* <Stack.Screen name="WorkoutLogs" component={WorkoutLogListScreen} /> */}
                 <Stack.Screen name="WorkoutLogForm" component={WorkoutLogFormScreen} />
                 <Stack.Screen name="WorkoutCategories" component={WorkoutCategoriesScreen} />
                 <Stack.Screen name="AddCustomCategory" component={AddCustomCategoryScreen} />
@@ -42,6 +43,10 @@ export default function AppNavigation() {
                 <Stack.Screen name="AddExerciseForm" component={AddExerciseFormScreen} />
                 <Stack.Screen name="TraineeDetail" component={TraineeDetailScreen} />
                 <Stack.Screen name="TrainerProfile" component={TrainerProfileScreen} />
+                {/* <Stack.Screen name="AboutTrainee" component={AboutTraineeScreen} /> */}
+                <Stack.Screen name="Progress" component={ProgressScreen} />
+
+
             </Stack.Navigator>
           </AuthProvider>
       </ThemeProvider>

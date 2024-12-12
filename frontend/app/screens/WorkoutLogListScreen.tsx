@@ -7,19 +7,17 @@ import {
     TouchableOpacity,
     TextInput,
     Alert,
-    Platform,
     ScrollView,
     KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { RootStackParamList } from '../types/navigation';
 import { ActivityIndicator, Switch } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext'; // Import ThemeContext
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-
+import { useTheme } from '../contexts/ThemeContext';
+import { Trainee } from '../types/trainee';
+import DateTimePicker from '@react-native-community/datetimepicker';
 type WorkoutLog = {
     id: string;
     date: string;
@@ -27,10 +25,14 @@ type WorkoutLog = {
     notes?: string;
 };
 
-type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutLogs'>;
+type Props = {
+    route: { params: { trainee: any } };
+    navigation: any;
+    trainee: Trainee;
+};
 
-export default function WorkoutLogListScreen({ route, navigation }: Props) {
-    const { trainee } = route.params;
+export default function WorkoutLogListScreen({ route, navigation,trainee }: Props) {
+    // const { trainee } = route.params;
     const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
