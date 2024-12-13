@@ -22,4 +22,6 @@ type Trainee struct {
 	ProgressMetrics  map[string]float64 `json:"progress_metrics,omitempty" bson:"progress_metrics,omitempty"` // Metrics like body fat %, lift weights
 	CreatedAt        string             `json:"created_at" bson:"created_at"`                                 // Creation timestamp
 	UpdatedAt        string             `json:"updated_at" bson:"updated_at"`                                 // Update timestamp
+    ImageURL         string             `json:"image_url,omitempty" bson:"image_url,omitempty"` // Add image URL field
+	
 }
