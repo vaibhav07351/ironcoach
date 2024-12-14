@@ -22,7 +22,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const checkToken = async () => {
         const token = await AsyncStorage.getItem('token');
-        console.log('Check token:', token); // Debug token presence
+        // console.log('Check token:', token); // Debug token presence
         setIsAuthenticated(!!token);
     };
 
@@ -31,9 +31,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, []);
 
     const login = async (token: string) => {
-        console.log("here token is: ",token)
+        // console.log("here token is: ",token)
         await AsyncStorage.setItem('token', token);
-        console.log("here token2 is: ",token)
+        // console.log("here token2 is: ",token)
         await checkToken(); // Revalidate authentication state
     };
 

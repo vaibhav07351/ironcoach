@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Linking, Image } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { AuthContext } from '../contexts/AuthContext';
@@ -12,10 +12,11 @@ type TrainerDetails = {
     name: string;
     email: string;
     specialization?: string;
+    image_url?: string;
 };
 
 export default function DashboardScreen({ navigation }: Props) {
-    const { isAuthenticated, logout } = useContext(AuthContext); // Assuming trainerId is in AuthContext
+    const { isAuthenticated, logout } = useContext(AuthContext);
     const [trainerDetails, setTrainerDetails] = useState<TrainerDetails | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -63,41 +64,55 @@ export default function DashboardScreen({ navigation }: Props) {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.greeting}>
-                Welcome, {trainerDetails?.name || 'Trainer'}!
-            </Text>
-
             <TouchableOpacity
-                style={styles.profileButton}
+                style={styles.profileCard}
                 onPress={() => {
                     if (trainerDetails?.email) {
                         navigation.navigate('TrainerProfile', { trainerId: trainerDetails.email });
                     } else {
                         Alert.alert('Error', 'Trainer ID is not available.');
                     }
-                }}>
-                <Text style={styles.profileButtonText}>My Profile</Text>
+                }}
+            >
+                <Image
+                    source={{
+                        uri: trainerDetails?.image_url || 'https://pixabay.com/get/ga888f12adb8d8613af71848c7fc56a61b5a358fced614a0309cf598e86b735a5cda4c3d25ea5f5a2c1f4645388bcef2d_1280.png',
+                    }}
+                    style={styles.profileImage}
+                />
+                <View style={styles.profileInfo}>
+                    <Text style={styles.trainerName}>{trainerDetails?.name || 'Trainer Name'}</Text>
+                    <Text style={styles.trainerEmail}>{trainerDetails?.email}</Text>
+                    <Text style={styles.trainerSpecialization}>
+                        {trainerDetails?.specialization || 'Specialization not available'}
+                    </Text>
+                </View>
             </TouchableOpacity>
 
-            <TouchableOpacity
-                style={styles.card}
-                onPress={() => navigation.navigate('Trainees', { status: true })}>
-                <Text style={styles.cardText}>Active Trainees</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={styles.card}
-                onPress={() => navigation.navigate('Trainees', { status: false })}>
-                <Text style={styles.cardText}>Inactive Trainees</Text>
-            </TouchableOpacity>
+            {/* Navigation Buttons */}
+            <View style={styles.buttonsContainer}>
+                <TouchableOpacity
+                    style={[styles.card, styles.activeCard]}
+                    onPress={() => navigation.navigate('Trainees', { status: true })}
+                >
+                    <Text style={styles.cardText}>Active Trainees</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.card, styles.inactiveCard]}
+                    onPress={() => navigation.navigate('Trainees', { status: false })}
+                >
+                    <Text style={styles.cardText}>Inactive Trainees</Text>
+                </TouchableOpacity>
+            </View>
 
-
+            {/* Logout Button */}
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                 <Text style={styles.logoutButtonText}>Logout</Text>
             </TouchableOpacity>
+
             {/* Footer */}
             <View style={styles.footer}>
                 <Text style={styles.footerText}>Developed by Vaibhav Bhardwaj</Text>
-                <Text style={styles.footerText}>For inquiries, feel free to reach out at:</Text>
                 <TouchableOpacity onPress={() => Linking.openURL('mailto:vaibhav07351@gmail.com')}>
                     <Text style={[styles.footerText, styles.footerLink]}>
                         vaibhav07351@gmail.com
@@ -112,76 +127,101 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: Spacing.medium,
-        backgroundColor: '#f0f4f8', // Soft background color
+        backgroundColor: '#f0f4f8',
         justifyContent: 'space-between',
     },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        color: '#6200ee', // Vibrant color for the title
-    },
-    greeting: {
-        fontSize: 18,
-        color: '#4caf50', // Friendly green color for the greeting
+    profileCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
         marginBottom: 20,
+    },
+    profileImage: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        marginRight: 16,
+    },
+    profileInfo: {
+        flex: 1,
+    },
+    trainerName: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    trainerEmail: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 4,
+    },
+    trainerSpecialization: {
+        fontSize: 14,
+        color: '#4caf50',
         fontStyle: 'italic',
     },
+    buttonsContainer: {
+        flex: 1,
+        justifyContent: 'center',
+    },
     card: {
-        padding: 18,
-        backgroundColor: '#fff',
-        borderRadius: 10,
+        padding: 10,
+        borderRadius: 12,
         marginBottom: 15,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 5, // Shadow for Android
+        elevation: 5,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 55,
+    },
+    activeCard: {
+        backgroundColor: '#59a9ff', // Green color for active trainees
+    },
+    inactiveCard: {
+        backgroundColor: '#9fa5aa', // Yellow color for inactive trainees
     },
     cardText: {
         fontSize: 18,
-        color: '#6200ee',
+        color: '#fff',
         fontWeight: '600',
+        textAlign: 'center',
     },
     logoutButton: {
-        marginTop: 30,
         padding: 14,
-        backgroundColor: '#d9534f', // Red color for logout
+        backgroundColor: '#d9534f',
         borderRadius: 10,
         alignItems: 'center',
+        marginBottom: 20,
     },
     logoutButtonText: {
         color: '#fff',
-        textAlign: 'center',
         fontSize: 16,
         fontWeight: 'bold',
     },
     footer: {
         alignItems: 'center',
-        marginTop: 20, // Add some space between the form and the footer
         paddingVertical: 8,
         borderTopWidth: 1,
-        borderTopColor: '#ddd', // Subtle border at the top
-        width: '100%', // Ensure footer spans the full width
+        borderTopColor: '#ddd',
+        width: '100%',
     },
     footerText: {
         fontSize: 14,
-        color: '#555', // A softer gray for the text
-        fontWeight: '500', // Slightly lighter font weight for a modern feel
-        textAlign: 'center',
-        marginBottom: 1, // Adds spacing between footer lines
+        color: '#555',
     },
     footerLink: {
-        color: '#6200ee', // Keep the link color consistent with buttons
+        color: '#6200ee',
         fontWeight: '600',
-        textDecorationLine: 'underline', // Adds underline for links
+        textDecorationLine: 'underline',
     },
-    profileButton: {
-        marginTop: 20,
-        backgroundColor: '#007bff',
-        padding: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    profileButtonText: { color: '#fff', fontSize: 16 },
 });

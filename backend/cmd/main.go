@@ -18,7 +18,8 @@ func main(){
 	 routes.RegisterWorkoutLogRoutes(router)
 	 routes.RegisterCategoryRoutes(router)
 	 routes.RegisterExerciseRoutes(router)
-	
+	 routes.RegisterImageRoutes(router)
+
 	router.GET("/",func(c *gin.Context){
 		c.JSON(200, gin.H{
 			"message":"Hello, Gym trainer App!",

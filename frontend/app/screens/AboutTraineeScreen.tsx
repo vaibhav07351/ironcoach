@@ -28,17 +28,22 @@ export default function AboutTraineeScreen({ trainee }: Props) {
             
             <View style={styles.section}>
                 <Text style={styles.label}>Goals:</Text>
-                <Text style={styles.value}>{trainee.goals || 'No specific goals provided'}</Text>
+                <Text style={styles.value}>{trainee.goals || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Notes:</Text>
-                <Text style={styles.value}>{trainee.notes || 'No additional notes'}</Text>
+                <Text style={styles.value}>{trainee.notes || 'NA'}</Text>
+            </View>
+            
+            <View style={styles.section}>
+                <Text style={styles.label}>Active Supplements:</Text>
+                <Text style={styles.value}>{trainee.active_supplements || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Medical History:</Text>
-                <Text style={styles.value}>{trainee.medical_history || 'None'}</Text>
+                <Text style={styles.value}>{trainee.medical_history || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
@@ -68,27 +73,27 @@ export default function AboutTraineeScreen({ trainee }: Props) {
 
             <View style={styles.section}>
                 <Text style={styles.label}>Profession:</Text>
-                <Text style={styles.value}>{trainee.profession || 'Not specified'}</Text>
+                <Text style={styles.value}>{trainee.profession || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Start Date:</Text>
-                <Text style={styles.value}>{trainee.start_date || 'Not provided'}</Text>
+                <Text style={styles.value}>{trainee.start_date || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Membership Type:</Text>
-                <Text style={styles.value}>{trainee.membership_type || 'Not specified'}</Text>
+                <Text style={styles.value}>{trainee.membership_type || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Emergency Contact:</Text>
-                <Text style={styles.value}>{trainee.emergency_contact || 'Not provided'}</Text>
+                <Text style={styles.value}>{trainee.emergency_contact || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Social Handles:</Text>
-                <Text style={styles.value}>{trainee.social_handle || 'Not provided'}</Text>
+                <Text style={styles.value}>{trainee.social_handle || 'NA'}</Text>
             </View>
         </ScrollView>
     );

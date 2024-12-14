@@ -16,4 +16,6 @@ export type Trainee = {
     notes?: string;
     active_status: boolean;
     social_handle?: string;
+    image_url?: string;
+    active_supplements?: string;
 };
