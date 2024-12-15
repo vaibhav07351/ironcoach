@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Linking } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Linking, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -10,11 +10,13 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false); // State for loading
     const navigation = useNavigation<NavigationProp>();
 
     const { login } = useContext(AuthContext); // Use login function from AuthContext
 
     const handleLogin = async () => {
+        setIsLoading(true); // Start loading
         try {
             const response = await fetch('http://192.168.1.10:8080/login', {
                 method: 'POST',
@@ -34,7 +36,7 @@ export default function LoginScreen() {
             // Call login function from AuthContext
             await login(token);
 
-            Alert.alert('Login Successful', 'Welcome back!');
+            // Alert.alert('Login Successful', 'Welcome back!');
             navigation.navigate('Dashboard'); // Navigate after successful login
         } catch (error: unknown) {
             if (error instanceof Error) {
@@ -42,8 +44,14 @@ export default function LoginScreen() {
             } else {
                 Alert.alert('Login Failed', 'An unknown error occurred.');
             }
+        } finally {
+            setIsLoading(false); // Stop loading
         }
     };
+
+    // if (isLoading) {
+    //     return <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />;
+    // }
 
     return (
         <View style={styles.container}>
@@ -63,9 +71,17 @@ export default function LoginScreen() {
                     onChangeText={setPassword}
                     secureTextEntry
                 />
-                <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                    <Text style={styles.buttonText}>Login</Text>
-                </TouchableOpacity>
+                
+                {/* Show loading spinner when isLoading is true */}
+                {isLoading ? (
+                    <ActivityIndicator size="large" color="#6200ee" />
+                ) : (
+                    <TouchableOpacity style={styles.button} onPress={handleLogin}>
+                        <Text style={styles.buttonText}>Login</Text>
+                    </TouchableOpacity>
+                )}
+                
+
                 <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
                     <Text style={styles.linkText}>Don't have an account? Sign up</Text>
                 </TouchableOpacity>
@@ -113,7 +129,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 20, // Add some space between the form and the footer
         paddingVertical: 8,
-        // backgroundColor: '#f9f9f9', // Light background color for footer
         borderTopWidth: 1,
         borderTopColor: '#ddd', // Subtle border at the top
         width: '100%', // Ensure footer spans the full width
