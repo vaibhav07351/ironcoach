@@ -34,23 +34,32 @@ func (r *DietEntryRepository) CreateDietEntry(entry models.DietEntry) error {
 }
 
 // Get all diet entries for a trainee
-func (r *DietEntryRepository) GetDietEntriesByTrainee(traineeID string) ([]models.DietEntry, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *DietEntryRepository) GetDietEntriesByTrainee(traineeID string, date string) ([]models.DietEntry, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	filter := bson.M{"trainee_id": traineeID}
-	cursor, err := r.collection.Find(ctx, filter)
+	query := bson.M{"trainee_id": traineeID}
+	if date != "" {
+		query["date"] = date // Filter by date if provided
+	}
+
+	cursor, err := r.collection.Find(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	var entries []models.DietEntry
-	if err = cursor.All(ctx, &entries); err != nil {
-		return nil, err
+	// Decode the results
+	var dietEntries []models.DietEntry
+	for cursor.Next(ctx) {
+		var entry models.DietEntry
+		if err := cursor.Decode(&entry); err != nil {
+			return nil, err
+		}
+		dietEntries = append(dietEntries, entry)
 	}
 
-	return entries, nil
+	return dietEntries, nil
 }
 
 // Update a diet entry

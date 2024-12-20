@@ -18,9 +18,11 @@ import TraineeDetailScreen from './screens/TraineeDetailScreen';
 import TrainerProfileScreen from './screens/TrainerProfileScreen';
 import AboutTraineeScreen from './screens/AboutTraineeScreen';
 import ProgressScreen from './screens/ProgressScreen';
+import LogDiet from './screens/LogDietScreen';
 
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import LogDietScreen from './screens/LogDietScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -44,6 +46,7 @@ export default function AppNavigation() {
                 <Stack.Screen name="TraineeDetail" component={TraineeDetailScreen} />
                 <Stack.Screen name="TrainerProfile" component={TrainerProfileScreen} />
                 {/* <Stack.Screen name="AboutTrainee" component={AboutTraineeScreen} /> */}
+                <Stack.Screen name="LogDiet" component={LogDietScreen} />
                 <Stack.Screen name="Progress" component={ProgressScreen} />
 
 

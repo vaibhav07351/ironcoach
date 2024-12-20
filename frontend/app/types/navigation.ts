@@ -21,4 +21,6 @@ export type RootStackParamList = {
 
     // Trainer Profile
     TrainerProfile: { trainerId: string }; // Trainer profile screen
+
+    LogDiet: { trainee: Trainee; date: string }; // Add this line
 };

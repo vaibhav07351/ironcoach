@@ -39,8 +39,14 @@ func (ctrl *DietEntryController) AddDietEntry(c *gin.Context) {
 // Get all diet entries for a trainee
 func (ctrl *DietEntryController) GetDietEntries(c *gin.Context) {
 	traineeID := c.Param("trainee_id")
+	date := c.Query("date")
 
-	entries, err := ctrl.service.GetDietEntriesByTrainee(traineeID)
+	if traineeID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "trainee_id is required"})
+		return
+	}
+
+	entries, err := ctrl.service.GetDietEntriesByTrainee(traineeID, date)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch diet entries"})
 		return
