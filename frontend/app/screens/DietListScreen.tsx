@@ -6,13 +6,11 @@ import {
     StyleSheet,
     TouchableOpacity,
     Alert,
-    ScrollView,
     KeyboardAvoidingView,
     Platform,
     ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Trainee } from '../types/trainee';
@@ -27,15 +25,13 @@ type Food = {
 
 type Meal = {
     name: string;
+    foods: Food[];
     calories: number;
     proteins: number;
-    foods: Food[];
 };
 
 type DietEntry = {
-    id?: string;
-    trainee_id: string;
-    date: string;
+    id: string;
     meals: Meal[];
     total_calories: number;
     total_proteins: number;
@@ -47,7 +43,8 @@ type Props = {
     trainee: Trainee;
 };
 
-export default function DietEntryScreen({ route, navigation, trainee }: Props) {
+export default function DietListScreen({ route, navigation, trainee }: Props) {
+
     const [dietEntry, setDietEntry] = useState<DietEntry | null>(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [isLoading, setIsLoading] = useState(false);
@@ -77,20 +74,20 @@ export default function DietEntryScreen({ route, navigation, trainee }: Props) {
 
             if (!response.ok) {
                 setDietEntry(null);
-                throw new Error('No diet entry found for this date.');
+                throw new Error('No diet entry found.');
             }
 
             const data: DietEntry = await response.json();
             setDietEntry(data);
         } catch (error) {
             console.error('Error fetching diet entry:', error);
-            Alert.alert('Error', 'Failed to fetch diet entry.');
+            Alert.alert('Error', 'Failed to load diet entry.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Handle date navigation (swipe left/right)
+    // Handle date navigation
     const navigateDate = (direction: 'previous' | 'next') => {
         const newDate = new Date(selectedDate);
         newDate.setDate(
@@ -106,36 +103,42 @@ export default function DietEntryScreen({ route, navigation, trainee }: Props) {
         }, [selectedDate])
     );
 
-    // Render individual meals
-    const renderMeal = ({ item }: { item: Meal }) => (
-        <View style={styles.mealCard}>
-            <Text style={styles.mealTitle}>{item.name}</Text>
-            <Text style={styles.mealStats}>
-                Calories: {item.calories} | Proteins: {item.proteins}
-            </Text>
-            <FlatList
-                data={item.foods}
-                keyExtractor={(food, index) => index.toString()}
-                renderItem={({ item: food }) => (
-                    <View style={styles.foodItem}>
-                        <Text style={styles.foodName}>{food.name}</Text>
-                        <Text style={styles.foodStats}>
-                            {food.quantity} {food.units} | {food.calories} cal | {food.proteins} g
-                            protein
-                        </Text>
-                    </View>
-                )}
-            />
-        </View>
-    );
-
-    // Navigate to log or update screen
-    const handleLogDiet = () => {
-        navigation.navigate('LogDiet', {
+    const navigateToAddFood = (mealName: string) => {
+        navigation.navigate('AddFood', {
             trainee,
+            mealName,
             date: formatDate(selectedDate),
+            existingFoods: dietEntry?.meals.find((meal) => meal.name === mealName)?.foods || [],
+            dietEntryId: dietEntry?.id,
         });
     };
+
+    const renderMeal = ({ item }: { item: Meal }) => (
+        <View style={styles.mealCard}>
+            <View style={styles.mealHeader}>
+                <Text style={styles.mealTitle}>{item.name}</Text>
+                <TouchableOpacity onPress={() => navigateToAddFood(item.name)}>
+                    <Icon name="plus" size={24} color="#6200ee" />
+                </TouchableOpacity>
+            </View>
+            {item.foods.length > 0 ? (
+                <FlatList
+                    data={item.foods}
+                    keyExtractor={(food, index) => index.toString()}
+                    renderItem={({ item: food }) => (
+                        <View style={styles.foodItem}>
+                            <Text style={styles.foodName}>{food.name}</Text>
+                            <Text style={styles.foodStats}>
+                                {food.calories} cal | {food.proteins} g
+                            </Text>
+                        </View>
+                    )}
+                />
+            ) : (
+                <Text style={styles.emptyText}>No food logged yet.</Text>
+            )}
+        </View>
+    );
 
     if (isLoading) {
         return <ActivityIndicator size="large" color="#6200ee" style={styles.loader} />;
@@ -146,6 +149,7 @@ export default function DietEntryScreen({ route, navigation, trainee }: Props) {
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
+            {/* Header for navigation between dates */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigateDate('previous')}>
                     <Icon name="chevron-left" size={30} color="#6200ee" />
@@ -156,29 +160,29 @@ export default function DietEntryScreen({ route, navigation, trainee }: Props) {
                 </TouchableOpacity>
             </View>
 
-            {dietEntry ? (
-                <FlatList
-                    data={dietEntry.meals}
-                    keyExtractor={(meal, index) => index.toString()}
-                    renderItem={renderMeal}
-                    ListHeaderComponent={() => (
-                        <View style={styles.summary}>
-                            <Text style={styles.summaryText}>
-                                Total Calories: {dietEntry.total_calories}
-                            </Text>
-                            <Text style={styles.summaryText}>
-                                Total Proteins: {dietEntry.total_proteins} g
-                            </Text>
-                        </View>
-                    )}
-                />
-            ) : (
-                <Text style={styles.emptyMessage}>No diet entry for this date.</Text>
-            )}
+            {/* Summary Section */}
+            <View style={styles.summary}>
+                <Text style={styles.summaryText}>
+                    Total Calories: {dietEntry?.total_calories || 0}
+                </Text>
+                <Text style={styles.summaryText}>
+                    Total Proteins: {dietEntry?.total_proteins || 0} g
+                </Text>
+            </View>
 
-            <TouchableOpacity style={styles.logButton} onPress={handleLogDiet}>
-                <Text style={styles.logButtonText}>Log Today's Diet</Text>
-            </TouchableOpacity>
+            {/* Meal List */}
+            <FlatList
+                data={dietEntry?.meals || [
+                    { name: 'Breakfast', foods: [], calories: 0, proteins: 0 },
+                    { name: 'Morning Snack', foods: [], calories: 0, proteins: 0 },
+                    { name: 'Lunch', foods: [], calories: 0, proteins: 0 },
+                    { name: 'Evening Snack', foods: [], calories: 0, proteins: 0 },
+                    { name: 'Dinner', foods: [], calories: 0, proteins: 0 },
+                ]}
+                keyExtractor={(meal) => meal.name}
+                renderItem={renderMeal}
+                contentContainerStyle={styles.listContent}
+            />
         </KeyboardAvoidingView>
     );
 }
@@ -192,22 +196,24 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     headerDate: { fontSize: 20, fontWeight: 'bold', color: '#6200ee' },
-    summary: { marginBottom: 16, padding: 10, backgroundColor: '#e1f5fe', borderRadius: 8 },
-    summaryText: { fontSize: 16, color: '#333' },
-    mealCard: { marginBottom: 16, padding: 12, backgroundColor: '#fff', borderRadius: 8 },
-    mealTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
-    mealStats: { fontSize: 14, color: '#555', marginBottom: 8 },
-    foodItem: { marginBottom: 4 },
-    foodName: { fontSize: 16, fontWeight: '500' },
-    foodStats: { fontSize: 14, color: '#555' },
-    logButton: {
-        backgroundColor: '#6200ee',
-        paddingVertical: 12,
-        borderRadius: 8,
+    summary: { marginBottom: 16, backgroundColor: '#e3f2fd', padding: 10, borderRadius: 8 },
+    summaryText: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+    mealCard: { marginBottom: 16, backgroundColor: '#fff', padding: 12, borderRadius: 8 },
+    mealHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 16,
+        marginBottom: 8,
     },
-    logButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-    emptyMessage: { fontSize: 16, textAlign: 'center', color: '#999', marginTop: 20 },
+    mealTitle: { fontSize: 18, fontWeight: 'bold', color: '#6200ee' },
+    foodItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+    },
+    foodName: { fontSize: 16 },
+    foodStats: { fontSize: 14, color: '#555' },
+    emptyText: { fontSize: 14, color: '#999' },
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    listContent: { paddingBottom: 16 },
 });

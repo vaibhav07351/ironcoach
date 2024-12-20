@@ -62,9 +62,9 @@ func (r *DietEntryRepository) GetDietEntriesByTrainee(traineeID string, date str
 	return dietEntries, nil
 }
 
-// Update a diet entry
-func (r *DietEntryRepository) UpdateDietEntry(entryID string, updateData models.DietEntry) error {
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+// Update a diet entry with date filter
+func (r *DietEntryRepository) UpdateDietEntry(entryID string, updateData models.DietEntry, date string) error {
+    ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
     defer cancel()
 
     objectID, err := primitive.ObjectIDFromHex(entryID)
@@ -72,7 +72,12 @@ func (r *DietEntryRepository) UpdateDietEntry(entryID string, updateData models.
         return errors.New("invalid ID format")
     }
 
-    filter := bson.M{"_id": objectID}
+    // Add date filter to the query
+    filter := bson.M{
+        "_id":  objectID,
+        "date": date, // Ensure the date matches
+    }
+
     update := bson.M{"$set": updateData}
 
     result, err := r.collection.UpdateOne(ctx, filter, update)
@@ -81,7 +86,7 @@ func (r *DietEntryRepository) UpdateDietEntry(entryID string, updateData models.
     }
 
     if result.MatchedCount == 0 {
-        return errors.New("not found")
+        return errors.New("not found or date mismatch")
     }
 
     return nil

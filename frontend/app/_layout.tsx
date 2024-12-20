@@ -1,5 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
@@ -18,11 +20,9 @@ import TraineeDetailScreen from './screens/TraineeDetailScreen';
 import TrainerProfileScreen from './screens/TrainerProfileScreen';
 import AboutTraineeScreen from './screens/AboutTraineeScreen';
 import ProgressScreen from './screens/ProgressScreen';
-import LogDiet from './screens/LogDietScreen';
+import AddFoodScreen from './screens/AddFoodScreen';
 
-import { AuthProvider } from './contexts/AuthContext';
-import { ThemeProvider } from './contexts/ThemeContext';
-import LogDietScreen from './screens/LogDietScreen';
+
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -46,7 +46,7 @@ export default function AppNavigation() {
                 <Stack.Screen name="TraineeDetail" component={TraineeDetailScreen} />
                 <Stack.Screen name="TrainerProfile" component={TrainerProfileScreen} />
                 {/* <Stack.Screen name="AboutTrainee" component={AboutTraineeScreen} /> */}
-                <Stack.Screen name="LogDiet" component={LogDietScreen} />
+                <Stack.Screen name="AddFood" component={AddFoodScreen} />
                 <Stack.Screen name="Progress" component={ProgressScreen} />
 
 

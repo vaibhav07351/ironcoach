@@ -1,4 +1,5 @@
 import { Trainee } from './trainee';
+import { Food } from './food';
 
 export type RootStackParamList = {
     Dashboard: undefined; // Dashboard screen
@@ -22,5 +23,16 @@ export type RootStackParamList = {
     // Trainer Profile
     TrainerProfile: { trainerId: string }; // Trainer profile screen
 
-    LogDiet: { trainee: Trainee; date: string }; // Add this line
+    // LogDiet: { trainee: Trainee; date: string }; // Add this line
+    AddFood: {
+        dietEntryId?: string; // Optional ID of the existing diet entry
+        trainee: any;
+        date: string;
+        mealName: string;
+        existingFoods: Food[];
+    };
+
+
+
+
 };

@@ -34,7 +34,7 @@ func (s *DietEntryService) GetDietEntriesByTrainee(traineeID string, date string
 }
 
 // Update a diet entry
-func (s *DietEntryService) UpdateDietEntry(entryID string, updateData models.DietEntry) error {
+func (s *DietEntryService) UpdateDietEntry(entryID string, updateData models.DietEntry, date string) error {
 
 	// Calculate calories and proteins for each meal
     calculateMealStats(&updateData)
@@ -42,7 +42,7 @@ func (s *DietEntryService) UpdateDietEntry(entryID string, updateData models.Die
 	updateData.UpdatedAt = time.Now()
 
     // Call the repository to update the entry
-    return s.repository.UpdateDietEntry(entryID, updateData)
+    return s.repository.UpdateDietEntry(entryID, updateData, date)
 }
 
 // Delete a diet entry

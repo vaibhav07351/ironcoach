@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import AboutTraineeScreen from '../screens/AboutTraineeScreen';
-import DietEntryScreen from '../screens/DietEntryScreen';
+import DietEntryScreen from './DietListScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';

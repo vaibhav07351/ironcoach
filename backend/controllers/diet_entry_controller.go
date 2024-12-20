@@ -58,6 +58,7 @@ func (ctrl *DietEntryController) GetDietEntries(c *gin.Context) {
 // Update a diet entry
 func (ctrl *DietEntryController) UpdateDietEntry(c *gin.Context) {
 	entryID := c.Param("entry_id")
+	date := c.Query("date")
 	var updateData models.DietEntry
 
     // Bind the incoming JSON to the DietEntry struct
@@ -66,11 +67,8 @@ func (ctrl *DietEntryController) UpdateDietEntry(c *gin.Context) {
         return
     }
 
-    // Set updated timestamp
-    // updateData.UpdatedAt = time.Now()
-
     // Call the service to update the diet entry
-    if err := ctrl.service.UpdateDietEntry(entryID, updateData); err != nil {
+    if err := ctrl.service.UpdateDietEntry(entryID, updateData, date); err != nil {
         if err.Error() == "not found" {
             c.JSON(http.StatusNotFound, gin.H{"error": "Diet entry not found"})
         } else {
