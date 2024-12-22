@@ -76,8 +76,10 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
                 setDietEntry(null);
                 throw new Error('No diet entry found.');
             }
-
+            
+           
             const data: DietEntry = await response.json();
+            console.log("diet list screen data rec is: ", data)
             setDietEntry(data);
         } catch (error) {
             console.error('Error fetching diet entry:', error);
@@ -104,13 +106,28 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
     );
 
     const navigateToAddFood = (mealName: string) => {
-        navigation.navigate('AddFood', {
-            trainee,
-            mealName,
-            date: formatDate(selectedDate),
-            existingFoods: dietEntry?.meals.find((meal) => meal.name === mealName)?.foods || [],
-            dietEntryId: dietEntry?.id,
-        });
+        console.log("diet list screen diet entry is : ", dietEntry);
+    
+        if (Array.isArray(dietEntry) && dietEntry.length > 0) {
+            const currentDietEntry = dietEntry[0];  // Access first item if it's an array
+            console.log("diet entry id is : ", currentDietEntry?.id);
+    
+            navigation.navigate('AddFood', {
+                trainee,
+                mealName,
+                date: formatDate(selectedDate),
+                existingFoods: currentDietEntry?.meals.find((meal: Meal) => meal.name === mealName)?.foods || [],
+                dietEntryId: currentDietEntry?.id,
+            });
+        } else {
+            navigation.navigate('AddFood', {
+                trainee,
+                mealName,
+                date: formatDate(selectedDate),
+                existingFoods: [],
+                dietEntryId: null,
+            });
+        }
     };
 
     const renderMeal = ({ item }: { item: Meal }) => (

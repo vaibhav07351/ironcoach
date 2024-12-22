@@ -55,10 +55,27 @@ func (ctrl *DietEntryController) GetDietEntries(c *gin.Context) {
 	c.JSON(http.StatusOK, entries)
 }
 
+// Get all diet entry for a trainee by Id
+func (ctrl *DietEntryController) GetDietEntryByID(c *gin.Context) {
+	entryID := c.Param("entry_id")
+
+	if entryID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "entry_id is required"})
+		return
+	}
+
+	entry, err := ctrl.service.GetDietEntryByID(entryID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch diet entries"})
+		return
+	}
+
+	c.JSON(http.StatusOK, entry)
+}
+
 // Update a diet entry
 func (ctrl *DietEntryController) UpdateDietEntry(c *gin.Context) {
 	entryID := c.Param("entry_id")
-	date := c.Query("date")
 	var updateData models.DietEntry
 
     // Bind the incoming JSON to the DietEntry struct
@@ -68,7 +85,7 @@ func (ctrl *DietEntryController) UpdateDietEntry(c *gin.Context) {
     }
 
     // Call the service to update the diet entry
-    if err := ctrl.service.UpdateDietEntry(entryID, updateData, date); err != nil {
+    if err := ctrl.service.UpdateDietEntry(entryID, updateData); err != nil {
         if err.Error() == "not found" {
             c.JSON(http.StatusNotFound, gin.H{"error": "Diet entry not found"})
         } else {

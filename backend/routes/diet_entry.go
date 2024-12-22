@@ -13,6 +13,7 @@ func RegisterDietEntryRoutes(router *gin.Engine) {
 
     protected.POST("/", dietEntryController.AddDietEntry)
     protected.GET("/:trainee_id", dietEntryController.GetDietEntries)
+    protected.GET("/entry/:entry_id", dietEntryController.GetDietEntryByID)
     protected.PUT("/:entry_id", dietEntryController.UpdateDietEntry)
     protected.DELETE("/:entry_id", dietEntryController.DeleteDietEntry)
 }

@@ -62,8 +62,25 @@ func (r *DietEntryRepository) GetDietEntriesByTrainee(traineeID string, date str
 	return dietEntries, nil
 }
 
+
+// Get Diet Entry By ID
+func (r *DietEntryRepository) GetDietEntryByID(entryID string) (models.DietEntry,error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var entry models.DietEntry
+
+	objectId, err := primitive.ObjectIDFromHex(entryID)
+	if err != nil {
+		return entry,err
+	}
+	err = r.collection.FindOne(ctx, bson.M{"_id": objectId}).Decode(&entry)
+	return entry,err
+}
+
+
 // Update a diet entry with date filter
-func (r *DietEntryRepository) UpdateDietEntry(entryID string, updateData models.DietEntry, date string) error {
+func (r *DietEntryRepository) UpdateDietEntry(entryID string, updateData models.DietEntry) error {
     ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
     defer cancel()
 
@@ -75,7 +92,6 @@ func (r *DietEntryRepository) UpdateDietEntry(entryID string, updateData models.
     // Add date filter to the query
     filter := bson.M{
         "_id":  objectID,
-        "date": date, // Ensure the date matches
     }
 
     update := bson.M{"$set": updateData}
