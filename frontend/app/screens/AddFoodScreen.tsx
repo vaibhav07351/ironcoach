@@ -24,6 +24,11 @@ type Food = {
     proteins: number;
 };
 
+type Meal = {
+    name: string;
+    foods: Food[];
+};
+
 type Props = NativeStackScreenProps<RootStackParamList, 'AddFood'>;
 
 export default function AddFoodScreen({ route, navigation }: Props) {
@@ -35,7 +40,7 @@ export default function AddFoodScreen({ route, navigation }: Props) {
         calories: 0,
         proteins: 0,
     });
-    const [foods, setFoods] = useState<Food[]>(existingFoods || []);
+    const [meals, setMeals] = useState<Meal[]>([]);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
     useEffect(() => {
@@ -63,12 +68,8 @@ export default function AddFoodScreen({ route, navigation }: Props) {
             const data = await response.json();
             console.log('Fetched Existing Diet Entry:', data);
 
-            // Populate the food list with the existing foods
             if (data?.meals) {
-                const meal = data.meals.find((meal: any) => meal.name === mealName);
-                if (meal) {
-                    setFoods(meal.foods || []);
-                }
+                setMeals(data.meals);
             }
         } catch (error) {
             console.error('Error fetching existing diet entry:', error);
@@ -81,26 +82,44 @@ export default function AddFoodScreen({ route, navigation }: Props) {
             Alert.alert('Validation Error', 'Please fill all fields for the food item.');
             return;
         }
-
-        if (editingIndex !== null) {
-            const updatedFoods = [...foods];
-            updatedFoods[editingIndex] = currentFood;
-            setFoods(updatedFoods);
-            setEditingIndex(null);
-        } else {
-            setFoods((prevFoods) => [...prevFoods, currentFood]);
-        }
-
+    
+        const updatedFoods = editingIndex !== null
+            ? meals.find((meal) => meal.name === mealName)?.foods?.map((food, index) =>
+                  index === editingIndex ? currentFood : food
+              ) || [] // Ensure foods are always an array
+            : [...(meals.find((meal) => meal.name === mealName)?.foods || []), currentFood];
+    
+        // Update meals state to reflect changes
+        setMeals((prevMeals) => {
+            const otherMeals = prevMeals.filter((meal) => meal.name !== mealName);
+            return [...otherMeals, { name: mealName, foods: updatedFoods }];
+        });
+    
+        // Reset current food state
         setCurrentFood({ name: '', quantity: 0, units: '', calories: 0, proteins: 0 });
+        setEditingIndex(null);
     };
+    
+    
+    
 
     const handleEditFood = (index: number) => {
-        setCurrentFood(foods[index]);
-        setEditingIndex(index);
+        const meal = meals.find((meal) => meal.name === mealName);
+        if (meal) {
+            setCurrentFood(meal.foods[index]);
+            setEditingIndex(index);
+        }
     };
 
     const handleDeleteFood = (index: number) => {
-        setFoods((prevFoods) => prevFoods.filter((_, i) => i !== index));
+        setMeals((prevMeals) => {
+            const otherMeals = prevMeals.filter((meal) => meal.name !== mealName);
+            const updatedFoods = prevMeals
+                .find((meal) => meal.name === mealName)
+                ?.foods?.filter((_, i) => i !== index) || [];  // Ensure foods is never undefined
+    
+            return [...otherMeals, { name: mealName, foods: updatedFoods }];
+        });
     };
 
     const saveMeal = async () => {
@@ -115,16 +134,10 @@ export default function AddFoodScreen({ route, navigation }: Props) {
             const payload = {
                 trainee_id: trainee.id,
                 date,
-                meals: [
-                    {
-                        name: mealName,
-                        foods,
-                    },
-                ],
+                meals,
             };
 
             if (dietEntryId) {
-                // Update existing diet entry
                 const response = await fetch(`http://192.168.1.10:8080/diet_entries/${dietEntryId}`, {
                     method: 'PUT',
                     headers: {
@@ -133,17 +146,13 @@ export default function AddFoodScreen({ route, navigation }: Props) {
                     },
                     body: JSON.stringify(payload),
                 });
-                
-                console.log("update body is: ", JSON.stringify(payload))
 
                 if (!response.ok) {
                     throw new Error('Failed to update diet entry.');
                 }
 
-                console.log('Updated Diet Entry Payload:', JSON.stringify(payload));
                 Alert.alert('Success', 'Diet entry updated successfully!');
             } else {
-                // Create a new diet entry
                 const response = await fetch('http://192.168.1.10:8080/diet_entries', {
                     method: 'POST',
                     headers: {
@@ -157,7 +166,6 @@ export default function AddFoodScreen({ route, navigation }: Props) {
                     throw new Error('Failed to create new diet entry.');
                 }
 
-                console.log('Created New Diet Entry Payload:', JSON.stringify(payload));
                 Alert.alert('Success', 'New diet entry created successfully!');
             }
 
@@ -186,6 +194,8 @@ export default function AddFoodScreen({ route, navigation }: Props) {
             </View>
         </View>
     );
+
+    const currentMealFoods = meals.find((meal) => meal.name === mealName)?.foods || [];
 
     return (
         <KeyboardAvoidingView
@@ -243,7 +253,7 @@ export default function AddFoodScreen({ route, navigation }: Props) {
             </View>
 
             <FlatList
-                data={foods}
+                data={currentMealFoods}
                 keyExtractor={(_, index) => index.toString()}
                 renderItem={renderFoodItem}
                 ListEmptyComponent={<Text style={styles.emptyText}>No foods added yet.</Text>}
