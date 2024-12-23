@@ -57,6 +57,20 @@ func (ctrl *TraineeController) GetTrainees(c *gin.Context) {
     c.JSON(http.StatusOK, trainees)
 }
 
+// Get trainee of a trainer by ID
+func (ctrl *TraineeController) GetTraineeByID(c *gin.Context) {
+    traineeID := c.Param("trainee_id") // Get query parameter
+   
+    trainee, err := ctrl.service.GetTraineeByID(traineeID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch trainees"})
+        return
+    }
+
+    c.JSON(http.StatusOK, trainee)
+}
+
+
 // Update a trainee
 func (ctrl *TraineeController) UpdateTrainee(c *gin.Context) {
     id := c.Param("id")

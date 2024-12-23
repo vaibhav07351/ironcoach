@@ -72,6 +72,23 @@ func (r *TraineeRepository) GetTraineesByTrainer(trainerID string, status string
 }
 
 
+//Get trainee by ID
+func (r *TraineeRepository) GetTraineeByID(id string) (models.Trainee, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	var trainee models.Trainee
+	// Convert the id to MongoDB's ObjectID type
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return trainee,errors.New("invalid trainee ID format")
+	}
+	
+	err = r.collection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&trainee)
+	return trainee,err
+}
+
+
 
 // Update a trainee
 func (r *TraineeRepository) UpdateTrainee(id string, update map[string]interface{}) error {

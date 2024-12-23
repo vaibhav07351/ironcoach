@@ -12,6 +12,7 @@ func RegisterTraineeRoutes(router *gin.Engine) {
 
     protected.POST("/", traineeController.AddTrainee)
     protected.GET("/", traineeController.GetTrainees)
+    protected.GET("/:trainee_id", traineeController.GetTraineeByID)
     protected.PUT("/:id", traineeController.UpdateTrainee)
     protected.DELETE("/:id", traineeController.DeleteTrainee)
 }

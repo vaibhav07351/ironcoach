@@ -1,6 +1,31 @@
 import { Trainee } from './trainee';
 import { Food } from './food';
 
+export type WeightBMIProgress = {
+    date: string;
+    weight: number;
+    bmi: number;
+    bodyFat?: number;
+};
+
+export type ExerciseRecord = {
+    date: string;
+    weight: number;
+    reps: number;
+};
+
+export type ExerciseProgress = {
+    exercise: string;
+    maxWeight: number;
+    avgWeight: number;
+    records: ExerciseRecord[];
+};
+
+export type Progress = {
+    weightBmi: WeightBMIProgress[]; // Array of weight and BMI progress
+    exercises: ExerciseProgress[]; // Array of exercise progress
+};
+
 export type RootStackParamList = {
     Dashboard: undefined; // Dashboard screen
     Login: undefined; // Login screen

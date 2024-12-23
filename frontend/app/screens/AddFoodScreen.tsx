@@ -66,7 +66,7 @@ export default function AddFoodScreen({ route, navigation }: Props) {
                 throw new Error('Diet entry not found.');
             }
             const data = await response.json();
-            console.log('Fetched Existing Diet Entry:', data);
+            // console.log('Fetched Existing Diet Entry:', data);
 
             if (data?.meals) {
                 setMeals(data.meals);

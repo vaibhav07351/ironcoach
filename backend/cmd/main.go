@@ -19,6 +19,7 @@ func main(){
 	 routes.RegisterCategoryRoutes(router)
 	 routes.RegisterExerciseRoutes(router)
 	 routes.RegisterDietEntryRoutes(router)
+	 routes.RegisterProgressRoutes(router)
 
 	router.GET("/",func(c *gin.Context){
 		c.JSON(200, gin.H{

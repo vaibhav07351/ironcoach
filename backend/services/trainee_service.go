@@ -26,6 +26,12 @@ func (s *TraineeService) GetTraineesByTrainer(trainerID string, status string) (
     return s.repository.GetTraineesByTrainer(trainerID, status)
 }
 
+// Get trainee of a trainer by ID
+func (s *TraineeService) GetTraineeByID(traineeID string) (models.Trainee, error) {
+    return s.repository.GetTraineeByID(traineeID)
+}
+
+
 // Update a trainee
 func (s *TraineeService) UpdateTrainee(id string, update map[string]interface{}) error {
     return s.repository.UpdateTrainee(id, update)

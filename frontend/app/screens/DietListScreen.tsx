@@ -82,7 +82,7 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
            
             // const data: DietEntry = await response.json();
             const data = await response.json();
-            console.log("diet list screen data rec is: ", data);
+            // console.log("diet list screen data rec is: ", data);
             setDietEntry(Array.isArray(data) ? data[0] : data);
         } catch (error) {
             console.error('Error fetching diet entry:', error);
@@ -109,11 +109,11 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
     );
 
     const navigateToAddFood = (mealName: string) => {
-        console.log("diet list screen diet entry is : ", dietEntry);
+        // console.log("diet list screen diet entry is : ", dietEntry);
     
         if (dietEntry!=null) {
             const currentDietEntry = dietEntry;  // Access first item if it's an array
-            console.log("diet entry id is : ", currentDietEntry?.id);
+            // console.log("diet entry id is : ", currentDietEntry?.id);
     
             navigation.navigate('AddFood', {
                 trainee,

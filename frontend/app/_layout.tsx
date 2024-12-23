@@ -47,7 +47,7 @@ export default function AppNavigation() {
                 <Stack.Screen name="TrainerProfile" component={TrainerProfileScreen} />
                 {/* <Stack.Screen name="AboutTrainee" component={AboutTraineeScreen} /> */}
                 <Stack.Screen name="AddFood" component={AddFoodScreen} />
-                <Stack.Screen name="Progress" component={ProgressScreen} />
+                {/* <Stack.Screen name="Progress" component={ProgressScreen} /> */}
 
 
             </Stack.Navigator>
