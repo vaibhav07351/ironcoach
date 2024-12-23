@@ -32,6 +32,8 @@ type Meal = {
 
 type DietEntry = {
     id: string;
+    date: string,
+    trainee_id: string,
     meals: Meal[];
     total_calories: number;
     total_proteins: number;
@@ -78,9 +80,10 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
             }
             
            
-            const data: DietEntry = await response.json();
-            console.log("diet list screen data rec is: ", data)
-            setDietEntry(data);
+            // const data: DietEntry = await response.json();
+            const data = await response.json();
+            console.log("diet list screen data rec is: ", data);
+            setDietEntry(Array.isArray(data) ? data[0] : data);
         } catch (error) {
             console.error('Error fetching diet entry:', error);
             Alert.alert('Error', 'Failed to load diet entry.');
@@ -108,8 +111,8 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
     const navigateToAddFood = (mealName: string) => {
         console.log("diet list screen diet entry is : ", dietEntry);
     
-        if (Array.isArray(dietEntry) && dietEntry.length > 0) {
-            const currentDietEntry = dietEntry[0];  // Access first item if it's an array
+        if (dietEntry!=null) {
+            const currentDietEntry = dietEntry;  // Access first item if it's an array
             console.log("diet entry id is : ", currentDietEntry?.id);
     
             navigation.navigate('AddFood', {
@@ -157,6 +160,20 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
         </View>
     );
 
+    const defaultMeals: Meal[] = [
+        { name: 'Breakfast', foods: [], calories: 0, proteins: 0 },
+        { name: 'Morning Snack', foods: [], calories: 0, proteins: 0 },
+        { name: 'Lunch', foods: [], calories: 0, proteins: 0 },
+        { name: 'Evening Snack', foods: [], calories: 0, proteins: 0 },
+        { name: 'Dinner', foods: [], calories: 0, proteins: 0 },
+    ];
+    
+    const mergedMeals = defaultMeals.map((defaultMeal) => {
+        const existingMeal = dietEntry?.meals?.find((meal) => meal.name === defaultMeal.name);
+        return existingMeal || defaultMeal;
+    });
+    
+
     if (isLoading) {
         return <ActivityIndicator size="large" color="#6200ee" style={styles.loader} />;
     }
@@ -177,7 +194,7 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
                 </TouchableOpacity>
             </View>
 
-            {/* Summary Section */}
+            {/*Top Page Diet Summary Section */}
             <View style={styles.summary}>
                 <Text style={styles.summaryText}>
                     Total Calories: {dietEntry?.total_calories || 0}
@@ -189,13 +206,7 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
 
             {/* Meal List */}
             <FlatList
-                data={dietEntry?.meals || [
-                    { name: 'Breakfast', foods: [], calories: 0, proteins: 0 },
-                    { name: 'Morning Snack', foods: [], calories: 0, proteins: 0 },
-                    { name: 'Lunch', foods: [], calories: 0, proteins: 0 },
-                    { name: 'Evening Snack', foods: [], calories: 0, proteins: 0 },
-                    { name: 'Dinner', foods: [], calories: 0, proteins: 0 },
-                ]}
+                data={mergedMeals}
                 keyExtractor={(meal) => meal.name}
                 renderItem={renderMeal}
                 contentContainerStyle={styles.listContent}
