@@ -191,8 +191,6 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
         <TouchableOpacity onPress={() => navigateDate('next')}>
           <Icon name="chevron-right" size={30} color="#6200ee" />
         </TouchableOpacity>
-
-        
       </View>
 
       {/* Date Picker Modal */}
@@ -235,7 +233,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  headerDate: { fontSize: 20, fontWeight: 'bold', color: '#6200ee' },
+  headerDate: { fontSize: 20, fontWeight: 'bold', color: '#000' },
   summary: { marginBottom: 16, backgroundColor: '#e3f2fd', padding: 10, borderRadius: 8 },
   summaryText: { fontSize: 18, fontWeight: 'bold', color: '#333' },
   mealCard: { marginBottom: 16, backgroundColor: '#fff', padding: 12, borderRadius: 8 },

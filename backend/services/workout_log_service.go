@@ -27,8 +27,8 @@ func (s *WorkoutLogService) AddWorkoutLog(log models.WorkoutLog) error {
 }
 
 // Get all workout logs for a trainee
-func (s *WorkoutLogService) GetWorkoutLogsByTrainee(traineeID string) ([]models.WorkoutLog, error) {
-	return s.repository.GetWorkoutLogsByTrainee(traineeID)
+func (s *WorkoutLogService) GetWorkoutLogsByTrainee(traineeID string, date string) ([]models.WorkoutLog, error) {
+	return s.repository.GetWorkoutLogsByTrainee(traineeID, date)
 }
 
 // Update an existing workout log
@@ -51,7 +51,7 @@ func (s *WorkoutLogService) DeleteWorkoutLog(logID string) error {
 
 
 func (s *WorkoutLogService) GetTraineeProgress(traineeID string) (map[string]interface{}, error) {
-    logs, err := s.repository.GetWorkoutLogsByTrainee(traineeID)
+    logs, err := s.repository.GetWorkoutLogsByTrainee(traineeID,"")
     if err != nil {
         return nil, err
     }

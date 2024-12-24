@@ -41,8 +41,9 @@ func (ctrl *WorkoutLogController) AddWorkoutLog(c *gin.Context) {
 // Get all workout logs for a trainee
 func (ctrl *WorkoutLogController) GetWorkoutLogs(c *gin.Context) {
 	traineeID := c.Param("trainee_id")
+	date := c.Query("date")
 
-	logs, err := ctrl.service.GetWorkoutLogsByTrainee(traineeID)
+	logs, err := ctrl.service.GetWorkoutLogsByTrainee(traineeID,date)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch workout logs"})
 		return

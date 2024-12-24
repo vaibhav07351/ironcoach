@@ -22,7 +22,7 @@ func NewProgressService() *ProgressService {
 
 // GetProgress fetches the progress data for a trainee
 func (s *ProgressService) GetProgress(traineeID string) (*models.Progress, error) {
-	workoutLogs, err := s.workoutLogRepo.GetWorkoutLogsByTrainee(traineeID)
+	workoutLogs, err := s.workoutLogRepo.GetWorkoutLogsByTrainee(traineeID,"")
 	if err != nil {
 		return nil, err
 	}

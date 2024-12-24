@@ -45,14 +45,17 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
     const [showTodayOnly, setShowTodayOnly] = useState(false);
     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
     const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-
+    const dateInIST = new Date();
+    dateInIST.setMinutes(dateInIST.getMinutes() + 330);
+    const [selectedDate, setSelectedDate] = useState(dateInIST);
     // Sidebar state for animation
     const [sidebarVisible, setSidebarVisible] = useState(false);
     const slideAnim = useState(new Animated.Value(-300))[0]; // Start off-screen
+    const [showDatePicker, setShowDatePicker] = useState(false); // State to control DateTimePicker visibility
 
     const styles = createStyles(isDarkMode);
 
-    const fetchWorkoutLogs = async () => {
+    const fetchWorkoutLogs = async (date: string) => {
         setIsLoading(true);
         try {
             const token = await AsyncStorage.getItem('token');
@@ -62,7 +65,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
                 return;
             }
 
-            const response = await fetch(`http://192.168.1.10:8080/workout_logs/${trainee.id}`, {
+            const response = await fetch(`http://192.168.1.10:8080/workout_logs/${trainee.id}?date=${date}`, {
                 headers: {
                     Authorization: `${token}`,
                 },
@@ -84,12 +87,12 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
 
     useFocusEffect(
         useCallback(() => {
-            fetchWorkoutLogs();
-        }, [trainee])
+            fetchWorkoutLogs(formatPickDate(selectedDate));
+        }, [trainee,selectedDate])
     );
 
     // Today's logs
-    const dateInIST = new Date();
+    // const dateInIST = new Date();
     dateInIST.setMinutes(dateInIST.getMinutes() + 330); // Add 330 minutes (5 hours 30 minutes)
 
     const todayDate = dateInIST.toISOString().split('T')[0]; // Format: YYYY-MM-DD
@@ -222,6 +225,21 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
         );
     };
 
+      // Handle date navigation
+  const navigateDate = (direction: 'previous' | 'next') => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(
+      direction === 'previous' ? newDate.getDate() - 1 : newDate.getDate() + 1
+    );
+    setSelectedDate(newDate);
+  };
+
+    // Format date as YYYY-MM-DD
+    const formatPickDate = (date: Date) => {
+        return date.toISOString().split('T')[0];
+      };
+    
+
     if (isLoading) {
         return <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />;
     }
@@ -230,8 +248,40 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.container}>
                 <View style={styles.title}>
-                    <Text style={styles.titleText}>Workout Logs for {trainee.name}</Text>
+                    {/* <Text style={styles.titleText}>Workout Logs for {trainee.name}</Text> */}
                 </View>
+                {/* Header for navigation between dates */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigateDate('previous')}>
+                        <Icon name="chevron-left" size={30} color="#6200ee" />
+                    </TouchableOpacity>
+
+                    <Text style={styles.headerDate}>{formatPickDate(selectedDate)}</Text>
+
+                    {/* Show DateTimePicker when clicked */}
+                    <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+                        <Icon name="calendar" size={30} color="#6200ee" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => navigateDate('next')} style={styles.nextArrowButton}>
+                        <Icon name="chevron-right" size={30} color="#6200ee" />
+                    </TouchableOpacity>
+                </View>
+
+                    {/* Date Picker Modal */}
+                      {showDatePicker && (
+                            <DateTimePicker
+                            value={selectedDate}
+                            mode="date"
+                            display="default"
+                            onChange={(event, selectedDate) => {
+                                if (selectedDate) {
+                                setSelectedDate(selectedDate);
+                                setShowDatePicker(false);
+                                }
+                            }}
+                            />
+                      )}
                 {/* Sidebar Toggle Button */}
                 <TouchableOpacity
                     style={styles.sidebarToggle}
@@ -450,5 +500,22 @@ const createStyles = (isDarkMode: boolean) =>
             shadowRadius: 4,
             elevation: 5, // For Android
         },
-        
+        header: {
+            flexDirection: 'row',
+            justifyContent: 'center', // Centering the items
+            alignItems: 'center',
+            marginBottom: 16,
+            width: '100%', // Ensure it takes the full width
+            paddingHorizontal: 50, // Add some padding to the left and right
+          },
+          headerDate: {
+            fontSize: 20,
+            fontWeight: 'bold',
+            color: isDarkMode ? '#fff' : '#000',
+            marginHorizontal: 20, // Add space around the date text
+            textAlign: 'center', // Ensure the date text is centered
+          },
+          nextArrowButton: {
+            marginLeft: 20, // Adds spacing between the calendar icon and the right arrow
+          },
     });
