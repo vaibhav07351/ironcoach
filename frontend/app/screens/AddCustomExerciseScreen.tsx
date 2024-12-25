@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -15,11 +15,17 @@ import { RootStackParamList } from '../types/navigation';
 type Props = NativeStackScreenProps<RootStackParamList, 'AddCustomExercise'>;
 
 export default function AddCustomExerciseScreen({ route, navigation }: Props) {
-    const { category, traineeId } = route.params; // Get category and traineeId from route params
-    const [exerciseName, setExerciseName] = useState('');
+    const { category, traineeId, exerciseId, currentName } = route.params; // Get category, traineeId, exerciseId, and currentName from route params
+    const [exerciseName, setExerciseName] = useState(currentName || ''); // Pre-fill name if editing
     const [isLoading, setIsLoading] = useState(false); // Spinner state
 
-    const handleAddExercise = async () => {
+    useEffect(() => {
+        if (exerciseId && currentName) {
+            console.log(`Editing exercise: ${exerciseId} with name: ${currentName}`);
+        }
+    }, [exerciseId, currentName]);
+
+    const handleSaveExercise = async () => {
         if (!exerciseName.trim()) {
             Alert.alert('Error', 'Exercise name cannot be empty.');
             return;
@@ -33,8 +39,14 @@ export default function AddCustomExerciseScreen({ route, navigation }: Props) {
                 return;
             }
 
-            const response = await fetch('http://192.168.1.10:8080/exercises', {
-                method: 'POST',
+            const url = exerciseId
+                ? `http://192.168.1.10:8080/exercises/${exerciseId}` // Update URL if editing
+                : 'http://192.168.1.10:8080/exercises'; // Create URL if adding
+
+            const method = exerciseId ? 'PUT' : 'POST'; // HTTP method: PUT for update, POST for create
+
+            const response = await fetch(url, {
+                method,
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `${token}`,
@@ -43,14 +55,17 @@ export default function AddCustomExerciseScreen({ route, navigation }: Props) {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to add exercise');
+                throw new Error(exerciseId ? 'Failed to update exercise' : 'Failed to add exercise');
             }
 
-            Alert.alert('Success', 'Exercise added successfully!');
+            Alert.alert(
+                'Success',
+                exerciseId ? 'Exercise updated successfully!' : 'Exercise added successfully!'
+            );
             navigation.goBack(); // Go back to the exercises screen
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'An error occurred while adding the exercise.');
+            Alert.alert('Error', 'An error occurred while saving the exercise.');
         } finally {
             setIsLoading(false); // Hide spinner
         }
@@ -58,7 +73,9 @@ export default function AddCustomExerciseScreen({ route, navigation }: Props) {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Add Custom Exercise to {category}</Text>
+            <Text style={styles.title}>
+                {exerciseId ? `Edit Exercise in ${category}` : `Add Custom Exercise to ${category}`}
+            </Text>
             <TextInput
                 style={styles.input}
                 placeholder="Exercise Name"
@@ -68,8 +85,10 @@ export default function AddCustomExerciseScreen({ route, navigation }: Props) {
             {isLoading ? (
                 <ActivityIndicator size="large" color="#6200ee" />
             ) : (
-                <TouchableOpacity style={styles.addButton} onPress={handleAddExercise}>
-                    <Text style={styles.addButtonText}>Add Exercise</Text>
+                <TouchableOpacity style={styles.addButton} onPress={handleSaveExercise}>
+                    <Text style={styles.addButtonText}>
+                        {exerciseId ? 'Update Exercise' : 'Add Exercise'}
+                    </Text>
                 </TouchableOpacity>
             )}
         </View>
