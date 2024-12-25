@@ -37,7 +37,17 @@ func (s *CategoryService) GetCategories() ([]models.Category, error) {
 }
 
 func (s *CategoryService) UpdateCategory(id string, updatedName string) error {
-    return s.repository.UpdateCategory(id, updatedName)
+    // Cascade update in exercises
+    if err := s.repository.UpdateCategory(id, updatedName); err != nil {
+        return err
+    }
+
+    // Cascade update in exercises
+    if err := s.repository.CascadeUpdateCategoryInExercises(id, updatedName); err != nil {
+        return err
+    }
+
+    return nil
 }
 
 func (s *CategoryService) DeleteCategory(id string) error {

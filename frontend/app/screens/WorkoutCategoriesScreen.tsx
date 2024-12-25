@@ -56,7 +56,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
     const handleDeleteCategory = async (categoryId: string) => {
         Alert.alert(
             'Delete Category',
-            'Are you sure you want to delete this category?',
+            'Are you sure you want to delete this category? This will permanently delete all exercises under this category and all workout logs associated with those exercises.',
             [
                 {
                     text: 'Cancel',
@@ -125,8 +125,8 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
         }, [])
     );
 
-    const handleCategorySelect = (category: string) => {
-        navigation.navigate('WorkoutExercises', { category, traineeId });
+    const handleCategorySelect = (category: { id: string; name: string }) => {
+        navigation.navigate('WorkoutExercises', {category: category.name, category_id: category.id, traineeId });
     };
 
     return (
@@ -145,7 +145,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                     renderItem={({ item }) => (
                         <TouchableOpacity
                             style={styles.categoryCard}
-                            onPress={() => handleCategorySelect(item.name)}
+                            onPress={() => handleCategorySelect(item)}
                             onLongPress={() => handleCategoryLongPress(item)}>
                             <Text style={styles.categoryText}>{item.name}</Text>
                         </TouchableOpacity>

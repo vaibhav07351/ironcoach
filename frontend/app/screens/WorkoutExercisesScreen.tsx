@@ -19,7 +19,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutExercises'>;
 
 export default function WorkoutExercisesScreen({ route, navigation }: Props) {
-    const { category, traineeId } = route.params;
+    const { category, category_id, traineeId } = route.params;
     const [exercises, setExercises] = useState<{ id: string; name: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(
@@ -75,6 +75,7 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
         if (selectedExercise) {
             navigation.navigate('AddCustomExercise', {
                 category,
+                category_id,
                 traineeId,
                 exerciseId: selectedExercise.id,
                 currentName: selectedExercise.name,
@@ -85,37 +86,55 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
 
     const handleDeleteExercise = async () => {
         if (selectedExercise) {
-            try {
-                const token = await AsyncStorage.getItem('token');
-                if (!token) {
-                    console.error('No token found. Redirecting to login.');
-                    navigation.navigate('Login');
-                    return;
-                }
-
-                const response = await fetch(
-                    `http://192.168.1.10:8080/exercises/${selectedExercise.id}`,
+            Alert.alert(
+                'Delete Confirmation',
+                `Deleting "${selectedExercise.name}" will also delete all workout logs associated with this exercise. Do you want to proceed?`,
+                [
                     {
-                        method: 'DELETE',
-                        headers: {
-                            Authorization: `${token}`,
+                        text: 'Cancel',
+                        style: 'cancel',
+                    },
+                    {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: async () => {
+                            try {
+                                const token = await AsyncStorage.getItem('token');
+                                if (!token) {
+                                    console.error('No token found. Redirecting to login.');
+                                    navigation.navigate('Login');
+                                    return;
+                                }
+    
+                                const response = await fetch(
+                                    `http://192.168.1.10:8080/exercises/${selectedExercise.id}`,
+                                    {
+                                        method: 'DELETE',
+                                        headers: {
+                                            Authorization: `${token}`,
+                                        },
+                                    }
+                                );
+    
+                                if (!response.ok) {
+                                    throw new Error('Failed to delete exercise');
+                                }
+    
+                                Alert.alert('Success', 'Exercise and its logs deleted successfully!');
+                                fetchExercises();
+                            } catch (error) {
+                                console.error('Error deleting exercise:', error);
+                                Alert.alert('Error', 'An error occurred while deleting the exercise.');
+                            }
+                            setIsModalVisible(false);
                         },
-                    }
-                );
-
-                if (!response.ok) {
-                    throw new Error('Failed to delete exercise');
-                }
-
-                Alert.alert('Success', 'Exercise deleted successfully!');
-                fetchExercises();
-            } catch (error) {
-                console.error('Error deleting exercise:', error);
-                Alert.alert('Error', 'An error occurred while deleting the exercise.');
-            }
+                    },
+                ],
+                { cancelable: false }
+            );
         }
-        setIsModalVisible(false);
     };
+    
 
     const handleLongPress = (exercise: { id: string; name: string }) => {
         setSelectedExercise(exercise);
@@ -151,7 +170,7 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
             </View>
             <TouchableOpacity
                 style={styles.addButton}
-                onPress={() => navigation.navigate('AddCustomExercise', { category, traineeId })}>
+                onPress={() => navigation.navigate('AddCustomExercise', { category, category_id, traineeId })}>
                 <Text style={styles.addButtonText}>+ Add Custom Exercise</Text>
             </TouchableOpacity>
 

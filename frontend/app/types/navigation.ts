@@ -45,8 +45,8 @@ export type RootStackParamList = {
         categoryId?: string; // Optional categoryId for editing
         currentName?: string; // Optional currentName for pre-filling during editing
     };
-    WorkoutExercises: { category: string; traineeId: string }; // Exercises under a category
-    AddCustomExercise: { category: string; traineeId: string; exerciseId?: string; currentName?: string };
+    WorkoutExercises: { category: string; category_id:string; traineeId: string }; // Exercises under a category
+    AddCustomExercise: { category: string; category_id:string; traineeId: string; exerciseId?: string; currentName?: string };
     AddExerciseForm: { exercise: string; exercise_id:string; traineeId: string }; // Add exercise details
 
     // Trainer Profile

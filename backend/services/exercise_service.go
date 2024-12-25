@@ -50,6 +50,7 @@ func (s *ExerciseService) UpdateExercise(id string, updatedName string) error {
 	if err := s.repository.UpdateExercise(id, updatedName); err != nil {
         return err
     }
+	
 	// Cascade update in workout logs
 	// s.repository.MigrateWorkoutLogs()
     return s.repository.CascadeUpdateExerciseInWorkoutLogs(id, updatedName)

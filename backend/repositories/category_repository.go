@@ -62,6 +62,24 @@ func (r *CategoryRepository) UpdateCategory(id string, updatedName string) error
 	return err
 }
 
+func (r *CategoryRepository) CascadeUpdateCategoryInExercises(categoryID string, updatedCategoryName string) error {
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
+
+    objectId, err := primitive.ObjectIDFromHex(categoryID)
+    if err != nil {
+        return err
+    }
+
+    _, err = r.collection.Database().Collection("exercises").UpdateMany(
+        ctx,
+        bson.M{"category_id": objectId},
+        bson.M{"$set": bson.M{"category": updatedCategoryName}},
+    )
+    return err
+}
+
+
 func (r *CategoryRepository) DeleteCategory(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

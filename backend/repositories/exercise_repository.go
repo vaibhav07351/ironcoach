@@ -101,25 +101,61 @@ func (r *ExerciseRepository) CascadeDeleteExerciseFromWorkoutLogs(exerciseID str
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// Convert exerciseID to ObjectID
 	objectId, err := primitive.ObjectIDFromHex(exerciseID)
 	if err != nil {
 		return err
 	}
 
-	_, err = r.collection.Database().Collection("workout_logs").UpdateMany(
+	// Delete records from "workout_logs" where "workouts.exercise_id" matches
+	_, err = r.collection.Database().Collection("workout_logs").DeleteMany(
 		ctx,
-		bson.M{},
-		bson.M{"$pull": bson.M{"workouts": bson.M{"exercise_id": objectId}}},
+		bson.M{"workouts.exercise_id": objectId},
 	)
 	return err
 }
 
+
 func (r *ExerciseRepository) DeleteExercisesByCategory(category string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_, err := r.collection.DeleteMany(ctx, bson.M{"category": category})
+
+	// Step 1: Find all exercises in the specified category
+	cursor, err := r.collection.Find(ctx, bson.M{"category": category})
+	if err != nil {
+		return err
+	}
+	defer cursor.Close(ctx)
+
+	var exercises []bson.M
+	if err := cursor.All(ctx, &exercises); err != nil {
+		return err
+	}
+
+	// Step 2: Extract exercise IDs
+	var exerciseIDs []primitive.ObjectID
+	for _, exercise := range exercises {
+		if id, ok := exercise["_id"].(primitive.ObjectID); ok {
+			exerciseIDs = append(exerciseIDs, id)
+		}
+	}
+
+	// Step 3: Delete logs in "workout_logs" for these exercises
+	if len(exerciseIDs) > 0 {
+		_, err = r.collection.Database().Collection("workout_logs").DeleteMany(
+			ctx,
+			bson.M{"workouts.exercise_id": bson.M{"$in": exerciseIDs}},
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Step 4: Delete exercises in the specified category
+	_, err = r.collection.DeleteMany(ctx, bson.M{"category": category})
 	return err
 }
+
 
 func (r *ExerciseRepository) IsExerciseExists(name string, category string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

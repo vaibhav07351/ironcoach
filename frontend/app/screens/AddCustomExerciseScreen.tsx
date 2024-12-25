@@ -15,7 +15,7 @@ import { RootStackParamList } from '../types/navigation';
 type Props = NativeStackScreenProps<RootStackParamList, 'AddCustomExercise'>;
 
 export default function AddCustomExerciseScreen({ route, navigation }: Props) {
-    const { category, traineeId, exerciseId, currentName } = route.params; // Get category, traineeId, exerciseId, and currentName from route params
+    const { category, category_id, traineeId, exerciseId, currentName } = route.params; // Get category, traineeId, exerciseId, and currentName from route params
     const [exerciseName, setExerciseName] = useState(currentName || ''); // Pre-fill name if editing
     const [isLoading, setIsLoading] = useState(false); // Spinner state
 
@@ -51,7 +51,7 @@ export default function AddCustomExerciseScreen({ route, navigation }: Props) {
                     'Content-Type': 'application/json',
                     Authorization: `${token}`,
                 },
-                body: JSON.stringify({ name: exerciseName, category, trainee_id: traineeId }),
+                body: JSON.stringify({ name: exerciseName, category, category_id, trainee_id: traineeId }),
             });
 
             if (!response.ok) {
