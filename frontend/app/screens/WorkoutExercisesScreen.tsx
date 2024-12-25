@@ -123,7 +123,7 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
     };
 
     const handleExerciseSelect = (exercise: { id: string; name: string }) => {
-        navigation.navigate('AddExerciseForm', { exercise: exercise.name, traineeId });
+        navigation.navigate('AddExerciseForm', { exercise: exercise.name, exercise_id: exercise.id, traineeId });
     };
     
     return (

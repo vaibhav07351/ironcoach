@@ -47,9 +47,20 @@ func (s *ExerciseService) GetExercisesByCategory(category string) ([]models.Exer
 }
 
 func (s *ExerciseService) UpdateExercise(id string, updatedName string) error {
-	return s.repository.UpdateExercise(id, updatedName)
+	if err := s.repository.UpdateExercise(id, updatedName); err != nil {
+        return err
+    }
+	// Cascade update in workout logs
+	// s.repository.MigrateWorkoutLogs()
+    return s.repository.CascadeUpdateExerciseInWorkoutLogs(id, updatedName)
 }
 
 func (s *ExerciseService) DeleteExercise(id string) error {
-	return s.repository.DeleteExercise(id)
+	// Delete the exercise from the exercises collection
+    if err := s.repository.DeleteExercise(id); err != nil {
+        return err
+    }
+
+    // Cascade delete all logs containing this exercise
+    return s.repository.CascadeDeleteExerciseFromWorkoutLogs(id)
 }

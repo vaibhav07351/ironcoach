@@ -20,7 +20,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 type Props = NativeStackScreenProps<RootStackParamList, 'AddExerciseForm'>;
 
 export default function AddExerciseFormScreen({ route, navigation }: Props) {
-    const { exercise, traineeId } = route.params;
+    const { exercise, exercise_id, traineeId } = route.params;
     const [weight, setWeight] = useState('');
     const [reps, setReps] = useState('');
     const [sets, setSets] = useState<number[]>([]);
@@ -96,6 +96,7 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
                 workouts: [
                     {
                         exercise,
+                        exercise_id,
                         sets: sets.length,
                         reps: sets,
                         weight: weights,

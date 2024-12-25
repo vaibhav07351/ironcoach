@@ -1,14 +1,19 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 // Workout represents a single exercise in a workout log
 type Workout struct {
-	Exercise string    `json:"exercise" bson:"exercise"` // Exercise name
-	Sets     int       `json:"sets" bson:"sets"`         // Number of sets
-	Reps     []int     `json:"reps" bson:"reps"`         // Reps for each set
-	Weight   []float64 `json:"weight" bson:"weight"`     // Weight used for each set
-	Notes     string    `json:"notes,omitempty" bson:"notes,omitempty"` // Additional notes
+	Exercise   string             `json:"exercise" bson:"exercise"`               // Exercise name
+	ExerciseID primitive.ObjectID `json:"exercise_id" bson:"exercise_id"`         // Link to Exercise
+	Sets       int                `json:"sets" bson:"sets"`                       // Number of sets
+	Reps       []int              `json:"reps" bson:"reps"`                       // Reps for each set
+	Weight     []float64          `json:"weight" bson:"weight"`                   // Weight used for each set
+	Notes      string             `json:"notes,omitempty" bson:"notes,omitempty"` // Additional notes
 }
 
 // WorkoutLog represents a log entry for a trainee's workout

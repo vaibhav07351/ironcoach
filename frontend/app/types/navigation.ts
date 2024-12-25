@@ -47,7 +47,7 @@ export type RootStackParamList = {
     };
     WorkoutExercises: { category: string; traineeId: string }; // Exercises under a category
     AddCustomExercise: { category: string; traineeId: string; exerciseId?: string; currentName?: string };
-    AddExerciseForm: { exercise: string; traineeId: string }; // Add exercise details
+    AddExerciseForm: { exercise: string; exercise_id:string; traineeId: string }; // Add exercise details
 
     // Trainer Profile
     TrainerProfile: { trainerId: string }; // Trainer profile screen
