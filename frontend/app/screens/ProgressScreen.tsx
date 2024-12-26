@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -14,6 +14,7 @@ import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Trainee } from '../types/trainee';
+import { useFocusEffect } from '@react-navigation/native';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -55,8 +56,8 @@ export default function ProgressScreen({ route, navigation, trainee }: Props) {
     const [weight, setWeight] = useState<string>('');
     const [selectedCategory, setSelectedCategory] = useState<string>('Overview');
     const [isLoading, setIsLoading] = useState(false);
-    const [tooltipData, setTooltipData] = useState<{ x: number; y: number; data: WeightBMIProgress | null } | null>(null);
-
+    const [tooltipData, setTooltipData] = useState<{x: number;y: number;data: WeightBMIProgress | null;} | null>(null);
+    
     const fetchProgressData = async () => {
         setIsLoading(true);
         try {
@@ -113,26 +114,41 @@ export default function ProgressScreen({ route, navigation, trainee }: Props) {
         }
     };
 
-    useEffect(() => {
-        fetchProgressData();
-    }, []);
+    // useEffect(() => {
+    //     fetchProgressData();
+    // }, []);
 
-    const renderOverview = () => (
-        <View>
-            <Text style={styles.sectionTitle}>Overview</Text>
-            <View style={styles.summaryCard}>
-                <Text style={styles.summaryText}>
-                    Latest Weight: {progressData?.weight_bmi[0]?.weight || 'N/A'} kg
-                </Text>
-                <Text style={styles.summaryText}>
-                    BMI: {progressData?.weight_bmi[0]?.bmi || 'N/A'}
-                </Text>
-                <Text style={styles.summaryText}>
-                    Body Fat: {progressData?.weight_bmi[0]?.bodyFat || 'N/A'} %
-                </Text>
-            </View>
-        </View>
+    useFocusEffect(
+        useCallback(() => {
+            fetchProgressData();
+        }, [])
     );
+
+    const renderOverview = () => {
+        // Get the latest weight entry from the weight_bmi array
+        const latestEntry =
+            progressData?.weight_bmi && progressData.weight_bmi.length > 0
+                ? progressData.weight_bmi[progressData.weight_bmi.length - 1] // Access the last item
+                : null;
+    
+        return (
+            <View>
+                <Text style={styles.sectionTitle}>Overview</Text>
+                <View style={styles.summaryCard}>
+                    <Text style={styles.summaryText}>
+                        Latest Weight: {latestEntry?.weight || 'N/A'} kg
+                    </Text>
+                    <Text style={styles.summaryText}>
+                        BMI: {latestEntry?.bmi || 'N/A'}
+                    </Text>
+                    <Text style={styles.summaryText}>
+                        Body Fat: {latestEntry?.bodyFat || 'N/A'} %
+                    </Text>
+                </View>
+            </View>
+        );
+    };
+    
 
     const renderWeightInput = () => (
         <View style={styles.inputSection}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import { Trainee } from '../types/trainee';
 
 type Props = {
@@ -9,7 +9,18 @@ type Props = {
 export default function AboutTraineeScreen({ trainee }: Props) {
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.title}>Trainee Details</Text>
+            <View style={styles.header}>
+                <View style={styles.detailsContainer}>
+                    <Text style={styles.title}>Trainee Details</Text>
+                </View>
+                {trainee.image_url && (
+                    <Image
+                        source={{ uri: trainee.image_url }}
+                        style={styles.image}
+                        resizeMode="cover"
+                    />
+                )}
+            </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Name:</Text>
@@ -25,7 +36,7 @@ export default function AboutTraineeScreen({ trainee }: Props) {
                 <Text style={styles.label}>Active Status:</Text>
                 <Text style={styles.value}>{trainee.active_status ? 'Active' : 'Inactive'}</Text>
             </View>
-            
+
             <View style={styles.section}>
                 <Text style={styles.label}>Goals:</Text>
                 <Text style={styles.value}>{trainee.goals || 'NA'}</Text>
@@ -35,7 +46,7 @@ export default function AboutTraineeScreen({ trainee }: Props) {
                 <Text style={styles.label}>Notes:</Text>
                 <Text style={styles.value}>{trainee.notes || 'NA'}</Text>
             </View>
-            
+
             <View style={styles.section}>
                 <Text style={styles.label}>Active Supplements:</Text>
                 <Text style={styles.value}>{trainee.active_supplements || 'NA'}</Text>
@@ -104,12 +115,26 @@ const styles = StyleSheet.create({
         padding: 16,
         backgroundColor: '#f7f9fc',
     },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    detailsContainer: {
+        flex: 1,
+        paddingRight: 8,
+    },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
-        textAlign: 'center',
-        marginBottom: 16,
         color: '#333',
+    },
+    image: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#ccc',
     },
     section: {
         flexDirection: 'row',
