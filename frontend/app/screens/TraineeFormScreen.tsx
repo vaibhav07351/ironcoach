@@ -55,6 +55,12 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
             const selectedImage = result.assets[0];
+
+             // Validate file size (fileSize is in bytes)
+            if (selectedImage.fileSize && selectedImage.fileSize > 2* 1024 * 1024) {
+                Alert.alert('File Size Error', 'Image size must be under 2 MB.');
+                return;
+            }
             setImage({ uri: selectedImage.uri });
         }
     };
@@ -177,9 +183,9 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
     
     const handleSubmit = async () => {
 
-        if (!validateFields()) {
-            return; // Exit if validation fails
-        }
+        // if (!validateFields()) {
+        //     return; // Exit if validation fails
+        // }
 
         setIsLoading(true);
 
@@ -267,7 +273,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                                 <TouchableOpacity style={styles.uploadButton} onPress={handlePickImage}>
                                     <Ionicons name="camera" size={20} color="#fff" />
                                     <Text style={styles.uploadButtonText}>
-                                        {image ? 'Change Photo(1MB)' : 'Upload Photo(1MB)'}
+                                        {image ? 'Change Photo(2MB)' : 'Upload Photo(2MB)'}
                                     </Text>
                                 </TouchableOpacity>
 
