@@ -155,6 +155,37 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
         }
     };
 
+    const validateDate = (date: string, fieldName: string): boolean => {
+        const dateRegex = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
+    
+        // Check if the date matches the DD-MM-YYYY format
+        if (!dateRegex.test(date)) {
+            Alert.alert('Validation Error', `${fieldName} must be in DD-MM-YYYY format.`);
+            return false;
+        }
+    
+        // Split the date into components (day, month, year)
+        const [day, month, year] = date.split('-').map(Number);
+    
+        // Check if the date is valid (e.g., February 30 is not valid)
+        const dateObj = new Date(year, month - 1, day);
+        if (dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) {
+            Alert.alert(`${fieldName} Validation Error`, `Invalid date. Please check the day, month, and year.`);
+            return false;
+        }
+    
+        // Check for reasonable year range (1900 to current year)
+        const currentYear = new Date().getFullYear();
+        if (year < 1900 || year > currentYear) {
+            Alert.alert(`${fieldName} Validation Error`, `Year must be between 1900 and ${currentYear}.`);
+            return false;
+        }
+    
+        return true;  // If all validations pass, return true
+    };
+    
+    
+    
     const validateFields = () => {
         if (!name.trim() || !phoneNumber.trim() || !dob.trim() || !gender.trim() || !height.trim()) {
             Alert.alert('Validation Error', 'All fields marked with * are mandatory.');
@@ -167,27 +198,14 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             return false;
         }
     
-        const dateRegex = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
-        if (!dateRegex.test(dob)) {
-            Alert.alert('Validation Error', 'Date of Birth must be in DD-MM-YYYY format.');
-            return false;
+            // For dob
+        if (!validateDate(dob, 'Date of Birth')) {
+            return false;  // Stop further processing if date is invalid
         }
 
-            // Split the date into components
-        const [day, month, year] = dob.split('-').map(Number);
-        
-        // Check if the date is valid (e.g., February 30 is not valid)
-        const date = new Date(year, month - 1, day);
-        if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
-            Alert.alert( 'Invalid date. Please check the day, month, and year.')
-            return false;
-        }
-
-        // Check for reasonable year range (1900 to current year)
-        const currentYear = new Date().getFullYear();
-        if (year < 1900 || year > currentYear) {
-            Alert.alert(`Year must be between 1900 and ${currentYear}.`)
-            return false
+        // For startDate
+        if (!validateDate(startDate, 'Start Date')) {
+            return false;  // Stop further processing if date is invalid
         }
     
         if (isNaN(parseFloat(height)) ||  parseFloat(height) <= 0) {
@@ -312,7 +330,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                         <TextInput style={styles.input} placeholder="Date of Birth (DD-MM-YYYY) *" value={dob} onChangeText={setDob} />
                         <TextInput style={styles.input} placeholder="Height (cm) *" value={height} onChangeText={setHeight} keyboardType="numeric" />
                         <TextInput style={styles.input} placeholder="Profession" value={profession} onChangeText={setProfession} />
-                        <TextInput style={styles.input} placeholder="Start Date" value={startDate} onChangeText={setStartDate} />
+                        <TextInput style={styles.input} placeholder="Start Date (DD-MM-YYYY)" value={startDate} onChangeText={setStartDate} />
                         {/* <TextInput style={styles.input} placeholder="Weight (kg) *" value={weight} onChangeText={setWeight} keyboardType="numeric" /> */}
                         {/* <TextInput style={styles.input} placeholder="BMI" value={bmi} onChangeText={setBmi} keyboardType="numeric" /> */}
                         <TextInput style={styles.input} placeholder="Membership Type" value={membershipType} onChangeText={setMembershipType} />
