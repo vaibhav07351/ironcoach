@@ -183,9 +183,9 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
     
     const handleSubmit = async () => {
 
-        // if (!validateFields()) {
-        //     return; // Exit if validation fails
-        // }
+        if (!validateFields()) {
+            return; // Exit if validation fails
+        }
 
         setIsLoading(true);
 
