@@ -94,19 +94,23 @@ export default function AboutTraineeScreen({ trainee, navigation }: Props) {
             </View>
 
             <View style={styles.section}>
-                <Text style={styles.label}>Date of Birth:</Text>
-                <Text style={styles.value}>{currentTrainee.dob}</Text>
-            </View>
-
-            <View style={styles.section}>
                 <Text style={styles.label}>Gender:</Text>
                 <Text style={styles.value}>{currentTrainee.gender}</Text>
             </View>
 
             <View style={styles.section}>
-                <Text style={styles.label}>Height:</Text>
-                <Text style={styles.value}>{currentTrainee.height} cm</Text>
+                <Text style={styles.label}>Date of Birth:</Text>
+                <Text style={styles.value}>{currentTrainee.dob}</Text>
             </View>
+
+            <View style={styles.section}>
+                <Text style={styles.label}>Height:</Text>
+                <Text style={styles.value}>
+                    {currentTrainee.height} cm ({Math.floor(currentTrainee.height / 2.54 / 12)}' 
+                    {Math.round((currentTrainee.height / 2.54) % 12)}'')
+                </Text>
+            </View>
+
 
             <View style={styles.section}>
                 <Text style={styles.label}>Profession:</Text>
@@ -137,7 +141,7 @@ export default function AboutTraineeScreen({ trainee, navigation }: Props) {
                 <Text style={styles.label}>Active Status:</Text>
                 <Text style={styles.value}>{currentTrainee.active_status ? 'Active' : 'Inactive'}</Text>
             </View>
-            
+
         </ScrollView>
     );
 }

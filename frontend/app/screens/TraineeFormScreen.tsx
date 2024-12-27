@@ -161,20 +161,37 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             return false;
         }
     
-        const phoneRegex = /^[0-9]{10}$/;
+        const phoneRegex = /^[6-9][0-9]{9}$/;
         if (!phoneRegex.test(phoneNumber)) {
-            Alert.alert('Validation Error', 'Please enter a valid 10-digit phone number.');
+            Alert.alert('Validation Error', 'Please enter a Valid 10-digit phone number.');
             return false;
         }
     
-        const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
+        const dateRegex = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
         if (!dateRegex.test(dob)) {
             Alert.alert('Validation Error', 'Date of Birth must be in DD-MM-YYYY format.');
             return false;
         }
+
+            // Split the date into components
+        const [day, month, year] = dob.split('-').map(Number);
+        
+        // Check if the date is valid (e.g., February 30 is not valid)
+        const date = new Date(year, month - 1, day);
+        if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+            Alert.alert( 'Invalid date. Please check the day, month, and year.')
+            return false;
+        }
+
+        // Check for reasonable year range (1900 to current year)
+        const currentYear = new Date().getFullYear();
+        if (year < 1900 || year > currentYear) {
+            Alert.alert(`Year must be between 1900 and ${currentYear}.`)
+            return false
+        }
     
-        if (isNaN(parseFloat(weight)) || isNaN(parseFloat(height)) || parseFloat(weight) <= 0 || parseFloat(height) <= 0) {
-            Alert.alert('Validation Error', 'Weight and Height must be positive numbers.');
+        if (isNaN(parseFloat(height)) ||  parseFloat(height) <= 0) {
+            Alert.alert('Validation Error', 'Height must be a positive number.');
             return false;
         }
 
@@ -291,8 +308,8 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                         <TextInput style={styles.input} placeholder="Notes" value={notes} onChangeText={setNotes} />
                         <TextInput style={styles.input} placeholder="Active Supplements" value={activeSupplements} onChangeText={setActiveSupplements} />
                         <TextInput style={styles.input} placeholder="Medical History" value={medicalHistory} onChangeText={setMedicalHistory} />
-                        <TextInput style={styles.input} placeholder="Date of Birth (DD-MM-YYYY) *" value={dob} onChangeText={setDob} />
                         <TextInput style={styles.input} placeholder="Gender *" value={gender} onChangeText={setGender} />
+                        <TextInput style={styles.input} placeholder="Date of Birth (DD-MM-YYYY) *" value={dob} onChangeText={setDob} />
                         <TextInput style={styles.input} placeholder="Height (cm) *" value={height} onChangeText={setHeight} keyboardType="numeric" />
                         <TextInput style={styles.input} placeholder="Profession" value={profession} onChangeText={setProfession} />
                         <TextInput style={styles.input} placeholder="Start Date" value={startDate} onChangeText={setStartDate} />
