@@ -139,7 +139,7 @@ export default function ProgressScreen({ route, navigation, trainee }: Props) {
                         Latest Weight: {latestEntry?.weight || 'N/A'} kg
                     </Text>
                     <Text style={styles.summaryText}>
-                        BMI: {latestEntry?.bmi || 'N/A'}
+                        BMI: {latestEntry?.bmi ? latestEntry.bmi.toFixed(2) : 'N/A'}
                     </Text>
                     <Text style={styles.summaryText}>
                         Body Fat: {latestEntry?.bodyFat || 'N/A'} %

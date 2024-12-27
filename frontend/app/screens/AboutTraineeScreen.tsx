@@ -1,21 +1,62 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { Trainee } from '../types/trainee';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Props = {
     trainee: Trainee;
+    navigation: any;
 };
 
-export default function AboutTraineeScreen({ trainee }: Props) {
+export default function AboutTraineeScreen({ trainee, navigation }: Props) {
+    const [currentTrainee, setCurrentTrainee] = useState<Trainee>(trainee);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            // Fetch updated trainee data here
+            if (trainee.id) {
+                // Assuming you fetch trainee details from an API or local storage
+                fetchUpdatedTrainee(trainee.id);
+            }
+        }, [trainee.id])
+    );
+
+    const fetchUpdatedTrainee = async (id: string) => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            // Replace with your API call logic or data retrieval logic
+            const response = await fetch(`http://192.168.1.10:8080/trainees/${trainee.id}`, {
+                headers: { Authorization: `${token}` },
+            });
+            const updatedTrainee = await response.json();
+            setCurrentTrainee(updatedTrainee);
+        } catch (error) {
+            console.error('Error fetching trainee data:', error);
+        }
+    };
+
+    const handleEditPress = () => {
+        navigation.navigate('TraineeForm', {
+            trainee: currentTrainee,
+            traineeId: currentTrainee.id,
+        });
+    };
+
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <View style={styles.header}>
                 <View style={styles.detailsContainer}>
                     <Text style={styles.title}>Trainee Details</Text>
+                    <TouchableOpacity style={styles.editButton} onPress={handleEditPress}>
+                        <Icon name="pencil-outline" size={20} color="#fff" />
+                    </TouchableOpacity>
                 </View>
-                {trainee.image_url && (
+
+                {currentTrainee.image_url && (
                     <Image
-                        source={{ uri: trainee.image_url }}
+                        source={{ uri: currentTrainee.image_url }}
                         style={styles.image}
                         resizeMode="cover"
                     />
@@ -24,88 +65,79 @@ export default function AboutTraineeScreen({ trainee }: Props) {
 
             <View style={styles.section}>
                 <Text style={styles.label}>Name:</Text>
-                <Text style={styles.value}>{trainee.name}</Text>
+                <Text style={styles.value}>{currentTrainee.name}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Phone Number:</Text>
-                <Text style={styles.value}>{trainee.phone_number}</Text>
-            </View>
-
-            <View style={styles.section}>
-                <Text style={styles.label}>Active Status:</Text>
-                <Text style={styles.value}>{trainee.active_status ? 'Active' : 'Inactive'}</Text>
+                <Text style={styles.value}>{currentTrainee.phone_number}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Goals:</Text>
-                <Text style={styles.value}>{trainee.goals || 'NA'}</Text>
+                <Text style={styles.value}>{currentTrainee.goals || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Notes:</Text>
-                <Text style={styles.value}>{trainee.notes || 'NA'}</Text>
+                <Text style={styles.value}>{currentTrainee.notes || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Active Supplements:</Text>
-                <Text style={styles.value}>{trainee.active_supplements || 'NA'}</Text>
+                <Text style={styles.value}>{currentTrainee.active_supplements || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Medical History:</Text>
-                <Text style={styles.value}>{trainee.medical_history || 'NA'}</Text>
+                <Text style={styles.value}>{currentTrainee.medical_history || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Date of Birth:</Text>
-                <Text style={styles.value}>{trainee.dob}</Text>
+                <Text style={styles.value}>{currentTrainee.dob}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Gender:</Text>
-                <Text style={styles.value}>{trainee.gender}</Text>
+                <Text style={styles.value}>{currentTrainee.gender}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Height:</Text>
-                <Text style={styles.value}>{trainee.height} cm</Text>
-            </View>
-
-            <View style={styles.section}>
-                <Text style={styles.label}>Weight:</Text>
-                <Text style={styles.value}>{trainee.weight} kg</Text>
-            </View>
-
-            <View style={styles.section}>
-                <Text style={styles.label}>BMI:</Text>
-                <Text style={styles.value}>{trainee.bmi?.toFixed(2) || 'Not calculated'}</Text>
+                <Text style={styles.value}>{currentTrainee.height} cm</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Profession:</Text>
-                <Text style={styles.value}>{trainee.profession || 'NA'}</Text>
+                <Text style={styles.value}>{currentTrainee.profession || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Start Date:</Text>
-                <Text style={styles.value}>{trainee.start_date || 'NA'}</Text>
+                <Text style={styles.value}>{currentTrainee.start_date || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Membership Type:</Text>
-                <Text style={styles.value}>{trainee.membership_type || 'NA'}</Text>
+                <Text style={styles.value}>{currentTrainee.membership_type || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Emergency Contact:</Text>
-                <Text style={styles.value}>{trainee.emergency_contact || 'NA'}</Text>
+                <Text style={styles.value}>{currentTrainee.emergency_contact || 'NA'}</Text>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.label}>Social Handles:</Text>
-                <Text style={styles.value}>{trainee.social_handle || 'NA'}</Text>
+                <Text style={styles.value}>{currentTrainee.social_handle || 'NA'}</Text>
             </View>
+
+            <View style={styles.section}>
+                <Text style={styles.label}>Active Status:</Text>
+                <Text style={styles.value}>{currentTrainee.active_status ? 'Active' : 'Inactive'}</Text>
+            </View>
+            
         </ScrollView>
     );
 }
@@ -153,5 +185,14 @@ const styles = StyleSheet.create({
         color: '#333',
         textAlign: 'right',
         flexShrink: 1,
+    },
+    editButton: {
+        backgroundColor: '#6200ee',
+        padding: 8,
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 2,
+        width: 50,
     },
 });

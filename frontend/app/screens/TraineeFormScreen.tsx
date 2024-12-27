@@ -24,21 +24,22 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
     const [membershipType, setMembershipType] = useState(trainee?.membership_type || '');
     const [emergencyContact, setEmergencyContact] = useState(trainee?.emergency_contact || '');
     const [medicalHistory, setMedicalHistory] = useState(trainee?.medical_history || '');
-    const [socialHandle, setSocialHandle] =  useState(trainee?.social_handle || '');
+    const [socialHandle, setSocialHandle] = useState(trainee?.social_handle || '');
     const [goals, setGoals] = useState(trainee?.goals || '');
     const [notes, setNotes] = useState(trainee?.notes || '');
     const [activeStatus, setActiveStatus] = useState(trainee?.active_status ?? true);
     const [progressMetrics, setProgressMetrics] = useState<string>(JSON.stringify(trainee?.progress_metrics || {}));
     const [isLoading, setIsLoading] = useState(false);
-    const [image, setImage] = useState<{ uri: string } | null>(null);
-    const [activeSupplements, setActiveSupplements] =  useState(trainee?.active_supplements || '');
-    
+    const [image, setImage] = useState<{ uri: string } | null>(
+        trainee?.image_url ? { uri: trainee.image_url } : null
+    );
+    const [activeSupplements, setActiveSupplements] = useState(trainee?.active_supplements || '');
+
     useEffect(() => {
         if (traineeId && !trainee) {
             fetchTrainee();
         }
     }, [traineeId]);
-
 
     const handlePickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -57,44 +58,39 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             setImage({ uri: selectedImage.uri });
         }
     };
-    
+
     const handleRemoveImage = () => {
         setImage(null);
     };
 
-    
-    // Fixing FormData for TypeScript
     const uploadImage = async () => {
         if (!image) {
-            // Alert.alert('Validation Error', 'Please select an image to upload.');
-            console.log("Please select an image to upload")
+            console.log('Please select an image to upload');
             return null;
         }
-    
+
         const formData = new FormData();
         formData.append('image', {
             uri: image.uri,
             name: 'trainee-profile.jpg',
             type: 'image/jpeg',
         } as any);
-    
+
         try {
             const token = await AsyncStorage.getItem('token');
             const response = await fetch('http://192.168.1.10:8080/images/upload', {
                 method: 'POST',
                 headers: {
                     Authorization: `${token}`,
-                    // 'Content-Type': 'multipart/form-data',
                 },
                 body: formData,
             });
-    
+
             if (!response.ok) {
                 throw new Error('Failed to upload image');
             }
-    
+
             const data = await response.json();
-            // console.log("data", data)
             return data.image_url;
         } catch (error) {
             console.error('Error uploading image:', error);
@@ -102,7 +98,6 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             return null;
         }
     };
-    
 
     const fetchTrainee = async () => {
         setIsLoading(true);
@@ -141,6 +136,11 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             setActiveStatus(data.active_status);
             setProgressMetrics(JSON.stringify(data.progress_metrics || {}));
             setActiveSupplements(data.active_supplements);
+
+            // Set image from fetched data
+            if (data.image_url) {
+                setImage({ uri: data.image_url });
+            }
         } catch (error) {
             console.error('Error fetching trainee:', error);
             Alert.alert('Error', 'Failed to load trainee details.');
@@ -149,18 +149,43 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
         }
     };
 
-    const handleSubmit = async () => {
-        if (!name || !phoneNumber || !dob || !gender || !weight || !height) {
-            Alert.alert('Validation Error', 'Please fill all mandatory fields marked with *.');
-            return;
+    const validateFields = () => {
+        if (!name.trim() || !phoneNumber.trim() || !dob.trim() || !gender.trim() || !height.trim()) {
+            Alert.alert('Validation Error', 'All fields marked with * are mandatory.');
+            return false;
         }
     
-        // Show loading indicator
+        const phoneRegex = /^[0-9]{10}$/;
+        if (!phoneRegex.test(phoneNumber)) {
+            Alert.alert('Validation Error', 'Please enter a valid 10-digit phone number.');
+            return false;
+        }
+    
+        const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
+        if (!dateRegex.test(dob)) {
+            Alert.alert('Validation Error', 'Date of Birth must be in DD-MM-YYYY format.');
+            return false;
+        }
+    
+        if (isNaN(parseFloat(weight)) || isNaN(parseFloat(height)) || parseFloat(weight) <= 0 || parseFloat(height) <= 0) {
+            Alert.alert('Validation Error', 'Weight and Height must be positive numbers.');
+            return false;
+        }
+
+        return true;
+    };
+    
+    const handleSubmit = async () => {
+
+        if (!validateFields()) {
+            return; // Exit if validation fails
+        }
+
         setIsLoading(true);
-        
+
         try {
             const imageUrl = await uploadImage();
-    
+
             const traineeData = {
                 id: traineeId || trainee?.id || '',
                 name,
@@ -179,18 +204,17 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 goals,
                 notes,
                 active_status: activeStatus,
-                progress_metrics: progressMetrics ? JSON.parse(progressMetrics) : undefined,
                 image_url: imageUrl,
-                active_supplements: activeSupplements
+                active_supplements: activeSupplements,
             };
-    
+
             const token = await AsyncStorage.getItem('token');
             if (!token) {
                 console.error('No token found. Redirecting to login.');
                 navigation.navigate('Login');
                 return;
             }
-    
+
             const response = await fetch(
                 `http://192.168.1.10:8080/trainees/${traineeId || ''}`,
                 {
@@ -202,32 +226,25 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                     body: JSON.stringify(traineeData),
                 }
             );
-    
+
             const responseBody = await response.json();
-            console.log('Response Body:', responseBody); // Log response body for debugging
-    
+
             if (!response.ok) {
                 throw new Error(responseBody.message || 'Failed to add trainee');
             }
-    
+
             Alert.alert('Success', traineeId ? 'Trainee updated successfully.' : 'Trainee added successfully.');
             navigation.goBack();
         } catch (error) {
             console.error('Error submitting trainee:', error);
             Alert.alert('Error', traineeId ? 'Failed to update trainee.' : 'Failed to add trainee.');
         } finally {
-            // Hide loading indicator after the form submission is complete
             setIsLoading(false);
         }
     };
-    
-    
 
     return (
-        <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16 }}>
                 {isLoading ? (
                     <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 200 }} />
@@ -257,118 +274,39 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                                 {image && (
                                     <TouchableOpacity style={styles.removeButton} onPress={handleRemoveImage}>
                                         <Ionicons name="trash" size={20} color="#fff" />
-                                        {/* <Text style={styles.removeButtonText}></Text> */}
                                     </TouchableOpacity>
                                 )}
                             </View>
                         </View>
 
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Name *"
-                            value={name}
-                            onChangeText={setName}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Date of Birth (DD-MM-YYYY) *"
-                            value={dob}
-                            onChangeText={setDob}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Gender *"
-                            value={gender}
-                            onChangeText={setGender}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Profession"
-                            value={profession}
-                            onChangeText={setProfession}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Phone Number *"
-                            value={phoneNumber}
-                            onChangeText={setPhoneNumber}
-                            keyboardType="phone-pad"
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Weight (kg) *"
-                            value={weight}
-                            onChangeText={setWeight}
-                            keyboardType="numeric"
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Height (cm) *"
-                            value={height}
-                            onChangeText={setHeight}
-                            keyboardType="numeric"
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Enrollment Date (DD-MM-YYYY)"
-                            value={startDate}
-                            onChangeText={setStartDate}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Active Supplements"
-                            value={medicalHistory}
-                            onChangeText={setActiveSupplements}
-                        />
+                        <TextInput style={styles.input} placeholder="Name *" value={name} onChangeText={setName} />
+                        <TextInput style={styles.input} placeholder="Phone Number *" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
+                        <TextInput style={styles.input} placeholder="Goals" value={goals} onChangeText={setGoals} />
+                        <TextInput style={styles.input} placeholder="Notes" value={notes} onChangeText={setNotes} />
+                        <TextInput style={styles.input} placeholder="Active Supplements" value={activeSupplements} onChangeText={setActiveSupplements} />
+                        <TextInput style={styles.input} placeholder="Medical History" value={medicalHistory} onChangeText={setMedicalHistory} />
+                        <TextInput style={styles.input} placeholder="Date of Birth (DD-MM-YYYY) *" value={dob} onChangeText={setDob} />
+                        <TextInput style={styles.input} placeholder="Gender *" value={gender} onChangeText={setGender} />
+                        <TextInput style={styles.input} placeholder="Height (cm) *" value={height} onChangeText={setHeight} keyboardType="numeric" />
+                        <TextInput style={styles.input} placeholder="Profession" value={profession} onChangeText={setProfession} />
+                        <TextInput style={styles.input} placeholder="Start Date" value={startDate} onChangeText={setStartDate} />
+                        {/* <TextInput style={styles.input} placeholder="Weight (kg) *" value={weight} onChangeText={setWeight} keyboardType="numeric" /> */}
+                        {/* <TextInput style={styles.input} placeholder="BMI" value={bmi} onChangeText={setBmi} keyboardType="numeric" /> */}
+                        <TextInput style={styles.input} placeholder="Membership Type" value={membershipType} onChangeText={setMembershipType} />
+                        <TextInput style={styles.input} placeholder="Emergency Contact" value={emergencyContact} onChangeText={setEmergencyContact} keyboardType="phone-pad" />
+                        <TextInput style={styles.input} placeholder="Social Handle" value={socialHandle} onChangeText={setSocialHandle} />
                         
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Membership Type"
-                            value={membershipType}
-                            onChangeText={setMembershipType}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Emergency Contact"
-                            value={emergencyContact}
-                            onChangeText={setEmergencyContact}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Medical History"
-                            value={medicalHistory}
-                            onChangeText={setMedicalHistory}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Social Handle"
-                            value={socialHandle}
-                            onChangeText={setSocialHandle}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Goals"
-                            value={goals}
-                            onChangeText={setGoals}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Notes"
-                            value={notes}
-                            onChangeText={setNotes}
-                        />
-
-                        {/* Active Status Switch */}
                         <View style={styles.switchContainer}>
-                            <Text style={styles.switchLabel}>Trainee Active Status</Text>
-                            <Switch
-                                value={activeStatus}
-                                onValueChange={setActiveStatus}
-                            />
+                            <Text style={styles.switchLabel}>Active Status</Text>
+                            <Switch value={activeStatus} onValueChange={setActiveStatus} />
                         </View>
 
-                        <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                            <Text style={styles.buttonText}>{traineeId || trainee ? 'Update' : 'Add'} Trainee</Text>
+                       
+
+                        
+
+                        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+                            <Text style={styles.submitButtonText}>{traineeId || trainee ? 'Update Trainee' : 'Add Trainee'}</Text>
                         </TouchableOpacity>
                     </>
                 )}
@@ -474,5 +412,17 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         marginLeft: 8,
+    },
+    submitButton: {
+        backgroundColor: '#6200ee',
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 16,
+    },
+    submitButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
     },
 });

@@ -45,7 +45,7 @@ export default function TraineeListScreen({ route, navigation }: Props) {
             }
 
             const data = await response.json();
-            setTrainees(data); // Assuming the API returns an array of Trainee objects
+            setTrainees(data || []); // Assuming the API returns an array of Trainee objects
         } catch (error) {
             console.error('Error fetching trainees:', error);
         } finally {
@@ -100,47 +100,53 @@ export default function TraineeListScreen({ route, navigation }: Props) {
             <Text style={styles.title}>
                 {status === true ? 'Active Trainees' : 'Inactive Trainees'}
             </Text>
-            <FlatList
-                data={trainees}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                    <View style={styles.cardContainer}>
-                        <TouchableOpacity
-                            
-                            style={styles.card}
-                            onPress={() => handleTraineeSelect(item)}
-                        >
-
+            {(!trainees || trainees.length === 0) ? (
+                <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                        {status === true ? 'No active trainees available' : 'No inactive trainees available'}
+                    </Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={trainees}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }) => (
+                        <View style={styles.cardContainer}>
+                            <TouchableOpacity
+                                style={styles.card}
+                                onPress={() => handleTraineeSelect(item)}
+                            >
                                 <Image
                                     source={{
                                         uri: item?.image_url || 'https://pixabay.com/get/ga888f12adb8d8613af71848c7fc56a61b5a358fced614a0309cf598e86b735a5cda4c3d25ea5f5a2c1f4645388bcef2d_1280.png',
                                     }}
                                     style={styles.profileImage}
                                 />
-
-                            <Text style={styles.cardText}>{item.name}</Text>
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity
-                            onPress={() =>
-                                Alert.alert(
-                                    'Delete Trainee',
-                                    `Are you sure you want to delete ${item.name}?`,
-                                    [
-                                        { text: 'Cancel', style: 'cancel' },
-                                        { text: 'Delete', style: 'destructive', onPress: () => deleteTrainee(item.id) },
-                                    ]
-                                )
-                            }
-                            style={styles.iconContainer}>
-                            <Ionicons name="trash-outline" size={24} color="red" />
-                        </TouchableOpacity>
-                    </View>
-                )}
-            />
+                                <Text style={styles.cardText}>{item.name}</Text>
+                            </TouchableOpacity>
+    
+                            <TouchableOpacity
+                                onPress={() =>
+                                    Alert.alert(
+                                        'Delete Trainee',
+                                        `Are you sure you want to delete ${item.name}?`,
+                                        [
+                                            { text: 'Cancel', style: 'cancel' },
+                                            { text: 'Delete', style: 'destructive', onPress: () => deleteTrainee(item.id) },
+                                        ]
+                                    )
+                                }
+                                style={styles.iconContainer}
+                            >
+                                <Ionicons name="trash-outline" size={24} color="red" />
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                />
+            )}
             <Button title="+ Add Trainee" onPress={() => navigation.navigate('TraineeForm', {})} />
         </View>
-    );
+    );    
 }
 
 const styles = StyleSheet.create({
@@ -185,6 +191,18 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         marginRight: 16, // Space between image and name
     },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 50, // Adjust spacing as needed
+    },
+    emptyText: {
+        fontSize: 18,
+        color: '#888',
+        textAlign: 'center',
+    },
+    
 });
 
 

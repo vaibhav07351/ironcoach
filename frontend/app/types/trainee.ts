@@ -6,8 +6,8 @@ export type Trainee = {
     gender: string;
     profession?: string;
     height: number;
-    weight: number;
-    bmi?: number;
+    // weight: number;
+    // bmi?: number;
     start_date?: string;
     membership_type?: string;
     emergency_contact?: string;

@@ -1,8 +1,9 @@
 package services
 
 import (
-    "ironcoach/models"
-    "ironcoach/repositories"
+	"ironcoach/models"
+	"ironcoach/repositories"
+	"time"
 )
 
 type TraineeService struct {
@@ -18,6 +19,8 @@ func NewTraineeService() *TraineeService {
 
 // Add a new trainee
 func (s *TraineeService) AddTrainee(trainee models.Trainee) error {
+    trainee.CreatedAt=time.Now()
+    trainee.UpdatedAt=time.Now()
     return s.repository.CreateTrainee(trainee)
 }
 
@@ -34,6 +37,7 @@ func (s *TraineeService) GetTraineeByID(traineeID string) (models.Trainee, error
 
 // Update a trainee
 func (s *TraineeService) UpdateTrainee(id string, update map[string]interface{}) error {
+    update["updated_at"] = time.Now()
     return s.repository.UpdateTrainee(id, update)
 }
 
