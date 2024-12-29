@@ -15,12 +15,18 @@ import (
 var DB *mongo.Client
 
 func ConnectDB() {
-    // Load environment variables
-    err := godotenv.Load("../../.env")
-    if err != nil {
-		fmt.Println(err)
-        log.Fatalf("Error loading .env file")
-    }
+   // Load environment variables based on the environment
+	env := os.Getenv("ENV") // Check for the ENV variable
+	if env != "production" {
+		// Load the .env file in non-production environments
+		err := godotenv.Load("../../.env")
+		if err != nil {
+			log.Fatalf("Error loading .env file: %v", err)
+		}
+		fmt.Println("Loaded .env file for development")
+	} else {
+		fmt.Println("Running in production mode, skipping .env file")
+	}
 
     // Get MongoDB URI from environment variables
     mongoURI := os.Getenv("MONGODB_URI")
