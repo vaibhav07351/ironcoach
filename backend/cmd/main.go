@@ -3,6 +3,7 @@ package main
 import (
 	"ironcoach/database"
 	"ironcoach/routes"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,5 +29,12 @@ func main(){
 		})
 	})
 
-	router.Run(":8080")
+	// Fetch the port from the environment variables
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Default port for local testing
+	}
+
+	// Start the server on the specified port
+	router.Run(":" + port)
 }
