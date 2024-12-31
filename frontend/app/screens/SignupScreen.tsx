@@ -7,6 +7,7 @@ import { RootStackParamList } from '../types/navigation';
 import { Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Signup'>;
 
@@ -78,7 +79,8 @@ export default function SignupScreen() {
     
         try {
             const token = await AsyncStorage.getItem('token');
-            const response = await fetch('http://192.168.1.10:8080/images/upload', {
+            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+            const response = await fetch(`${backendUrl}/images/upload`, {
                 method: 'POST',
                 headers: {
                     Authorization: `${token}`,
@@ -118,7 +120,8 @@ export default function SignupScreen() {
 
             const imageUrl = await uploadImage();
 
-            const response = await fetch('http://192.168.1.10:8080/registerTrainer', {
+            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+            const response = await fetch(`${backendUrl}/registerTrainer`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

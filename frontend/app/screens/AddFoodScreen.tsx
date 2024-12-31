@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Constants from 'expo-constants';
 
 type Food = {
     name: string;
@@ -50,6 +51,7 @@ export default function AddFoodScreen({ route, navigation }: Props) {
     }, [dietEntryId]);
 
     const handleExistingDietEntry = async (entryId: string) => {
+        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
@@ -57,7 +59,7 @@ export default function AddFoodScreen({ route, navigation }: Props) {
                 navigation.navigate('Login');
                 return;
             }
-            const response = await fetch(`http://192.168.1.10:8080/diet_entries/entry/${entryId}`, {
+            const response = await fetch(`${backendUrl}/diet_entries/entry/${entryId}`, {
                 headers: {
                     Authorization: `${token}`,
                 },
@@ -123,6 +125,7 @@ export default function AddFoodScreen({ route, navigation }: Props) {
     };
 
     const saveMeal = async () => {
+        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
@@ -138,7 +141,7 @@ export default function AddFoodScreen({ route, navigation }: Props) {
             };
 
             if (dietEntryId) {
-                const response = await fetch(`http://192.168.1.10:8080/diet_entries/${dietEntryId}`, {
+                const response = await fetch(`${backendUrl}/diet_entries/${dietEntryId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -153,7 +156,7 @@ export default function AddFoodScreen({ route, navigation }: Props) {
 
                 Alert.alert('Success', 'Diet entry updated successfully!');
             } else {
-                const response = await fetch('http://192.168.1.10:8080/diet_entries', {
+                const response = await fetch(`${backendUrl}/diet_entries`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

@@ -15,6 +15,7 @@ import { RootStackParamList } from '../types/navigation';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { MaterialIcons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutExercises'>;
 
@@ -36,8 +37,8 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
                 navigation.navigate('Login');
                 return;
             }
-
-            const response = await fetch(`http://192.168.1.10:8080/exercises/${category}`, {
+            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+            const response = await fetch(`${backendUrl}/exercises/${category}`, {
                 headers: {
                     Authorization: `${token}`,
                 },
@@ -105,9 +106,9 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
                                     navigation.navigate('Login');
                                     return;
                                 }
-    
+                                const backendUrl = Constants.expoConfig?.extra?.backendUrl;
                                 const response = await fetch(
-                                    `http://192.168.1.10:8080/exercises/${selectedExercise.id}`,
+                                    `${backendUrl}/exercises/${selectedExercise.id}`,
                                     {
                                         method: 'DELETE',
                                         headers: {

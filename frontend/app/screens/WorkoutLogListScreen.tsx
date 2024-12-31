@@ -19,6 +19,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../contexts/ThemeContext';
 import { Trainee } from '../types/trainee';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Constants from 'expo-constants';
 
 type WorkoutLog = {
     id: string;
@@ -57,6 +58,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
 
     const fetchWorkoutLogs = async (date: string) => {
         setIsLoading(true);
+        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
@@ -65,7 +67,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
                 return;
             }
 
-            const response = await fetch(`http://192.168.1.10:8080/workout_logs/${trainee.id}?date=${date}`, {
+            const response = await fetch(`${backendUrl}/workout_logs/${trainee.id}?date=${date}`, {
                 headers: {
                     Authorization: `${token}`,
                 },
@@ -164,8 +166,8 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
                                 Alert.alert('Error', 'User is not authenticated. Please log in again.');
                                 return;
                             }
-
-                            const response = await fetch(`http://192.168.1.10:8080/workout_logs/${logId}`, {
+                            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+                            const response = await fetch(`${backendUrl}/workout_logs/${logId}`, {
                                 method: 'DELETE',
                                 headers: {
                                     Authorization: `${token}`,

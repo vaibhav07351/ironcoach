@@ -5,6 +5,7 @@ import { RootStackParamList } from '../types/navigation';
 import { AuthContext } from '../contexts/AuthContext';
 import { Spacing } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
@@ -28,8 +29,9 @@ export default function DashboardScreen({ navigation }: Props) {
         }
 
         const fetchTrainerDetails = async () => {
+            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
             try {
-                const response = await fetch(`http://192.168.1.10:8080/getTrainerDetails`, {
+                const response = await fetch(`${backendUrl}/getTrainerDetails`, {
                     headers: {
                         Authorization: `${await AsyncStorage.getItem('token')}`,
                     },

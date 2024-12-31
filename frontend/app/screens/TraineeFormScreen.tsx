@@ -7,6 +7,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TraineeForm'>;
 
@@ -82,9 +83,10 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             type: 'image/jpeg',
         } as any);
 
+        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
         try {
             const token = await AsyncStorage.getItem('token');
-            const response = await fetch('http://192.168.1.10:8080/images/upload', {
+            const response = await fetch(`${backendUrl}/images/upload`, {
                 method: 'POST',
                 headers: {
                     Authorization: `${token}`,
@@ -107,6 +109,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
 
     const fetchTrainee = async () => {
         setIsLoading(true);
+        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
@@ -115,7 +118,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 return;
             }
 
-            const response = await fetch(`http://192.168.1.10:8080/trainees/${traineeId}`, {
+            const response = await fetch(`${backendUrl}/trainees/${traineeId}`, {
                 headers: { Authorization: `${token}` },
             });
 
@@ -223,7 +226,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
         }
 
         setIsLoading(true);
-
+        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
         try {
             const imageUrl = await uploadImage();
 
@@ -257,7 +260,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             }
 
             const response = await fetch(
-                `http://192.168.1.10:8080/trainees/${traineeId || ''}`,
+                `${backendUrl}/trainees/${traineeId || ''}`,
                 {
                     method: traineeId || trainee ? 'PUT' : 'POST',
                     headers: {

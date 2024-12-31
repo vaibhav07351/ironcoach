@@ -31,7 +31,7 @@ type Claims struct {
 
 // GenerateJWT creates a signed token for a given email
 func GenerateJWT(email string) (string, error) {
-	expirationTime := time.Now().Add(24 * time.Hour)
+	expirationTime := time.Now().Add(7 *24 * time.Hour)
 	claims := &Claims{
 		Email: email,
 		RegisteredClaims: jwt.RegisteredClaims{

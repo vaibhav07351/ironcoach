@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useFocusEffect } from '@react-navigation/native';
+import Constants from 'expo-constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutCategories'>;
 
@@ -35,8 +36,9 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                 navigation.navigate('Login');
                 return;
             }
-
-            const response = await fetch('http://192.168.1.10:8080/categories', {
+            
+            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+            const response = await fetch(`${backendUrl}/categories`, {
                 headers: { Authorization: `${token}` },
             });
 
@@ -74,9 +76,9 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                                 navigation.navigate('Login');
                                 return;
                             }
-
+                            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
                             const response = await fetch(
-                                `http://192.168.1.10:8080/categories/${categoryId}`,
+                                `${backendUrl}/categories/${categoryId}`,
                                 {
                                     method: 'DELETE',
                                     headers: { Authorization: `${token}` },

@@ -11,6 +11,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
+import Constants from 'expo-constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddCustomExercise'>;
 
@@ -38,10 +39,10 @@ export default function AddCustomExerciseScreen({ route, navigation }: Props) {
                 navigation.navigate('Login');
                 return;
             }
-
+            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
             const url = exerciseId
-                ? `http://192.168.1.10:8080/exercises/${exerciseId}` // Update URL if editing
-                : 'http://192.168.1.10:8080/exercises'; // Create URL if adding
+                ? `${backendUrl}/exercises/${exerciseId}` // Update URL if editing
+                : `${backendUrl}/exercises`; // Create URL if adding
 
             const method = exerciseId ? 'PUT' : 'POST'; // HTTP method: PUT for update, POST for create
 

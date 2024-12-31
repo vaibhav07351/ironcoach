@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "IronCoach",
+    "slug": "IronCoach",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/ironcoach.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,22 +13,23 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/ironcoach.png",
         "backgroundColor": "#ffffff"
       },
-      "package":"com.vaibhav.ironcoach"
+      "package": "com.vaibhav.ironcoach",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/ironcoach.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/ironcoach.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
@@ -37,6 +38,15 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "7067ae90-2994-477c-9616-cc290d9c2d06"
+      },
+       "backendUrl": "https://ironcoach-backend.onrender.com"
     }
   }
 }

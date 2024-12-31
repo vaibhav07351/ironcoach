@@ -15,6 +15,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Constants from 'expo-constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutLogForm'>;
 
@@ -109,8 +110,8 @@ export default function WorkoutLogFormScreen({ route, navigation }: Props) {
                     },
                 ],
             };
-
-            const url = `http://192.168.1.10:8080/workout_logs/${workoutLog.id}`
+            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+            const url = `${backendUrl}/workout_logs/${workoutLog.id}`
 
             const method = 'PUT';
 

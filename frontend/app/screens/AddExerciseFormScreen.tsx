@@ -15,6 +15,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Constants from 'expo-constants';
 
 // Define Props for the Screen
 type Props = NativeStackScreenProps<RootStackParamList, 'AddExerciseForm'>;
@@ -106,8 +107,8 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
             };
     
             // console.log('Prepared Workout Log:', workoutLog);
-    
-            const response = await fetch(`http://192.168.1.10:8080/workout_logs`, {
+            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+            const response = await fetch(`${backendUrl}/workout_logs`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

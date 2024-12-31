@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { ActivityIndicator } from 'react-native';
+import Constants from 'expo-constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddCustomCategory'>;
 
@@ -20,6 +21,7 @@ export default function AddCustomCategoryScreen({ route, navigation }: Props) {
         }
 
         setIsLoading(true); // Start loading
+        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
@@ -29,8 +31,8 @@ export default function AddCustomCategoryScreen({ route, navigation }: Props) {
             }
 
             const url = isUpdateMode
-                ? `http://192.168.1.10:8080/categories/${categoryId}`
-                : 'http://192.168.1.10:8080/categories';
+                ? `${backendUrl}/categories/${categoryId}`
+                : `${backendUrl}/categories`;
             const method = isUpdateMode ? 'PUT' : 'POST';
 
             const response = await fetch(url, {

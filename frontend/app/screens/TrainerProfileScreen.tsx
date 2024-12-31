@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TrainerProfile'>;
 
@@ -20,7 +21,8 @@ export default function TrainerProfileScreen({ route }: Props) {
     useEffect(() => {
         const fetchTrainerDetails = async () => {
             try {
-                const response = await fetch(`http://192.168.1.10:8080/getTrainerDetails`, {
+                const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+                const response = await fetch(`${backendUrl}/getTrainerDetails`, {
                     headers: {
                         Authorization: `${await AsyncStorage.getItem('token')}`,
                     },

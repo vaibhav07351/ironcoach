@@ -17,6 +17,7 @@ import { Trainee } from '../types/trainee';
 import { Colors, Spacing } from '../../constants/theme';
 import { useIsFocused } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import Constants from 'expo-constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trainees'>;
 
@@ -28,6 +29,7 @@ export default function TraineeListScreen({ route, navigation }: Props) {
 
     const fetchTrainees = async () => {
         setIsLoading(true);
+        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
@@ -36,7 +38,7 @@ export default function TraineeListScreen({ route, navigation }: Props) {
                 return;
             }
 
-            const response = await fetch(`http://192.168.1.10:8080/trainees?active_status=${status}`, {
+            const response = await fetch(`${backendUrl}/trainees?active_status=${status}`, {
                 headers: { Authorization: `${token}` },
             });
 
@@ -55,6 +57,7 @@ export default function TraineeListScreen({ route, navigation }: Props) {
 
     const deleteTrainee = async (id: string) => {
         setIsLoading(true);
+        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
@@ -63,7 +66,7 @@ export default function TraineeListScreen({ route, navigation }: Props) {
                 return;
             }
 
-            const response = await fetch(`http://192.168.1.10:8080/trainees/${id}`, {
+            const response = await fetch(`${backendUrl}/trainees/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `${token}` },
             });

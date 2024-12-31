@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Trainee } from '../types/trainee';
 import DateTimePicker from '@react-native-community/datetimepicker'; // Import DateTimePicker
+import Constants from 'expo-constants';
 
 type Food = {
   name: string;
@@ -69,9 +70,9 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
         navigation.navigate('Login');
         return;
       }
-
+      const backendUrl = Constants.expoConfig?.extra?.backendUrl;
       const response = await fetch(
-        `http://192.168.1.10:8080/diet_entries/${trainee.id}?date=${date}`,
+        `${backendUrl}/diet_entries/${trainee.id}?date=${date}`,
         {
           headers: { Authorization: `${token}` },
         }

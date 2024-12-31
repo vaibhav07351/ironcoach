@@ -4,6 +4,7 @@ import { Trainee } from '../types/trainee';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 type Props = {
     trainee: Trainee;
@@ -24,10 +25,11 @@ export default function AboutTraineeScreen({ trainee, navigation }: Props) {
     );
 
     const fetchUpdatedTrainee = async (id: string) => {
+        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
         try {
             const token = await AsyncStorage.getItem('token');
             // Replace with your API call logic or data retrieval logic
-            const response = await fetch(`http://192.168.1.10:8080/trainees/${trainee.id}`, {
+            const response = await fetch(`${backendUrl}/trainees/${trainee.id}`, {
                 headers: { Authorization: `${token}` },
             });
             const updatedTrainee = await response.json();

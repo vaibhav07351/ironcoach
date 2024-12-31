@@ -15,6 +15,7 @@ import { Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Trainee } from '../types/trainee';
 import { useFocusEffect } from '@react-navigation/native';
+import Constants from 'expo-constants';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -60,11 +61,12 @@ export default function ProgressScreen({ route, navigation, trainee }: Props) {
     
     const fetchProgressData = async () => {
         setIsLoading(true);
+        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) throw new Error('User not authenticated');
 
-            const response = await fetch(`http://192.168.1.10:8080/progress/${trainee.id}`, {
+            const response = await fetch(`${backendUrl}/progress/${trainee.id}`, {
                 headers: { Authorization: `${token}` },
             });
 
@@ -94,8 +96,9 @@ export default function ProgressScreen({ route, navigation, trainee }: Props) {
                 date: new Date().toISOString().split('T')[0],
                 weight: parseFloat(weight),
             };
-
-            const response = await fetch('http://192.168.1.10:8080/progress', {
+            
+            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+            const response = await fetch(`${backendUrl}/progress`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

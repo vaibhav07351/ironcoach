@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { AuthContext } from '../contexts/AuthContext'; // Import AuthContext
+import Constants from 'expo-constants';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -18,7 +19,8 @@ export default function LoginScreen() {
     const handleLogin = async () => {
         setIsLoading(true); // Start loading
         try {
-            const response = await fetch('http://192.168.1.10:8080/login', {
+            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+            const response = await fetch(`${backendUrl}/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
