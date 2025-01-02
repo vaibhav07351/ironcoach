@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"fmt"
+	// "fmt"
 	"ironcoach/services"
 	"net/http"
 
@@ -26,7 +26,7 @@ func (ctrl *ImageController) UploadImage(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
         return
     }
-    fmt.Println("image cntrlr: ", file )
+    // fmt.Println("image cntrlr: ", file )
 
     // Call the service to handle file upload
     imageURL, err := ctrl.service.UploadImage(file)

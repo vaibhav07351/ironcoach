@@ -1,7 +1,7 @@
 package services
 
 import (
-	"fmt"
+	// "fmt"
 	"ironcoach/repositories"
 	"mime/multipart"
 )
@@ -25,7 +25,7 @@ func (s *ImageService) UploadImage(file *multipart.FileHeader) (string, error) {
         return "", err
     }
     defer fileContent.Close()
-    fmt.Println("filcntnt in service is : ", fileContent)
+    // fmt.Println("filcntnt in service is : ", fileContent)
     // Delegate the actual upload to the repository
     return s.repository.UploadToCloud(fileContent)
 }

@@ -2,7 +2,7 @@ package repositories
 
 import (
 	"context"
-	"fmt"
+	// "fmt"
 	"io"
 	"log"
 	"os"
@@ -33,9 +33,9 @@ func NewImageRepository() *ImageRepository {
 
 // UploadToCloud handles the interaction with Cloudinary
 func (r *ImageRepository) UploadToCloud(file io.Reader) (string, error) {
-    fmt.Println("bfr file here is : ", file)
+    // fmt.Println("bfr file here is : ", file)
     resp, err := r.cloudinary.Upload.Upload(context.Background(), file, uploader.UploadParams{})
-    fmt.Println("respnse is : ", resp)
+    // fmt.Println("respnse is : ", resp)
     if err != nil {
         return "", err
     }

@@ -119,9 +119,9 @@ export default function TraineeListScreen({ route, navigation }: Props) {
                                 style={styles.card}
                                 onPress={() => handleTraineeSelect(item)}
                             >
-                                <Image
+                               <Image
                                     source={{
-                                        uri: item?.image_url || 'https://pixabay.com/get/ga888f12adb8d8613af71848c7fc56a61b5a358fced614a0309cf598e86b735a5cda4c3d25ea5f5a2c1f4645388bcef2d_1280.png',
+                                        uri: item?.image_url?.trim() || 'https://res.cloudinary.com/vaibhav07351/image/upload/v1735825573/tisqhtqxaydhprbwtsld.png',
                                     }}
                                     style={styles.profileImage}
                                 />

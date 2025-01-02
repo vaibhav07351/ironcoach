@@ -56,13 +56,16 @@ export default function AboutTraineeScreen({ trainee, navigation }: Props) {
                     </TouchableOpacity>
                 </View>
 
-                {currentTrainee.image_url && (
-                    <Image
-                        source={{ uri: currentTrainee.image_url }}
-                        style={styles.image}
-                        resizeMode="cover"
-                    />
-                )}
+                <Image
+                    source={{
+                        uri: currentTrainee.image_url
+                            ? currentTrainee.image_url
+                            : 'https://res.cloudinary.com/vaibhav07351/image/upload/v1735825573/tisqhtqxaydhprbwtsld.png',
+                    }}
+                    style={styles.image}
+                    resizeMode="cover"
+                />
+
             </View>
 
             <View style={styles.section}>
