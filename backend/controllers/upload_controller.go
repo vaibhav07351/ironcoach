@@ -1,10 +1,11 @@
 package controllers
 
 import (
-    "net/http"
-    "ironcoach/services"
+	"fmt"
+	"ironcoach/services"
+	"net/http"
 
-    "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 )
 
 type ImageController struct {
@@ -25,6 +26,7 @@ func (ctrl *ImageController) UploadImage(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
         return
     }
+    fmt.Println("image cntrlr: ", file )
 
     // Call the service to handle file upload
     imageURL, err := ctrl.service.UploadImage(file)
