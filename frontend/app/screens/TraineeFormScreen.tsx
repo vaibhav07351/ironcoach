@@ -224,12 +224,13 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
         if (!validateFields()) {
             return; // Exit if validation fails
         }
-
+    
         setIsLoading(true);
         const backendUrl = Constants.expoConfig?.extra?.backendUrl;
         try {
-            const imageUrl = await uploadImage();
-
+            // Upload image only if a new one is selected
+            const imageUrl = image && image.uri !== trainee?.image_url ? await uploadImage() : trainee?.image_url;
+    
             const traineeData = {
                 id: traineeId || trainee?.id || '',
                 name,
@@ -251,14 +252,14 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 image_url: imageUrl,
                 active_supplements: activeSupplements,
             };
-
+    
             const token = await AsyncStorage.getItem('token');
             if (!token) {
                 console.error('No token found. Redirecting to login.');
                 navigation.navigate('Login');
                 return;
             }
-
+    
             const response = await fetch(
                 `${backendUrl}/trainees/${traineeId || ''}`,
                 {
@@ -270,13 +271,13 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                     body: JSON.stringify(traineeData),
                 }
             );
-
+    
             const responseBody = await response.json();
-
+    
             if (!response.ok) {
                 throw new Error(responseBody.message || 'Failed to add trainee');
             }
-
+    
             Alert.alert('Success', traineeId ? 'Trainee updated successfully.' : 'Trainee added successfully.');
             navigation.goBack();
         } catch (error) {
