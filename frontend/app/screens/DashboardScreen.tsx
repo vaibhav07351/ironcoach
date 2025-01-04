@@ -14,6 +14,7 @@ type TrainerDetails = {
     email: string;
     specialization?: string;
     image_url?: string;
+    bio?: string;
 };
 
 export default function DashboardScreen({ navigation }: Props) {
@@ -86,7 +87,7 @@ export default function DashboardScreen({ navigation }: Props) {
                     <Text style={styles.trainerName}>{trainerDetails?.name || 'Trainer Name'}</Text>
                     <Text style={styles.trainerEmail}>{trainerDetails?.email}</Text>
                     <Text style={styles.trainerSpecialization}>
-                        {trainerDetails?.specialization || 'Specialization not available'}
+                        {trainerDetails?.bio || 'Specialization not available'}
                     </Text>
                 </View>
             </TouchableOpacity>

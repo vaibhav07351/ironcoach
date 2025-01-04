@@ -8,7 +8,6 @@ import {
     ActivityIndicator,
     Alert,
     Modal,
-    Pressable,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -21,10 +20,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutCategories'>;
 export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
     const { traineeId } = route.params; // Get traineeId
     const [isLoading, setIsLoading] = useState(false);
-    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-    const [selectedCategory, setSelectedCategory] = useState<{ id: string; name: string } | null>(
-        null
-    );
+    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);  // Initialize as an empty array
+    const [selectedCategory, setSelectedCategory] = useState<{ id: string; name: string } | null>(null);
     const [isModalVisible, setModalVisible] = useState(false);
 
     const fetchCategories = async () => {
@@ -47,7 +44,13 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
             }
 
             const data = await response.json();
+            
+            if (!data || data.length === 0) {
+                setCategories([])
+            }else{
             setCategories(data); // Update categories list
+
+            }
         } catch (error) {
             console.error('Error fetching categories:', error);
         } finally {
@@ -128,7 +131,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
     );
 
     const handleCategorySelect = (category: { id: string; name: string }) => {
-        navigation.navigate('WorkoutExercises', {category: category.name, category_id: category.id, traineeId });
+        navigation.navigate('WorkoutExercises', { category: category.name, category_id: category.id, traineeId });
     };
 
     return (
@@ -136,7 +139,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
             <Text style={styles.title}>Select a Category</Text>
             {isLoading ? (
                 <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />
-            ) : categories.length === 0 ? (
+            ) : categories.length === 0 ? ( // Check if categories array is empty
                 <View style={styles.noDataContainer}>
                     <Text style={styles.noDataText}>No categories available.</Text>
                 </View>
@@ -154,6 +157,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                     )}
                 />
             )}
+
             <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => navigation.navigate('AddCustomCategory', { traineeId })}>
@@ -189,7 +193,6 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                                 <Text style={styles.modalButtonText}>🗑️ Delete</Text>
                             </TouchableOpacity>
                         </View>
-                        
                     </View>
                 </View>
             </Modal>
@@ -271,5 +274,4 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-    
 });
