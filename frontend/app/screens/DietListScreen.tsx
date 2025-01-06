@@ -179,8 +179,12 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <View style={styles.title}>
+            <Text style={styles.titleText}>Diet Entry Logs for {trainee.name}</Text>
+        </View>
       {/* Header for navigation between dates */}
       <View style={styles.header}>
+        
         <TouchableOpacity onPress={() => navigateDate('previous')}>
           <Icon name="chevron-left" size={30} color="#6200ee" />
         </TouchableOpacity>
@@ -227,6 +231,18 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
 }
 
 const styles = StyleSheet.create({
+  title: {
+    justifyContent: 'center', // Align items vertically in the center
+    alignItems: 'center', // Align items horizontally in the center
+},
+titleText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    // color: isDarkMode ? '#fff' : '#000',
+    marginBottom: 16,
+    textAlign: 'center'
+},
+
   container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
   header: {
     flexDirection: 'row',

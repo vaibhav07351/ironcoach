@@ -250,7 +250,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.container}>
                 <View style={styles.title}>
-                    {/* <Text style={styles.titleText}>Workout Logs for {trainee.name}</Text> */}
+                    <Text style={styles.titleText}>Workout Logs for {trainee.name}</Text>
                 </View>
                 {/* Header for navigation between dates */}
                 <View style={styles.header}>
