@@ -31,10 +31,14 @@ func (r *CategoryRepository) AddCategory(category models.Category) error {
 	return err
 }
 
-func (r *CategoryRepository) GetCategories() ([]models.Category, error) {
+func (r *CategoryRepository) GetCategories(trainerID string) ([]models.Category, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cursor, err := r.collection.Find(ctx, bson.M{})
+
+	// Filter categories based on trainerID
+	filter := bson.M{"trainer_id": trainerID}
+
+	cursor, err := r.collection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

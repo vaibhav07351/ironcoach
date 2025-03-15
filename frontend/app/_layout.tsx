@@ -21,7 +21,7 @@ import TrainerProfileScreen from './screens/TrainerProfileScreen';
 import AboutTraineeScreen from './screens/AboutTraineeScreen';
 import ProgressScreen from './screens/ProgressScreen';
 import AddFoodScreen from './screens/AddFoodScreen';
-
+// import AboutTraineeScreenTabs from './screens/AboutTraineeScreenTabs';
 
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -48,7 +48,7 @@ export default function AppNavigation() {
                 {/* <Stack.Screen name="AboutTrainee" component={AboutTraineeScreen} /> */}
                 <Stack.Screen name="AddFood" component={AddFoodScreen} />
                 {/* <Stack.Screen name="Progress" component={ProgressScreen} /> */}
-
+                {/* <Stack.Screen name="AboutTraineeScreenTabs" component={AboutTraineeScreenTabs} /> */}
 
             </Stack.Navigator>
           </AuthProvider>

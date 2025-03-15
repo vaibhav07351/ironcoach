@@ -87,7 +87,7 @@ export default function DashboardScreen({ navigation }: Props) {
                     <Text style={styles.trainerName}>{trainerDetails?.name || 'Trainer Name'}</Text>
                     <Text style={styles.trainerEmail}>{trainerDetails?.email}</Text>
                     <Text style={styles.trainerSpecialization}>
-                        {trainerDetails?.bio || 'Specialization not available'}
+                        {trainerDetails?.bio || 'Bio not available'}
                     </Text>
                 </View>
             </TouchableOpacity>

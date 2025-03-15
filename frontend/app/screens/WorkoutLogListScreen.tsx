@@ -95,7 +95,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
 
     // Today's logs
     // const dateInIST = new Date();
-    dateInIST.setMinutes(dateInIST.getMinutes() + 330); // Add 330 minutes (5 hours 30 minutes)
+    // dateInIST.setMinutes(dateInIST.getMinutes() + 330); // Add 330 minutes (5 hours 30 minutes)
 
     const todayDate = dateInIST.toISOString().split('T')[0]; // Format: YYYY-MM-DD
     const todayLogs = workoutLogs.filter((log) => log.date === todayDate);

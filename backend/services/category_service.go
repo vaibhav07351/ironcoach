@@ -32,8 +32,8 @@ func (s *CategoryService) AddCategory(category models.Category) error {
 }
 
 
-func (s *CategoryService) GetCategories() ([]models.Category, error) {
-    return s.repository.GetCategories()
+func (s *CategoryService) GetCategories(trainerID string) ([]models.Category, error) {
+    return s.repository.GetCategories(trainerID)
 }
 
 func (s *CategoryService) UpdateCategory(id string, updatedName string) error {

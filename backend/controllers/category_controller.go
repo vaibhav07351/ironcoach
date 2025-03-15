@@ -27,6 +27,10 @@ func (c *CategoryController) AddCategory(ctx *gin.Context) {
         return
     }
 
+    // Get trainer ID from JWT claims
+    trainerID := ctx.MustGet("email").(string)
+    category.TrainerID = trainerID
+
     if err := c.service.AddCategory(category); err != nil {
         if err.Error() == "category already exists" {
             ctx.JSON(http.StatusConflict, gin.H{"error": "Category already exists"})
@@ -41,7 +45,8 @@ func (c *CategoryController) AddCategory(ctx *gin.Context) {
 
 
 func (c *CategoryController) GetCategories(ctx *gin.Context) {
-    categories, err := c.service.GetCategories()
+    trainerID := ctx.MustGet("email").(string)
+    categories, err := c.service.GetCategories(trainerID)
     if err != nil {
         ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve categories"})
         return
