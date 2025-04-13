@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/gin-contrib/cors"
+	// "github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -37,18 +37,18 @@ func main() {
 	})
 
 	//We can also keep the cors middleware (they will work together)
-	router.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"https://ironcoach--ctsjgkrhrb.expo.app",
-			"https://ironcoach--ironcoach-staging.expo.app",
-			"https://ironcoach.expo.app",
-		},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+	// router.Use(cors.New(cors.Config{
+	// 	AllowOrigins: []string{
+	// 		"https://ironcoach--ctsjgkrhrb.expo.app",
+	// 		"https://ironcoach--ironcoach-staging.expo.app",
+	// 		"https://ironcoach.expo.app",
+	// 	},
+	// 	AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+	// 	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+	// 	ExposeHeaders:    []string{"Content-Length"},
+	// 	AllowCredentials: true,
+	// 	MaxAge:           12 * time.Hour,
+	// }))
 
 	// Register routes
 	routes.RegisterTrainerRoutes(router)
