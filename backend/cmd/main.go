@@ -4,9 +4,9 @@ import (
 	"ironcoach/database"
 	"ironcoach/routes"
 	"os"
-	// "time"
+	"time"
 
-	// "github.com/gin-contrib/cors"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,39 +16,39 @@ func main() {
 	router := gin.Default()
 
 
-	//Custom CORS middleware (must be BEFORE routes)
-	router.Use(func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-		if origin == "https://ironcoach--ctsjgkrhrb.expo.app" ||
-			origin == "https://ironcoach--ironcoach-staging.expo.app" ||
-			origin == "https://ironcoach.expo.app" {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-			c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
-			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		}
+	// //Custom CORS middleware (must be BEFORE routes)
+	// router.Use(func(c *gin.Context) {
+	// 	origin := c.Request.Header.Get("Origin")
+	// 	if origin == "https://ironcoach--ctsjgkrhrb.expo.app" ||
+	// 		origin == "https://ironcoach--ironcoach-staging.expo.app" ||
+	// 		origin == "https://ironcoach.expo.app" {
+	// 		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+	// 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+	// 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
+	// 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	// 	}
 
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
+	// 	if c.Request.Method == "OPTIONS" {
+	// 		c.AbortWithStatus(204)
+	// 		return
+	// 	}
 
-		c.Next()
-	})
+	// 	c.Next()
+	// })
 
-	//We can also keep the cors middleware (they will work together)
-	// router.Use(cors.New(cors.Config{
-	// 	AllowOrigins: []string{
-	// 		"https://ironcoach--ctsjgkrhrb.expo.app",
-	// 		"https://ironcoach--ironcoach-staging.expo.app",
-	// 		"https://ironcoach.expo.app",
-	// 	},
-	// 	AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-	// 	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-	// 	ExposeHeaders:    []string{"Content-Length"},
-	// 	AllowCredentials: true,
-	// 	MaxAge:           12 * time.Hour,
-	// }))
+	// We can also keep the cors middleware (they will work together)
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			"https://ironcoach--ctsjgkrhrb.expo.app",
+			"https://ironcoach--ironcoach-staging.expo.app",
+			"https://ironcoach.expo.app",
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Register routes
 	routes.RegisterTrainerRoutes(router)
