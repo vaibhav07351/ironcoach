@@ -13,14 +13,9 @@ import (
 func main() {
 	database.ConnectDB()
 
-	router := gin.New()                      // Use gin.New() instead of gin.Default()
-	router.RedirectTrailingSlash = false    // Disable trailing slash redirect
+	router := gin.Default()
 
-	// Add Logger and Recovery middleware manually (since gin.New() doesn't add them)
-	router.Use(gin.Logger())
-	router.Use(gin.Recovery())
-
-	// CORS middleware
+	// Use official CORS middleware (handles all cases safely)
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"https://ironcoach--nuhvn6qnqp.expo.app",
@@ -34,11 +29,11 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// OPTIONS preflight handler
+	//  This line handles all OPTIONS preflight requests
 	router.OPTIONS("/*path", func(c *gin.Context) {
 		c.Status(204)
 	})
-
+	
 	// Register routes
 	routes.RegisterTrainerRoutes(router)
 	routes.RegisterTraineeRoutes(router)
@@ -55,6 +50,7 @@ func main() {
 		})
 	})
 
+	// Fetch port
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
