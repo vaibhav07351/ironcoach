@@ -18,7 +18,7 @@ func main() {
 	// Use official CORS middleware (handles all cases safely)
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"https://ironcoach--ctsjgkrhrb.expo.app",
+			"https://ironcoach--nuhvn6qnqp.expo.app",
 			"https://ironcoach--ironcoach-staging.expo.app",
 			"https://ironcoach.expo.app",
 		},
@@ -29,6 +29,11 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	//  This line handles all OPTIONS preflight requests
+	router.OPTIONS("/*path", func(c *gin.Context) {
+		c.Status(204)
+	})
+	
 	// Register routes
 	routes.RegisterTrainerRoutes(router)
 	routes.RegisterTraineeRoutes(router)
