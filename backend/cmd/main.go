@@ -15,28 +15,7 @@ func main() {
 
 	router := gin.Default()
 
-
-	// //Custom CORS middleware (must be BEFORE routes)
-	// router.Use(func(c *gin.Context) {
-	// 	origin := c.Request.Header.Get("Origin")
-	// 	if origin == "https://ironcoach--ctsjgkrhrb.expo.app" ||
-	// 		origin == "https://ironcoach--ironcoach-staging.expo.app" ||
-	// 		origin == "https://ironcoach.expo.app" {
-	// 		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-	// 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-	// 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
-	// 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	// 	}
-
-	// 	if c.Request.Method == "OPTIONS" {
-	// 		c.AbortWithStatus(204)
-	// 		return
-	// 	}
-
-	// 	c.Next()
-	// })
-
-	// We can also keep the cors middleware (they will work together)
+	// Use official CORS middleware (handles all cases safely)
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"https://ironcoach--ctsjgkrhrb.expo.app",

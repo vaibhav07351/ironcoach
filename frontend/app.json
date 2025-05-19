@@ -46,7 +46,7 @@
       "eas": {
         "projectId": "7067ae90-2994-477c-9616-cc290d9c2d06"
       },
-       "backendUrl": "https://ironcoach-backend.onrender.com"
+       "backendUrl": "https://ironcoach-production.up.railway.app"
     }
   }
 }
