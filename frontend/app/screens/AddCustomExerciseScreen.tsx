@@ -5,20 +5,20 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    Alert,
     ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddCustomExercise'>;
 
 export default function AddCustomExerciseScreen({ route, navigation }: Props) {
-    const { category, category_id, traineeId, exerciseId, currentName } = route.params; // Get category, traineeId, exerciseId, and currentName from route params
-    const [exerciseName, setExerciseName] = useState(currentName || ''); // Pre-fill name if editing
-    const [isLoading, setIsLoading] = useState(false); // Spinner state
+    const { category, category_id, traineeId, exerciseId, currentName } = route.params;
+    const [exerciseName, setExerciseName] = useState(currentName || '');
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         if (exerciseId && currentName) {
@@ -28,23 +28,32 @@ export default function AddCustomExerciseScreen({ route, navigation }: Props) {
 
     const handleSaveExercise = async () => {
         if (!exerciseName.trim()) {
-            Alert.alert('Error', 'Exercise name cannot be empty.');
+            Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2: 'Exercise name cannot be empty.',
+            });
             return;
         }
+
         setIsLoading(true);
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
-                Alert.alert('Error', 'Authentication token not found. Please log in again.');
+                Toast.show({
+                    type: 'error',
+                    text1: 'Authentication Error',
+                    text2: 'Please log in again.',
+                });
                 navigation.navigate('Login');
                 return;
             }
+
             const backendUrl = Constants.expoConfig?.extra?.backendUrl;
             const url = exerciseId
-                ? `${backendUrl}/exercises/${exerciseId}` // Update URL if editing
-                : `${backendUrl}/exercises`; // Create URL if adding
-
-            const method = exerciseId ? 'PUT' : 'POST'; // HTTP method: PUT for update, POST for create
+                ? `${backendUrl}/exercises/${exerciseId}`
+                : `${backendUrl}/exercises`;
+            const method = exerciseId ? 'PUT' : 'POST';
 
             const response = await fetch(url, {
                 method,
@@ -52,30 +61,43 @@ export default function AddCustomExerciseScreen({ route, navigation }: Props) {
                     'Content-Type': 'application/json',
                     Authorization: `${token}`,
                 },
-                body: JSON.stringify({ name: exerciseName, category, category_id, trainee_id: traineeId }),
+                body: JSON.stringify({
+                    name: exerciseName,
+                    category,
+                    category_id,
+                    trainee_id: traineeId,
+                }),
             });
 
             if (!response.ok) {
                 throw new Error(exerciseId ? 'Failed to update exercise' : 'Failed to add exercise');
             }
 
-            Alert.alert(
-                'Success',
-                exerciseId ? 'Exercise updated successfully!' : 'Exercise added successfully!'
-            );
-            navigation.goBack(); // Go back to the exercises screen
+            Toast.show({
+                type: 'success',
+                text1: exerciseId ? 'Exercise Updated' : 'Exercise Added',
+                text2: `The exercise "${exerciseName}" was successfully ${exerciseId ? 'updated' : 'added'}.`,
+            });
+
+            navigation.goBack();
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'An error occurred while saving the exercise.');
+            Toast.show({
+                type: 'error',
+                text1: 'Server Error',
+                text2: 'Something went wrong while saving the exercise.',
+            });
         } finally {
-            setIsLoading(false); // Hide spinner
+            setIsLoading(false);
         }
     };
 
     return (
         <View style={styles.container}>
             <Text style={styles.title}>
-                {exerciseId ? `Edit Exercise in ${category}` : `Add Custom Exercise to ${category}`}
+                {exerciseId
+                    ? `Edit Exercise in ${category}`
+                    : `Add Custom Exercise to ${category}`}
             </Text>
             <TextInput
                 style={styles.input}

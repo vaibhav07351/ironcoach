@@ -5,7 +5,6 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -16,6 +15,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Trainee } from '../types/trainee';
 import DateTimePicker from '@react-native-community/datetimepicker'; // Import DateTimePicker
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 
 type Food = {
   name: string;
@@ -66,7 +66,11 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        Alert.alert('Error', 'User is not authenticated. Please log in again.');
+         Toast.show({
+          type: 'error',
+          text1: 'Authentication Failed',
+          text2: 'Please log in again.',
+        });
         navigation.navigate('Login');
         return;
       }
@@ -87,7 +91,11 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
       setDietEntry(Array.isArray(data) ? data[0] : data);
     } catch (error) {
       console.error('Error fetching diet entry:', error);
-      Alert.alert('Error', 'Failed to load diet entry.');
+      Toast.show({
+          type: 'info',
+          text1: 'Failed to load Diet Entry',
+          text2: 'No diet data found for this date.',
+        });
     } finally {
       setIsLoading(false);
     }

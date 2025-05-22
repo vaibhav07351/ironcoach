@@ -6,7 +6,6 @@ import {
     FlatList,
     TouchableOpacity,
     ActivityIndicator,
-    Alert,
     Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,13 +13,14 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutCategories'>;
 
 export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
-    const { traineeId } = route.params; // Get traineeId
+    const { traineeId } = route.params;
     const [isLoading, setIsLoading] = useState(false);
-    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);  // Initialize as an empty array
+    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<{ id: string; name: string } | null>(null);
     const [isModalVisible, setModalVisible] = useState(false);
 
@@ -33,7 +33,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                 navigation.navigate('Login');
                 return;
             }
-            
+
             const backendUrl = Constants.expoConfig?.extra?.backendUrl;
             const response = await fetch(`${backendUrl}/categories`, {
                 headers: { Authorization: `${token}` },
@@ -44,67 +44,61 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
             }
 
             const data = await response.json();
-            
-            if (!data || data.length === 0) {
-                setCategories([])
-            }else{
-            setCategories(data); // Update categories list
 
+            if (!data || data.length === 0) {
+                setCategories([]);
+            } else {
+                setCategories(data);
             }
         } catch (error) {
             console.error('Error fetching categories:', error);
+            // Toast.show({
+            //     type: 'error',
+            //     text1: 'Error',
+            //     text2: 'Failed to load categories',
+            // });
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleDeleteCategory = async (categoryId: string) => {
-        Alert.alert(
-            'Delete Category',
-            'Are you sure you want to delete this category? This will permanently delete all exercises under this category and all workout logs associated with those exercises.',
-            [
-                {
-                    text: 'Cancel',
-                    style: 'cancel',
-                },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        setIsLoading(true);
-                        try {
-                            const token = await AsyncStorage.getItem('token');
-                            if (!token) {
-                                console.error('No token found. Redirecting to login.');
-                                navigation.navigate('Login');
-                                return;
-                            }
-                            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-                            const response = await fetch(
-                                `${backendUrl}/categories/${categoryId}`,
-                                {
-                                    method: 'DELETE',
-                                    headers: { Authorization: `${token}` },
-                                }
-                            );
+        setModalVisible(false);
+        setIsLoading(true);
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) {
+                console.error('No token found. Redirecting to login.');
+                navigation.navigate('Login');
+                return;
+            }
 
-                            if (!response.ok) {
-                                throw new Error('Failed to delete category');
-                            }
+            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+            const response = await fetch(`${backendUrl}/categories/${categoryId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `${token}` },
+            });
 
-                            setCategories(categories.filter((cat) => cat.id !== categoryId));
-                            Alert.alert('Success', 'Category deleted successfully!');
-                        } catch (error) {
-                            console.error('Error deleting category:', error);
-                            Alert.alert('Error', 'Failed to delete category.');
-                        } finally {
-                            setIsLoading(false);
-                        }
-                    },
-                },
-            ],
-            { cancelable: true }
-        );
+            if (!response.ok) {
+                throw new Error('Failed to delete category');
+            }
+
+            setCategories(categories.filter((cat) => cat.id !== categoryId));
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: 'Category deleted successfully!',
+            });
+        } catch (error) {
+            console.error('Error deleting category:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to delete category.',
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleEditCategory = () => {
@@ -123,7 +117,6 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
         setModalVisible(true);
     };
 
-    // Fetch categories every time the screen comes into focus
     useFocusEffect(
         useCallback(() => {
             fetchCategories();
@@ -131,7 +124,11 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
     );
 
     const handleCategorySelect = (category: { id: string; name: string }) => {
-        navigation.navigate('WorkoutExercises', { category: category.name, category_id: category.id, traineeId });
+        navigation.navigate('WorkoutExercises', {
+            category: category.name,
+            category_id: category.id,
+            traineeId,
+        });
     };
 
     return (
@@ -139,7 +136,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
             <Text style={styles.title}>Select a Category</Text>
             {isLoading ? (
                 <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />
-            ) : categories.length === 0 ? ( // Check if categories array is empty
+            ) : categories.length === 0 ? (
                 <View style={styles.noDataContainer}>
                     <Text style={styles.noDataText}>No categories available.</Text>
                 </View>
@@ -151,7 +148,8 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                         <TouchableOpacity
                             style={styles.categoryCard}
                             onPress={() => handleCategorySelect(item)}
-                            onLongPress={() => handleCategoryLongPress(item)}>
+                            onLongPress={() => handleCategoryLongPress(item)}
+                        >
                             <Text style={styles.categoryText}>{item.name}</Text>
                         </TouchableOpacity>
                     )}
@@ -160,7 +158,8 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
 
             <TouchableOpacity
                 style={styles.addButton}
-                onPress={() => navigation.navigate('AddCustomCategory', { traineeId })}>
+                onPress={() => navigation.navigate('AddCustomCategory', { traineeId })}
+            >
                 <Text style={styles.addButtonText}>+ Add Custom Category</Text>
             </TouchableOpacity>
 
@@ -169,7 +168,8 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                 visible={isModalVisible}
                 transparent={true}
                 animationType="fade"
-                onRequestClose={() => setModalVisible(false)}>
+                onRequestClose={() => setModalVisible(false)}
+            >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContainer}>
                         <Text style={styles.modalTitle}>Category Options</Text>
@@ -178,24 +178,25 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                                 style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}
                                 onPress={() => {
                                     handleEditCategory();
-                                    setModalVisible(false); // Close modal after edit
-                                }}>
+                                }}
+                            >
                                 <Text style={styles.modalButtonText}>✏️ Edit</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.modalButton, { backgroundColor: '#FF5252' }]}
                                 onPress={() => {
                                     if (selectedCategory) {
-                                        setModalVisible(false); // Close modal before delete
                                         handleDeleteCategory(selectedCategory.id);
                                     }
-                                }}>
+                                }}
+                            >
                                 <Text style={styles.modalButtonText}>🗑️ Delete</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
             </Modal>
+
         </View>
     );
 }

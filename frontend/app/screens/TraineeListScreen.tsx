@@ -21,8 +21,25 @@ import { Colors, Spacing } from '../../constants/theme';
 import { useIsFocused } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trainees'>;
+
+function ConfirmDeleteToast({ message, onConfirm, onCancel }: any) {
+    return (
+        <View style={styles.toastContainer}>
+            <Text style={styles.toastMessage}>{message}</Text>
+            <View style={styles.buttonsContainer}>
+                <TouchableOpacity onPress={onCancel} style={[styles.button, styles.cancelBtn]}>
+                    <Text style={styles.btnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={onConfirm} style={[styles.button, styles.confirmBtn]}>
+                    <Text style={styles.btnText}>Delete</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+}
 
 export default function TraineeListScreen({ route, navigation }: Props) {
     const { status } = route.params; // "active" or "inactive"
@@ -224,21 +241,24 @@ export default function TraineeListScreen({ route, navigation }: Props) {
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
-                                    onPress={() =>
-                                        Alert.alert(
-                                            'Delete Trainee',
-                                            `Are you sure you want to delete ${item.name}?`,
-                                            [
-                                                { text: 'Cancel', style: 'cancel' },
-                                                {
-                                                    text: 'Delete',
-                                                    style: 'destructive',
-                                                    onPress: () =>
-                                                        deleteTrainee(item.id),
+                                    onPress={() => {
+                                        Toast.show({
+                                            type: 'confirm_delete',
+                                            position: 'bottom',
+                                            props: {
+                                                message: `Are you sure you want to permanently delete trainee: ${item.name}?`,
+                                                onConfirm: () => {
+                                                    deleteTrainee(item.id);
+                                                    Toast.hide();
                                                 },
-                                            ]
-                                        )
-                                    }
+                                                onCancel: () => {
+                                                    Toast.hide();
+                                                },
+                                            },
+                                            visibilityTime: 10000,
+                                            autoHide: false,
+                                        });
+                                    }}
                                     style={styles.iconContainer}
                                 >
                                     <Ionicons name="trash-outline" size={24} color="red" />
@@ -252,11 +272,56 @@ export default function TraineeListScreen({ route, navigation }: Props) {
                     onPress={() => navigation.navigate('TraineeForm', {})}
                 />
             </View>
+            <Toast
+                config={{
+                    confirm_delete: ({ props }) => (
+                        <ConfirmDeleteToast
+                            message={props.message}
+                            onConfirm={props.onConfirm}
+                            onCancel={props.onCancel}
+                        />
+                    ),
+                }}
+            />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
+     toastContainer: {
+        backgroundColor: '#333',
+        padding: 15,
+        borderRadius: 8,
+        flexDirection: 'column',
+        alignItems: 'center',
+        marginHorizontal: 10,
+        marginBottom: 30,
+    },
+    toastMessage: {
+        color: 'white',
+        marginBottom: 10,
+        fontSize: 16,
+        textAlign: 'center',
+    },
+    buttonsContainer: {
+        flexDirection: 'row',
+    },
+    button: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        marginHorizontal: 5,
+        borderRadius: 6,
+    },
+    cancelBtn: {
+        backgroundColor: '#555',
+    },
+    confirmBtn: {
+        backgroundColor: '#d9534f',
+    },
+    btnText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
     container: {
         flex: 1,
         flexDirection: 'row',

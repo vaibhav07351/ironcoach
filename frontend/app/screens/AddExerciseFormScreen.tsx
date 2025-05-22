@@ -16,6 +16,8 @@ import { RootStackParamList } from '../types/navigation';
 import { ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
+
 
 // Define Props for the Screen
 type Props = NativeStackScreenProps<RootStackParamList, 'AddExerciseForm'>;
@@ -31,7 +33,12 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
 
     const handleSave = () => {
         if (!weight || !reps) {
-            Alert.alert('Validation Error', 'Please enter weight and reps.');
+            Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2: 'Please enter weight and reps.',
+            });
+
             return;
         }
 
@@ -76,7 +83,12 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
     const handleSubmit = async () => {
         
         if (sets.length === 0 || weights.length === 0) {
-            Alert.alert('Validation Error', 'Please add at least one set.');
+            Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2: 'Please add at least one set.',
+            });
+
             return;
         }
     
@@ -84,7 +96,12 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
-                Alert.alert('Error', 'Authentication token not found. Please log in again.');
+                Toast.show({
+                    type: 'error',
+                    text1: 'Authentication Error',
+                    text2: 'Token not found. Please login again.',
+                });
+
                 navigation.navigate('Login');
                 return;
             }
@@ -121,7 +138,12 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
                 throw new Error('Failed to add workout log');
             }
     
-            Alert.alert('Success', 'Workout log added successfully!');
+            Toast.show({
+                type: 'success',
+                text1: 'Workout Log Added',
+                text2: 'Successfully logged the workout.',
+            });
+
             navigation.reset({
                 // index: 1, // Position in the stack
                 routes: [
@@ -131,7 +153,12 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
             });
         } catch (error) {
             console.error('Error:', error);
-            Alert.alert('Error', 'An error occurred while adding the workout log.');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to add workout log. Please try again.',
+            });
+
         } finally {
             setIsLoading(false);
         }

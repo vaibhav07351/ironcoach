@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import Toast from 'react-native-toast-message';
 
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
@@ -51,6 +52,7 @@ export default function AppNavigation() {
                 {/* <Stack.Screen name="AboutTraineeScreenTabs" component={AboutTraineeScreenTabs} /> */}
 
             </Stack.Navigator>
+           <Toast />
           </AuthProvider>
       </ThemeProvider>
     );

@@ -20,6 +20,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Trainee } from '../types/trainee';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 
 type WorkoutLog = {
     id: string;
@@ -148,46 +149,51 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
     };
 
     const handleDelete = async (logId: string) => {
-        Alert.alert(
-            'Confirm Deletion',
-            'Are you sure you want to delete this workout log?',
-            [
-                {
-                    text: 'Cancel',
-                    style: 'cancel',
-                },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            const token = await AsyncStorage.getItem('token');
-                            if (!token) {
-                                Alert.alert('Error', 'User is not authenticated. Please log in again.');
-                                return;
-                            }
-                            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-                            const response = await fetch(`${backendUrl}/workout_logs/${logId}`, {
-                                method: 'DELETE',
-                                headers: {
-                                    Authorization: `${token}`,
-                                },
-                            });
+        // Show confirmation toast
+        Toast.show({
+            type: 'info',
+            text1: 'Confirm Deletion',
+            text2: 'Tap here to confirm deletion of this workout log',
+            visibilityTime: 4000,
+            onPress: async () => {
+                try {
+                    const token = await AsyncStorage.getItem('token');
+                    if (!token) {
+                        Toast.show({
+                            type: 'error',
+                            text1: 'Authentication Error',
+                            text2: 'User is not authenticated. Please log in again.',
+                        });
+                        return;
+                    }
+                    const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+                    const response = await fetch(`${backendUrl}/workout_logs/${logId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            Authorization: `${token}`,
+                        },
+                    });
 
-                            if (!response.ok) {
-                                throw new Error('Failed to delete workout log.');
-                            }
+                    if (!response.ok) {
+                        throw new Error('Failed to delete workout log.');
+                    }
 
-                            Alert.alert('Success', 'Workout log deleted successfully.');
-                            setWorkoutLogs((prevLogs) => prevLogs.filter((log) => log.id !== logId));
-                        } catch (error) {
-                            console.error('Error deleting workout log:', error);
-                            Alert.alert('Error', 'Failed to delete workout log. Please try again.');
-                        }
-                    },
-                },
-            ]
-        );
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Success',
+                        text2: 'Workout log deleted successfully.',
+                    });
+                    setWorkoutLogs((prevLogs) => prevLogs.filter((log) => log.id !== logId));
+                } catch (error) {
+                    console.error('Error deleting workout log:', error);
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Error',
+                        text2: 'Failed to delete workout log. Please try again.',
+                    });
+                }
+            }
+        });
     };
     
     // Function to format date from YYYY-MM-DD to DD-MM-YYYY

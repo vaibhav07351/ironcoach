@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,6 +8,7 @@ import { Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TraineeForm'>;
 
@@ -45,7 +46,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
     const handlePickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('Permission required', 'You need to grant permission to access the image library.');
+             Toast.show({ type: 'error', text1: 'Permission required', text2: 'Enable image library access' });
             return;
         }
 
@@ -59,7 +60,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
 
              // Validate file size (fileSize is in bytes)
             if (selectedImage.fileSize && selectedImage.fileSize > 2* 1024 * 1024) {
-                Alert.alert('File Size Error', 'Image size must be under 2 MB.');
+                Toast.show({ type: 'error', text1: 'Image too large', text2: 'Image must be under 2 MB' });
                 return;
             }
             setImage({ uri: selectedImage.uri });
@@ -102,7 +103,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             return data.image_url;
         } catch (error) {
             console.error('Error uploading image:', error);
-            Alert.alert('Error', 'Failed to upload image.');
+            Toast.show({ type: 'error', text1: 'Upload Error', text2: 'Failed to upload image' });
             return null;
         }
     };
@@ -152,7 +153,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             }
         } catch (error) {
             console.error('Error fetching trainee:', error);
-            Alert.alert('Error', 'Failed to load trainee details.');
+            Toast.show({ type: 'error', text1: 'Loading Error', text2: 'Failed to load trainee details.' });
         } finally {
             setIsLoading(false);
         }
@@ -160,65 +161,89 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
 
     const validateDate = (date: string, fieldName: string): boolean => {
         const dateRegex = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
-    
+
         // Check if the date matches the DD-MM-YYYY format
         if (!dateRegex.test(date)) {
-            Alert.alert('Validation Error', `${fieldName} must be in DD-MM-YYYY format.`);
+            Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2: `${fieldName} must be in DD-MM-YYYY format.`,
+            });
             return false;
         }
-    
+
         // Split the date into components (day, month, year)
         const [day, month, year] = date.split('-').map(Number);
-    
+
         // Check if the date is valid (e.g., February 30 is not valid)
         const dateObj = new Date(year, month - 1, day);
-        if (dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) {
-            Alert.alert(`${fieldName} Validation Error`, `Invalid date. Please check the day, month, and year.`);
+        if (
+            dateObj.getDate() !== day ||
+            dateObj.getMonth() !== month - 1 ||
+            dateObj.getFullYear() !== year
+        ) {
+            Toast.show({
+                type: 'error',
+                text1: `${fieldName} Validation Error`,
+                text2: 'Invalid date. Please check the day, month, and year.',
+            });
             return false;
         }
-    
+
         // Check for reasonable year range (1900 to current year)
         const currentYear = new Date().getFullYear();
         if (year < 1900 || year > currentYear) {
-            Alert.alert(`${fieldName} Validation Error`, `Year must be between 1900 and ${currentYear}.`);
+            Toast.show({
+                type: 'error',
+                text1: `${fieldName} Validation Error`,
+                text2: `Year must be between 1900 and ${currentYear}.`,
+            });
             return false;
         }
-    
+
         return true;  // If all validations pass, return true
     };
     
-    
-    
     const validateFields = () => {
         if (!name.trim() || !phoneNumber.trim() || !dob.trim() || !gender.trim() || !height.trim()) {
-            Alert.alert('Validation Error', 'All fields marked with * are mandatory.');
+            Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2: 'All fields marked with * are mandatory.',
+            });
             return false;
-        }
-    
-        const phoneRegex = /^[6-9][0-9]{9}$/;
-        if (!phoneRegex.test(phoneNumber)) {
-            Alert.alert('Validation Error', 'Please enter a Valid 10-digit phone number.');
-            return false;
-        }
-    
-            // For dob
-        if (!validateDate(dob, 'Date of Birth')) {
-            return false;  // Stop further processing if date is invalid
         }
 
-        // For startDate
-        if (!validateDate(startDate, 'Start Date')) {
-            return false;  // Stop further processing if date is invalid
+        const phoneRegex = /^[6-9][0-9]{9}$/;
+        if (!phoneRegex.test(phoneNumber)) {
+            Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2: 'Please enter a valid 10-digit phone number.',
+            });
+            return false;
         }
-    
-        if (isNaN(parseFloat(height)) ||  parseFloat(height) <= 0) {
-            Alert.alert('Validation Error', 'Height must be a positive number.');
+
+        if (!validateDate(dob, 'Date of Birth')) {
+            return false;
+        }
+
+        if (!validateDate(startDate, 'Start Date')) {
+            return false;
+        }
+
+        if (isNaN(parseFloat(height)) || parseFloat(height) <= 0) {
+            Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2: 'Height must be a positive number.',
+            });
             return false;
         }
 
         return true;
     };
-    
+
     const handleSubmit = async () => {
 
         if (!validateFields()) {
@@ -278,11 +303,21 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 throw new Error(responseBody.message || 'Failed to add trainee');
             }
     
-            Alert.alert('Success', traineeId ? 'Trainee updated successfully.' : 'Trainee added successfully.');
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: traineeId ? 'Trainee updated successfully.' : 'Trainee added successfully.',
+            });
+
             navigation.goBack();
         } catch (error) {
             console.error('Error submitting trainee:', error);
-            Alert.alert('Error', traineeId ? 'Failed to update trainee.' : 'Failed to add trainee.');
+            Toast.show({
+                type: 'error',
+                text1: 'Submission Error',
+                text2: traineeId ? 'Failed to update trainee.' : 'Failed to add trainee.',
+            });
+
         } finally {
             setIsLoading(false);
         }
@@ -334,7 +369,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                         <TextInput style={styles.input} placeholder="Date of Birth (DD-MM-YYYY) *" value={dob} onChangeText={setDob} />
                         <TextInput style={styles.input} placeholder="Height (cm) *" value={height} onChangeText={setHeight} keyboardType="numeric" />
                         <TextInput style={styles.input} placeholder="Profession" value={profession} onChangeText={setProfession} />
-                        <TextInput style={styles.input} placeholder="Start Date (DD-MM-YYYY)" value={startDate} onChangeText={setStartDate} />
+                        <TextInput style={styles.input} placeholder="Start Date (DD-MM-YYYY) *" value={startDate} onChangeText={setStartDate} />
                         {/* <TextInput style={styles.input} placeholder="Weight (kg) *" value={weight} onChangeText={setWeight} keyboardType="numeric" /> */}
                         {/* <TextInput style={styles.input} placeholder="BMI" value={bmi} onChangeText={setBmi} keyboardType="numeric" /> */}
                         <TextInput style={styles.input} placeholder="Membership Type" value={membershipType} onChangeText={setMembershipType} />

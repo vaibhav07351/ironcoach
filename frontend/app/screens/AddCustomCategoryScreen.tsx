@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    StyleSheet,
+    Alert,
+    ActivityIndicator,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
-import { ActivityIndicator } from 'react-native';
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddCustomCategory'>;
 
@@ -16,16 +24,25 @@ export default function AddCustomCategoryScreen({ route, navigation }: Props) {
 
     const handleSaveCategory = async () => {
         if (!categoryName.trim()) {
-            Alert.alert('Error', 'Category name cannot be empty.');
+            Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2: 'Category name cannot be empty.',
+            });
             return;
         }
 
-        setIsLoading(true); // Start loading
+        setIsLoading(true);
         const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
-                Alert.alert('Error', 'Authentication token not found. Please log in again.');
+                Toast.show({
+                    type: 'error',
+                    text1: 'Authentication Error',
+                    text2: 'Please log in again.',
+                });
                 navigation.navigate('Login');
                 return;
             }
@@ -45,24 +62,31 @@ export default function AddCustomCategoryScreen({ route, navigation }: Props) {
             });
 
             if (!response.ok) {
-                throw new Error(
-                    isUpdateMode ? 'Failed to update category' : 'Failed to add category'
-                );
+                throw new Error(isUpdateMode ? 'Failed to update category' : 'Failed to add category');
             }
 
-            Alert.alert('Success', isUpdateMode ? 'Category updated successfully!' : 'Category added successfully!');
-            navigation.goBack(); // Go back to the categories screen
+            Toast.show({
+                type: 'success',
+                text1: isUpdateMode ? 'Category Updated' : 'Category Added',
+                text2: `The category "${categoryName}" has been ${isUpdateMode ? 'updated' : 'added'} successfully.`,
+            });
+
+            navigation.goBack();
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'An error occurred while saving the category.');
+            Toast.show({
+                type: 'error',
+                text1: 'Server Error',
+                text2: 'Something went wrong while saving the category.',
+            });
         } finally {
-            setIsLoading(false); // Stop loading
+            setIsLoading(false);
         }
     };
 
     useEffect(() => {
         if (isUpdateMode && currentName) {
-            setCategoryName(currentName); // Populate the input with the current category name
+            setCategoryName(currentName);
         }
     }, [currentName, isUpdateMode]);
 
@@ -70,7 +94,9 @@ export default function AddCustomCategoryScreen({ route, navigation }: Props) {
         <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />
     ) : (
         <View style={styles.container}>
-            <Text style={styles.title}>{isUpdateMode ? 'Update Category' : 'Add Custom Category'}</Text>
+            <Text style={styles.title}>
+                {isUpdateMode ? 'Update Category' : 'Add Custom Category'}
+            </Text>
             <TextInput
                 style={styles.input}
                 placeholder="Category Name"
@@ -78,14 +104,21 @@ export default function AddCustomCategoryScreen({ route, navigation }: Props) {
                 onChangeText={setCategoryName}
             />
             <TouchableOpacity style={styles.saveButton} onPress={handleSaveCategory}>
-                <Text style={styles.saveButtonText}>{isUpdateMode ? 'Update Category' : 'Add Category'}</Text>
+                <Text style={styles.saveButtonText}>
+                    {isUpdateMode ? 'Update Category' : 'Add Category'}
+                </Text>
             </TouchableOpacity>
+
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16, justifyContent: 'center' },
+    container: {
+        flex: 1,
+        padding: 16,
+        justifyContent: 'center',
+    },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
@@ -107,5 +140,8 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         alignItems: 'center',
     },
-    saveButtonText: { color: '#fff', fontSize: 16 },
+    saveButtonText: {
+        color: '#fff',
+        fontSize: 16,
+    },
 });

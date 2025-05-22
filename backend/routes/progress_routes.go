@@ -12,5 +12,5 @@ func RegisterProgressRoutes(router *gin.Engine) {
 	protected := router.Group("/progress").Use(middlewares.AuthMiddleware())
 
 	protected.GET("/:trainee_id", progressController.GetProgress)
-	protected.POST("/", progressController.AddWeightProgress)
+	protected.POST("", progressController.AddWeightProgress)
 }

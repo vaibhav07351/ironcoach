@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,6 +8,7 @@ import { Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Signup'>;
 
@@ -35,7 +36,7 @@ export default function SignupScreen() {
     const handlePickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('Permission required', 'You need to grant permission to access the image library.');
+            Toast.show({ type: 'error', text1: 'Permission required', text2: 'Enable image library access' });
             return;
         }
 
@@ -49,7 +50,7 @@ export default function SignupScreen() {
 
             // Validate file size (fileSize is in bytes)
             if (selectedImage.fileSize && selectedImage.fileSize > 2* 1024 * 1024) {
-                Alert.alert('File Size Error', 'Image size must be under 2 MB.');
+                Toast.show({ type: 'error', text1: 'Image too large', text2: 'Image must be under 2 MB' });
                 return;
             }
             
@@ -65,7 +66,6 @@ export default function SignupScreen() {
     // Fixing FormData for TypeScript
     const uploadImage = async () => {
         if (!image) {
-            // Alert.alert('Validation Error', 'Please select an image to upload.');
             console.log("Please select an image to upload")
             return null;
         }
@@ -98,7 +98,7 @@ export default function SignupScreen() {
             return data.image_url;
         } catch (error) {
             console.error('Error uploading image:', error);
-            Alert.alert('Error', 'Failed to upload image.');
+            Toast.show({ type: 'error', text1: 'Upload Error', text2: 'Failed to upload image' });
             return null;
         }
     };
@@ -106,12 +106,12 @@ export default function SignupScreen() {
     const handleSignup = async () => {
 
         if (!name || !email || !password || !confirmPassword) {
-            Alert.alert('Validation Error', 'Please fill all mandatory fields marked with *.');
+            Toast.show({ type: 'error', text1: 'Missing Fields', text2: 'Fill all mandatory fields (*)' });
             return;
         }
 
         if (password !== confirmPassword) {
-            Alert.alert('Error', 'Passwords do not match. Please check and try again.');
+            Toast.show({ type: 'error', text1: 'Password Mismatch', text2: 'Passwords do not match' });
             return;
         }
 
@@ -152,13 +152,13 @@ export default function SignupScreen() {
                 throw new Error(data.error || 'Signup failed');
             }
 
-            Alert.alert('Signup Successful', data.message || 'Your account has been created.');
+            Toast.show({ type: 'success', text1: 'Signup Successful', text2: 'Account created successfully' });
             navigation.navigate('Login');
         } catch (error: unknown) {
             if (error instanceof Error) {
-                Alert.alert('Signup Failed', error.message);
+                 Toast.show({ type: 'error', text1: 'Signup Failed', text2: error.message });
             } else {
-                Alert.alert('Signup Failed', 'An unknown error occurred.');
+                 Toast.show({ type: 'error', text1: 'Signup Failed', text2: 'An unknown error occurred.' });
             }
         }
     };

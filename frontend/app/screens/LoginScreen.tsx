@@ -1,10 +1,11 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Linking, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { AuthContext } from '../contexts/AuthContext'; // Import AuthContext
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -38,13 +39,25 @@ export default function LoginScreen() {
             // Call login function from AuthContext
             await login(token);
 
-            // Alert.alert('Login Successful', 'Welcome back!');
+            Toast.show({
+                type: 'success',
+                text1: 'Login Successful',
+                text2: 'Welcome back!',
+            });
             navigation.navigate('Dashboard'); // Navigate after successful login
         } catch (error: unknown) {
             if (error instanceof Error) {
-                Alert.alert('Login Failed', error.message);
+                Toast.show({
+                    type: 'error',
+                    text1: 'Login Failed',
+                    text2: error.message,
+                });
             } else {
-                Alert.alert('Login Failed', 'An unknown error occurred.');
+                 Toast.show({
+                    type: 'error',
+                    text1: 'Login Failed',
+                    text2: 'An unknown error occurred.',
+                });
             }
         } finally {
             setIsLoading(false); // Stop loading

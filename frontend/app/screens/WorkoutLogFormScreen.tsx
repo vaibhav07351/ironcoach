@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     FlatList,
     TextInput,
-    Alert,
     KeyboardAvoidingView,
     Platform,
 } from 'react-native';
@@ -16,6 +15,7 @@ import { RootStackParamList } from '../types/navigation';
 import { ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutLogForm'>;
 
@@ -53,7 +53,11 @@ export default function WorkoutLogFormScreen({ route, navigation }: Props) {
     };
     const handleSave = () => {
         if (!weight || !reps) {
-            Alert.alert('Validation Error', 'Please enter weight and reps.');
+             Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2: 'Please enter weight and reps.',
+            });
             return;
         }
 
@@ -84,7 +88,11 @@ export default function WorkoutLogFormScreen({ route, navigation }: Props) {
 
     const handleSubmit = async () => {
         if (!exercise || sets.length === 0 || weights.length === 0) {
-            Alert.alert('Validation Error', 'Please fill out all fields.');
+            Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2: 'Please fill out all fields.',
+            });
             return;
         }
 
@@ -93,7 +101,11 @@ export default function WorkoutLogFormScreen({ route, navigation }: Props) {
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
-                Alert.alert('Error', 'Authentication token not found. Please log in again.');
+                Toast.show({
+                    type: 'error',
+                    text1: 'Authentication Error',
+                    text2: 'Token not found. Please log in again.',
+                });
                 navigation.navigate('Login');
                 return;
             }
@@ -128,14 +140,22 @@ export default function WorkoutLogFormScreen({ route, navigation }: Props) {
                 throw new Error('Failed to save workout log.');
             }
 
-            Alert.alert('Success', 'Workout log saved successfully!');
+             Toast.show({
+                type: 'success',
+                text1: 'Workout Saved',
+                text2: 'Workout log saved successfully!',
+            });
             navigation.reset({
                 // index: 1,
                 routes: [{ name: 'TraineeDetail' , params: { trainee } }],
             });
         } catch (error) {
             console.error('Error saving workout log:', error);
-            Alert.alert('Error', 'Failed to save workout log.');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to save workout log.',
+            });
         } finally {
             setIsLoading(false);
         }

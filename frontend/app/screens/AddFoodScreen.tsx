@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     FlatList,
     TextInput,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     Button,
@@ -16,6 +15,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 
 type Food = {
     name: string;
@@ -55,7 +55,12 @@ export default function AddFoodScreen({ route, navigation }: Props) {
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
-                Alert.alert('Error', 'Authentication token not found. Please log in again.');
+               Toast.show({
+                    type: 'error',
+                    text1: 'Authentication Token not found',
+                    text2: 'Please log in again.',
+                });
+
                 navigation.navigate('Login');
                 return;
             }
@@ -75,13 +80,23 @@ export default function AddFoodScreen({ route, navigation }: Props) {
             }
         } catch (error) {
             console.error('Error fetching existing diet entry:', error);
-            Alert.alert('Error', 'Failed to fetch existing diet entry.');
+            Toast.show({
+                type: 'error',
+                text1: 'Failed to Load',
+                text2: 'Could not fetch diet entry.',
+            });
+
         }
     };
 
     const handleAddOrEditFood = () => {
         if (!currentFood.name || currentFood.quantity <= 0 || !currentFood.units) {
-            Alert.alert('Validation Error', 'Please fill all fields for the food item.');
+            Toast.show({
+                type: 'error',
+                text1: 'Missing Fields',
+                text2: 'Please fill all the fields.',
+            });
+
             return;
         }
     
@@ -129,7 +144,12 @@ export default function AddFoodScreen({ route, navigation }: Props) {
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
-                Alert.alert('Error', 'Authentication token not found. Please log in again.');
+                Toast.show({
+                    type: 'error',
+                    text1: 'Authentication Error',
+                    text2: 'Please log in again.',
+                });
+
                 navigation.navigate('Login');
                 return;
             }
@@ -154,7 +174,11 @@ export default function AddFoodScreen({ route, navigation }: Props) {
                     throw new Error('Failed to update diet entry.');
                 }
 
-                Alert.alert('Success', 'Diet entry updated successfully!');
+                Toast.show({
+                    type: 'success',
+                    text1: 'Diet Entry Updated',
+                });
+
             } else {
                 const response = await fetch(`${backendUrl}/diet_entries`, {
                     method: 'POST',
@@ -169,13 +193,22 @@ export default function AddFoodScreen({ route, navigation }: Props) {
                     throw new Error('Failed to create new diet entry.');
                 }
 
-                Alert.alert('Success', 'New diet entry created successfully!');
+                Toast.show({
+                    type: 'success',
+                    text1: 'New Diet Entry Created',
+                });
+
             }
 
             navigation.goBack();
         } catch (error) {
             console.error('Error saving meal:', error);
-            Alert.alert('Error', 'Failed to save meal.');
+            Toast.show({
+                type: 'error',
+                text1: 'Save Failed',
+                text2: 'Unable to save Meal.',
+            });
+
         }
     };
 

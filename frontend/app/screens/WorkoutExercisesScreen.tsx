@@ -7,12 +7,12 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Modal,
-    Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useFocusEffect } from '@react-navigation/native';
+import Toast from 'react-native-toast-message';
 
 import { MaterialIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
@@ -85,54 +85,63 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
         setIsModalVisible(false);
     };
 
+    const showDeleteConfirmation = () => {
+        if (selectedExercise) {
+            Toast.show({
+                type: 'info',
+                text1: 'Delete Confirmation',
+                text2: `Deleting "${selectedExercise.name}" will also delete all workout logs. Tap to confirm.`,
+                position: 'top',
+                visibilityTime: 8000,
+                onPress: handleDeleteExercise,
+                props: {
+                    onPress: handleDeleteExercise
+                }
+            });
+            setIsModalVisible(false);
+        }
+    };
+
     const handleDeleteExercise = async () => {
         if (selectedExercise) {
-            Alert.alert(
-                'Delete Confirmation',
-                `Deleting "${selectedExercise.name}" will also delete all workout logs associated with this exercise. Do you want to proceed?`,
-                [
+            try {
+                const token = await AsyncStorage.getItem('token');
+                if (!token) {
+                    console.error('No token found. Redirecting to login.');
+                    navigation.navigate('Login');
+                    return;
+                }
+                const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+                const response = await fetch(
+                    `${backendUrl}/exercises/${selectedExercise.id}`,
                     {
-                        text: 'Cancel',
-                        style: 'cancel',
-                    },
-                    {
-                        text: 'Delete',
-                        style: 'destructive',
-                        onPress: async () => {
-                            try {
-                                const token = await AsyncStorage.getItem('token');
-                                if (!token) {
-                                    console.error('No token found. Redirecting to login.');
-                                    navigation.navigate('Login');
-                                    return;
-                                }
-                                const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-                                const response = await fetch(
-                                    `${backendUrl}/exercises/${selectedExercise.id}`,
-                                    {
-                                        method: 'DELETE',
-                                        headers: {
-                                            Authorization: `${token}`,
-                                        },
-                                    }
-                                );
-    
-                                if (!response.ok) {
-                                    throw new Error('Failed to delete exercise');
-                                }
-    
-                                Alert.alert('Success', 'Exercise and its logs deleted successfully!');
-                                fetchExercises();
-                            } catch (error) {
-                                console.error('Error deleting exercise:', error);
-                                Alert.alert('Error', 'An error occurred while deleting the exercise.');
-                            }
-                            setIsModalVisible(false);
+                        method: 'DELETE',
+                        headers: {
+                            Authorization: `${token}`,
                         },
-                    },
-                ],
-                { cancelable: false }
-            );
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete exercise');
+                }
+
+                Toast.show({
+                    type: 'success',
+                    text1: 'Success',
+                    text2: 'Exercise and its logs deleted successfully!',
+                    position: 'top'
+                });
+                fetchExercises();
+            } catch (error) {
+                console.error('Error deleting exercise:', error);
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: 'An error occurred while deleting the exercise.',
+                    position: 'top'
+                });
+            }
         }
     };
     
@@ -192,13 +201,14 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.modalButton, { backgroundColor: '#FF5252' }]}
-                            onPress={handleDeleteExercise}>
+                            onPress={showDeleteConfirmation}>
                             {/* <MaterialIcons name="delete" size={24} color="#FFF" /> */}
                             <Text style={styles.modalButtonText}>🗑️ Delete</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
+        
         </View>
     );
 }

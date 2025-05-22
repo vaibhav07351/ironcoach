@@ -19,7 +19,7 @@ func main() {
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"https://ironcoach--nuhvn6qnqp.expo.app",
-			"http://localhost:8081/",
+			"http://localhost:8081",
 			"https://ironcoach--ironcoach-staging.expo.app",
 			"https://ironcoach.expo.app",
 		},

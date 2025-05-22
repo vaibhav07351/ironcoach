@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Linking, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Image } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { AuthContext } from '../contexts/AuthContext';
 import { Spacing } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import Toast from 'react-native-toast-message';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
@@ -24,7 +25,11 @@ export default function DashboardScreen({ navigation }: Props) {
 
     useEffect(() => {
         if (!isAuthenticated) {
-            Alert.alert('Session Expired', 'Please log in to continue.');
+            Toast.show({
+                type: 'error',
+                text1: 'Session Expired',
+                text2: 'Please log in to continue.',
+            });
             navigation.navigate('Login');
             return;
         }
@@ -46,7 +51,11 @@ export default function DashboardScreen({ navigation }: Props) {
                 setTrainerDetails(data);
             } catch (error) {
                 console.error('Error fetching trainer details:', error);
-                Alert.alert('Error', 'Failed to fetch trainer details.');
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: 'Failed to fetch trainer details.',
+                });
             } finally {
                 setIsLoading(false);
             }
@@ -57,7 +66,11 @@ export default function DashboardScreen({ navigation }: Props) {
 
     const handleLogout = () => {
         logout();
-        Alert.alert('Logged Out', 'You have been logged out successfully.');
+        Toast.show({
+            type: 'success',
+            text1: 'Logged Out',
+            text2: 'You have been logged out successfully.',
+        });
         navigation.navigate('Login');
     };
 
@@ -73,7 +86,11 @@ export default function DashboardScreen({ navigation }: Props) {
                     if (trainerDetails?.email) {
                         navigation.navigate('TrainerProfile', { trainerId: trainerDetails.email });
                     } else {
-                        Alert.alert('Error', 'Trainer ID is not available.');
+                         Toast.show({
+                            type: 'error',
+                            text1: 'Error',
+                            text2: 'Trainer ID is not available.',
+                        });
                     }
                 }}
             >

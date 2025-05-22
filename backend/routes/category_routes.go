@@ -11,8 +11,8 @@ func RegisterCategoryRoutes(router *gin.Engine) {
 	categoryController := controllers.NewCategoryController()
     protected := router.Group("/categories").Use(middlewares.AuthMiddleware())
 
-    protected.POST("/",categoryController.AddCategory)
-    protected.GET("/", categoryController.GetCategories)
+    protected.POST("",categoryController.AddCategory)
+    protected.GET("", categoryController.GetCategories)
     protected.PUT("/:id", categoryController.UpdateCategory)
     protected.DELETE("/:id", categoryController.DeleteCategory)
 }
