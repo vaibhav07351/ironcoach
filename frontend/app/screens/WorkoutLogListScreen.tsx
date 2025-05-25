@@ -79,7 +79,10 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
             }
 
             const data = await response.json();
-            setWorkoutLogs(Array.isArray(data) ? data : []); // Ensure `workoutLogs` is always an array
+            if (!data || !Array.isArray(data)) {
+            console.warn("Received unexpected data format:", data);
+            setWorkoutLogs([]); // fallback to empty array
+            }  // Ensure `workoutLogs` is always an array
         } catch (error) {
             console.error('Error fetching workout logs:', error);
             setWorkoutLogs([]); // Fallback to empty array
