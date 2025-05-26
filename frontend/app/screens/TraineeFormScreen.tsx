@@ -323,6 +323,25 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
         }
     };
 
+    interface InputFieldProps {
+        label: string;
+        value: string;
+        onChangeText: (text: string) => void;
+        [key: string]: any; // For additional TextInput props
+    }
+
+    const InputField = ({ label, value, onChangeText, ...props }: InputFieldProps) => (
+        <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>{label}</Text>
+            <TextInput
+                style={styles.input}
+                value={value}
+                onChangeText={onChangeText}
+                {...props}
+            />
+        </View>
+    );
+
     return (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16 }}>
@@ -359,31 +378,25 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                             </View>
                         </View>
 
-                        <TextInput style={styles.input} placeholder="Name *" value={name} onChangeText={setName} />
-                        <TextInput style={styles.input} placeholder="Phone Number *" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
-                        <TextInput style={styles.input} placeholder="Goals" value={goals} onChangeText={setGoals} />
-                        <TextInput style={styles.input} placeholder="Notes" value={notes} onChangeText={setNotes} />
-                        <TextInput style={styles.input} placeholder="Active Supplements" value={activeSupplements} onChangeText={setActiveSupplements} />
-                        <TextInput style={styles.input} placeholder="Medical History" value={medicalHistory} onChangeText={setMedicalHistory} />
-                        <TextInput style={styles.input} placeholder="Gender *" value={gender} onChangeText={setGender} />
-                        <TextInput style={styles.input} placeholder="Date of Birth (DD-MM-YYYY) *" value={dob} onChangeText={setDob} />
-                        <TextInput style={styles.input} placeholder="Height (cm) *" value={height} onChangeText={setHeight} keyboardType="numeric" />
-                        <TextInput style={styles.input} placeholder="Profession" value={profession} onChangeText={setProfession} />
-                        <TextInput style={styles.input} placeholder="Start Date (DD-MM-YYYY) *" value={startDate} onChangeText={setStartDate} />
-                        {/* <TextInput style={styles.input} placeholder="Weight (kg) *" value={weight} onChangeText={setWeight} keyboardType="numeric" /> */}
-                        {/* <TextInput style={styles.input} placeholder="BMI" value={bmi} onChangeText={setBmi} keyboardType="numeric" /> */}
-                        <TextInput style={styles.input} placeholder="Membership Type" value={membershipType} onChangeText={setMembershipType} />
-                        <TextInput style={styles.input} placeholder="Emergency Contact" value={emergencyContact} onChangeText={setEmergencyContact} keyboardType="phone-pad" />
-                        <TextInput style={styles.input} placeholder="Social Handle" value={socialHandle} onChangeText={setSocialHandle} />
+                        <InputField label="Name *" value={name} onChangeText={setName} />
+                        <InputField label="Phone Number *" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
+                        <InputField label="Goals" value={goals} onChangeText={setGoals} />
+                        <InputField label="Notes" value={notes} onChangeText={setNotes} />
+                        <InputField label="Active Supplements" value={activeSupplements} onChangeText={setActiveSupplements} />
+                        <InputField label="Medical History" value={medicalHistory} onChangeText={setMedicalHistory} />
+                        <InputField label="Gender *" value={gender} onChangeText={setGender} />
+                        <InputField label="Date of Birth (DD-MM-YYYY) *" value={dob} onChangeText={setDob} />
+                        <InputField label="Height (cm) *" value={height} onChangeText={setHeight} keyboardType="numeric" />
+                        <InputField label="Profession" value={profession} onChangeText={setProfession} />
+                        <InputField label="Start Date (DD-MM-YYYY) *" value={startDate} onChangeText={setStartDate} />
+                        <InputField label="Membership Type" value={membershipType} onChangeText={setMembershipType} />
+                        <InputField label="Emergency Contact" value={emergencyContact} onChangeText={setEmergencyContact} keyboardType="phone-pad" />
+                        <InputField label="Social Handle" value={socialHandle} onChangeText={setSocialHandle} />
                         
                         <View style={styles.switchContainer}>
                             <Text style={styles.switchLabel}>Active Status</Text>
                             <Switch value={activeStatus} onValueChange={setActiveStatus} />
                         </View>
-
-                       
-
-                        
 
                         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
                             <Text style={styles.submitButtonText}>{traineeId || trainee ? 'Update Trainee' : 'Add Trainee'}</Text>
@@ -397,12 +410,20 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
     title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
+    inputContainer: {
+        marginBottom: 12,
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#333',
+        marginBottom: 4,
+    },
     input: {
         padding: 12,
         borderWidth: 1,
         borderColor: '#ccc',
         borderRadius: 8,
-        marginBottom: 12,
     },
     button: {
         backgroundColor: '#6200ee',
