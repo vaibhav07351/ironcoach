@@ -48,33 +48,9 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
     const [isLabEditing, setIsLabEditing] = useState(false);
     const [currentTestDate, setCurrentTestDate] = useState('');
     const [showHistoryModal, setShowHistoryModal] = useState(false);
-    const [selectedHistoryDate, setSelectedHistoryDate] = useState('');
     
-    // Mock historical data - in real app, this would come from backend
-    const [testHistory, setTestHistory] = useState<TestRecord[]>([
-        {
-            date: '2024-01-15',
-            fitnessTests: [
-                { id: 1, category: 'Aerobic Endurance', test: 'Rockport Test', result1: '12:30', result2: '12:15', icon: 'directions-run', color: '#3B82F6' },
-                { id: 2, category: 'Muscular Strength', test: '1 Rep Max (Upper)', result1: '80kg', result2: '85kg', icon: 'fitness-center', color: '#EF4444' },
-            ],
-            labTests: [
-                { id: 1, category: 'Complete Blood Count (CBC)', test: 'Hemoglobin', value: '14.2', unit: 'g/dL', normalRange: '12-16', icon: 'opacity', color: '#EA580C' },
-                { id: 3, category: 'Lipid Profile', test: 'Total Cholesterol', value: '185', unit: 'mg/dL', normalRange: '<200', icon: 'favorite', color: '#7C3AED' },
-            ]
-        },
-        {
-            date: '2024-03-20',
-            fitnessTests: [
-                { id: 1, category: 'Aerobic Endurance', test: 'Rockport Test', result1: '11:45', result2: '11:30', icon: 'directions-run', color: '#3B82F6' },
-                { id: 2, category: 'Muscular Strength', test: '1 Rep Max (Upper)', result1: '85kg', result2: '90kg', icon: 'fitness-center', color: '#EF4444' },
-            ],
-            labTests: [
-                { id: 1, category: 'Complete Blood Count (CBC)', test: 'Hemoglobin', value: '14.8', unit: 'g/dL', normalRange: '12-16', icon: 'opacity', color: '#EA580C' },
-                { id: 3, category: 'Lipid Profile', test: 'Total Cholesterol', value: '175', unit: 'mg/dL', normalRange: '<200', icon: 'favorite', color: '#7C3AED' },
-            ]
-        }
-    ]);
+    // Remove all sample data - will come from backend
+    const [testHistory, setTestHistory] = useState<TestRecord[]>([]);
 
     const [results, setResults] = useState<FitnessTest[]>([
         { 
@@ -415,119 +391,197 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                 </View>
             </View>
 
-            {/* Test Date Section */}
+            {/* Test Date Section - More prominent */}
             <View style={styles.dateSection}>
-                <View style={styles.dateHeader}>
-                    <MaterialIcons name="event" size={20} color="#6B7280" />
-                    <Text style={styles.dateLabel}>Test Date</Text>
+                <View style={styles.dateCard}>
+                    <View style={styles.dateHeader}>
+                        <MaterialIcons name="event" size={24} color="#3B82F6" />
+                        <Text style={styles.dateTitle}>Assessment Date</Text>
+                    </View>
+                    <View style={styles.dateControls}>
+                        {(isEditing || isLabEditing) ? (
+                            <TextInput
+                                value={currentTestDate}
+                                onChangeText={setCurrentTestDate}
+                                placeholder="YYYY-MM-DD"
+                                style={styles.dateInput}
+                            />
+                        ) : (
+                            <Text style={styles.dateDisplay}>
+                                {currentTestDate ? formatDate(currentTestDate) : 'Select Date'}
+                            </Text>
+                        )}
+                        <TouchableOpacity
+                            onPress={() => setShowHistoryModal(true)}
+                            style={styles.historyButton}
+                        >
+                            <MaterialIcons name="history" size={18} color="#3B82F6" />
+                            <Text style={styles.historyButtonText}>History</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
-                <View style={styles.dateControls}>
-                    {(isEditing || isLabEditing) ? (
-                        <TextInput
-                            value={currentTestDate}
-                            onChangeText={setCurrentTestDate}
-                            placeholder="YYYY-MM-DD"
-                            style={styles.dateInput}
-                        />
-                    ) : (
-                        <Text style={styles.dateDisplay}>
-                            {currentTestDate ? formatDate(currentTestDate) : 'No date selected'}
-                        </Text>
-                    )}
+            </View>
+
+            {/* Physical Fitness Tests Section */}
+            <View style={styles.majorSection}>
+                <View style={styles.majorSectionHeader}>
+                    <View style={styles.sectionTitleContainer}>
+                        <MaterialIcons name="fitness-center" size={24} color="#3B82F6" />
+                        <Text style={styles.majorSectionTitle}>Physical Fitness Tests</Text>
+                    </View>
                     <TouchableOpacity
-                        onPress={() => setShowHistoryModal(true)}
-                        style={styles.historyButton}
+                        onPress={isEditing ? handleSave : handleToggleEdit}
+                        style={[styles.actionButton, isEditing ? styles.saveButton : styles.editButton]}
                     >
-                        <MaterialIcons name="history" size={18} color="#3B82F6" />
-                        <Text style={styles.historyButtonText}>History</Text>
+                        <MaterialIcons 
+                            name={isEditing ? "save" : "edit"} 
+                            size={16} 
+                            color="white" 
+                        />
+                        <Text style={styles.actionButtonText}>
+                            {isEditing ? 'Save' : 'Edit'}
+                        </Text>
                     </TouchableOpacity>
                 </View>
-            </View>
 
-            {/* Physical Fitness Tests */}
-            <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Physical Fitness Tests</Text>
-                <TouchableOpacity
-                    onPress={isEditing ? handleSave : handleToggleEdit}
-                    style={[styles.actionButton, isEditing ? styles.saveButton : styles.editButton]}
-                >
-                    <MaterialIcons 
-                        name={isEditing ? "save" : "edit"} 
-                        size={18} 
-                        color="white" 
-                    />
-                    <Text style={styles.actionButtonText}>
-                        {isEditing ? 'Save' : 'Edit'}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
-            <View style={styles.content}>
-                {Object.entries(categoryGroups).map(([category, items]) => {
-                    const firstItem = items[0];
-                    
-                    return (
-                        <View key={category} style={styles.categoryCard}>
-                            {/* Category Header */}
-                            <View style={[styles.categoryHeader, { backgroundColor: firstItem.color }]}>
-                                <View style={styles.categoryHeaderContent}>
-                                    <View style={styles.iconContainer}>
+                <View style={styles.sectionContent}>
+                    {Object.entries(categoryGroups).map(([category, items]) => {
+                        const firstItem = items[0];
+                        
+                        return (
+                            <View key={category} style={styles.categoryCard}>
+                                {/* Category Header */}
+                                <View style={[styles.categoryHeader, { backgroundColor: firstItem.color }]}>
+                                    <View style={styles.categoryHeaderContent}>
                                         <MaterialIcons 
                                             name={firstItem.icon as any} 
-                                            size={24} 
+                                            size={18} 
                                             color="white" 
                                         />
+                                        <Text style={styles.categoryTitle}>{category}</Text>
                                     </View>
-                                    <Text style={styles.categoryTitle}>{category}</Text>
                                 </View>
-                            </View>
 
-                            {/* Tests */}
-                            {items.map((item, index) => (
-                                <View key={item.id} style={[styles.testItem, index !== items.length - 1 && styles.testItemBorder]}>
-                                    <View style={styles.testContent}>
-                                        {/* Test Number */}
-                                        <View style={styles.testNumber}>
-                                            <Text style={styles.testNumberText}>{item.id}</Text>
-                                        </View>
-                                        
-                                        {/* Test Details */}
-                                        <View style={styles.testDetails}>
-                                            <Text style={styles.testName}>{item.test}</Text>
-                                            
-                                            {/* Results */}
-                                            <View style={styles.resultsContainer}>
-                                                <View style={styles.resultItem}>
-                                                    <Text style={styles.resultLabel}>Test 1</Text>
-                                                    {isEditing ? (
-                                                        <TextInput
-                                                            value={item.result1}
-                                                            onChangeText={(text) => updateResult(item.id, 'result1', text)}
-                                                            placeholder="Enter result"
-                                                            style={styles.resultInput}
-                                                        />
-                                                    ) : (
-                                                        <View style={styles.resultDisplay}>
-                                                            <Text style={[styles.resultText, !item.result1 && styles.resultTextEmpty]}>
-                                                                {item.result1 || 'Not recorded'}
-                                                            </Text>
-                                                        </View>
-                                                    )}
-                                                </View>
+                                {/* Tests */}
+                                {items.map((item, index) => (
+                                    <View key={item.id} style={[styles.testItem, index !== items.length - 1 && styles.testItemBorder]}>
+                                        <View style={styles.testContent}>
+                                            {/* Test Details */}
+                                            <View style={styles.testDetails}>
+                                                <Text style={styles.testName}>{item.test}</Text>
                                                 
-                                                <View style={styles.resultItem}>
-                                                    <Text style={styles.resultLabel}>Test 2</Text>
-                                                    {isEditing ? (
+                                                {/* Results */}
+                                                <View style={styles.resultsContainer}>
+                                                    <View style={styles.resultItem}>
+                                                        <Text style={styles.resultLabel}>Test 1</Text>
+                                                        {isEditing ? (
+                                                            <TextInput
+                                                                value={item.result1}
+                                                                onChangeText={(text) => updateResult(item.id, 'result1', text)}
+                                                                placeholder="Enter result"
+                                                                style={styles.resultInput}
+                                                            />
+                                                        ) : (
+                                                            <View style={styles.resultDisplay}>
+                                                                <Text style={[styles.resultText, !item.result1 && styles.resultTextEmpty]}>
+                                                                    {item.result1 || '-'}
+                                                                </Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                    
+                                                    <View style={styles.resultItem}>
+                                                        <Text style={styles.resultLabel}>Test 2</Text>
+                                                        {isEditing ? (
+                                                            <TextInput
+                                                                value={item.result2}
+                                                                onChangeText={(text) => updateResult(item.id, 'result2', text)}
+                                                                placeholder="Enter result"
+                                                                style={styles.resultInput}
+                                                            />
+                                                        ) : (
+                                                            <View style={styles.resultDisplay}>
+                                                                <Text style={[styles.resultText, !item.result2 && styles.resultTextEmpty]}>
+                                                                    {item.result2 || '-'}
+                                                                </Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        );
+                    })}
+                </View>
+            </View>
+
+            {/* Laboratory Tests Section */}
+            <View style={styles.majorSection}>
+                <View style={styles.majorSectionHeader}>
+                    <View style={styles.sectionTitleContainer}>
+                        <MaterialIcons name="science" size={24} color="#10B981" />
+                        <Text style={styles.majorSectionTitle}>Laboratory Tests</Text>
+                    </View>
+                    <TouchableOpacity
+                        onPress={isLabEditing ? handleSave : handleToggleLabEdit}
+                        style={[styles.actionButton, isLabEditing ? styles.saveButton : styles.editButton]}
+                    >
+                        <MaterialIcons 
+                            name={isLabEditing ? "save" : "edit"} 
+                            size={16} 
+                            color="white" 
+                        />
+                        <Text style={styles.actionButtonText}>
+                            {isLabEditing ? 'Save' : 'Edit'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.sectionContent}>
+                    {Object.entries(labCategoryGroups).map(([category, items]) => {
+                        const firstItem = items[0];
+                        
+                        return (
+                            <View key={category} style={styles.categoryCard}>
+                                {/* Category Header */}
+                                <View style={[styles.categoryHeader, { backgroundColor: firstItem.color }]}>
+                                    <View style={styles.categoryHeaderContent}>
+                                        <MaterialIcons 
+                                            name={firstItem.icon as any} 
+                                            size={18} 
+                                            color="white" 
+                                        />
+                                        <Text style={styles.categoryTitle}>{category}</Text>
+                                    </View>
+                                </View>
+
+                                {/* Lab Tests */}
+                                {items.map((item, index) => (
+                                    <View key={item.id} style={[styles.labTestItem, index !== items.length - 1 && styles.testItemBorder]}>
+                                        <View style={styles.labTestContent}>
+                                            <View style={styles.labTestHeader}>
+                                                <Text style={styles.labTestName}>{item.test}</Text>
+                                                <Text style={styles.normalRange}>Normal: {item.normalRange} {item.unit}</Text>
+                                            </View>
+                                            
+                                            <View style={styles.labResultsContainer}>
+                                                <View style={styles.labResultItem}>
+                                                    <Text style={styles.resultLabel}>Value</Text>
+                                                    {isLabEditing ? (
                                                         <TextInput
-                                                            value={item.result2}
-                                                            onChangeText={(text) => updateResult(item.id, 'result2', text)}
-                                                            placeholder="Enter result"
+                                                            value={item.value}
+                                                            onChangeText={(text) => updateLabResult(item.id, 'value', text)}
+                                                            placeholder={`Enter value`}
                                                             style={styles.resultInput}
+                                                            keyboardType="numeric"
                                                         />
                                                     ) : (
                                                         <View style={styles.resultDisplay}>
-                                                            <Text style={[styles.resultText, !item.result2 && styles.resultTextEmpty]}>
-                                                                {item.result2 || 'Not recorded'}
+                                                            <Text style={[styles.resultText, !item.value && styles.resultTextEmpty]}>
+                                                                {item.value ? `${item.value} ${item.unit}` : '-'}
                                                             </Text>
                                                         </View>
                                                     )}
@@ -535,136 +589,10 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                                             </View>
                                         </View>
                                     </View>
-                                </View>
-                            ))}
-                        </View>
-                    );
-                })}
-            </View>
-
-            {/* Lab Tests Section */}
-            <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Laboratory Tests</Text>
-                <TouchableOpacity
-                    onPress={isLabEditing ? handleSave : handleToggleLabEdit}
-                    style={[styles.actionButton, isLabEditing ? styles.saveButton : styles.editButton]}
-                >
-                    <MaterialIcons 
-                        name={isLabEditing ? "save" : "edit"} 
-                        size={18} 
-                        color="white" 
-                    />
-                    <Text style={styles.actionButtonText}>
-                        {isLabEditing ? 'Save' : 'Edit'}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
-            <View style={styles.content}>
-                {Object.entries(labCategoryGroups).map(([category, items]) => {
-                    const firstItem = items[0];
-                    
-                    return (
-                        <View key={category} style={styles.categoryCard}>
-                            {/* Category Header */}
-                            <View style={[styles.categoryHeader, { backgroundColor: firstItem.color }]}>
-                                <View style={styles.categoryHeaderContent}>
-                                    <View style={styles.iconContainer}>
-                                        <MaterialIcons 
-                                            name={firstItem.icon as any} 
-                                            size={24} 
-                                            color="white" 
-                                        />
-                                    </View>
-                                    <Text style={styles.categoryTitle}>{category}</Text>
-                                </View>
+                                ))}
                             </View>
-
-                            {/* Lab Tests */}
-                            {items.map((item, index) => (
-                                <View key={item.id} style={[styles.labTestItem, index !== items.length - 1 && styles.testItemBorder]}>
-                                    <View style={styles.labTestContent}>
-                                        <View style={styles.labTestHeader}>
-                                            <Text style={styles.labTestName}>{item.test}</Text>
-                                            <Text style={styles.normalRange}>Normal: {item.normalRange} {item.unit}</Text>
-                                        </View>
-                                        
-                                        <View style={styles.labResultsContainer}>
-                                            <View style={styles.labResultItem}>
-                                                <Text style={styles.resultLabel}>Value</Text>
-                                                {isLabEditing ? (
-                                                    <TextInput
-                                                        value={item.value}
-                                                        onChangeText={(text) => updateLabResult(item.id, 'value', text)}
-                                                        placeholder={`Enter value ${item.unit}`}
-                                                        style={styles.resultInput}
-                                                        keyboardType="numeric"
-                                                    />
-                                                ) : (
-                                                    <View style={styles.resultDisplay}>
-                                                        <Text style={[styles.resultText, !item.value && styles.resultTextEmpty]}>
-                                                            {item.value ? `${item.value} ${item.unit}` : 'Not recorded'}
-                                                        </Text>
-                                                    </View>
-                                                )}
-                                            </View>
-                                        </View>
-                                    </View>
-                                </View>
-                            ))}
-                        </View>
-                    );
-                })}
-            </View>
-
-            {/* Progress Summary */}
-            <View style={styles.content}>
-                <View style={styles.progressCard}>
-                    <Text style={styles.progressTitle}>Assessment Progress</Text>
-                    
-                    {/* Physical Tests Progress */}
-                    <Text style={styles.progressSubtitle}>Physical Tests</Text>
-                    <View style={styles.progressContent}>
-                        {Object.entries(categoryGroups).map(([category, items]) => {
-                            const percentage = getCompletionPercentage(items);
-                            
-                            return (
-                                <View key={category} style={styles.progressItem}>
-                                    <Text style={styles.progressCategory}>{category}</Text>
-                                    <View style={styles.progressRight}>
-                                        <View style={styles.progressBar}>
-                                            <View 
-                                                style={[styles.progressFill, { width: `${percentage}%` }]}
-                                            />
-                                        </View>
-                                        <Text style={styles.progressPercentage}>{percentage}%</Text>
-                                    </View>
-                                </View>
-                            );
-                        })}
-                    </View>
-
-                    {/* Lab Tests Progress */}
-                    <Text style={styles.progressSubtitle}>Laboratory Tests</Text>
-                    <View style={styles.progressContent}>
-                        {Object.entries(labCategoryGroups).map(([category, items]) => {
-                            const percentage = getLabCompletionPercentage(items);
-                            
-                            return (
-                                <View key={category} style={styles.progressItem}>
-                                    <Text style={styles.progressCategory}>{category}</Text>
-                                    <View style={styles.progressRight}>
-                                        <View style={styles.progressBar}>
-                                            <View 
-                                                style={[styles.progressFill, { width: `${percentage}%`, backgroundColor: '#10B981' }]}
-                                            />
-                                        </View>
-                                        <Text style={styles.progressPercentage}>{percentage}%</Text>
-                                    </View>
-                                </View>
-                            );
-                        })}
-                    </View>
+                        );
+                    })}
                 </View>
             </View>
 
@@ -676,7 +604,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
             >
                 <View style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Test History</Text>
+                        <Text style={styles.modalTitle}>Assessment History</Text>
                         <TouchableOpacity
                             onPress={() => setShowHistoryModal(false)}
                             style={styles.closeButton}
@@ -731,6 +659,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                             <View style={styles.emptyState}>
                                 <MaterialIcons name="history" size={48} color="#D1D5DB" />
                                 <Text style={styles.emptyStateText}>No previous assessments found</Text>
+                                <Text style={styles.emptyStateSubtext}>Create your first assessment above</Text>
                             </View>
                         )}
                     </ScrollView>
@@ -741,390 +670,478 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FAFBFC',
+  },
+
+  // Header Styles - Compact
+  header: {
+    backgroundColor: 'white',
+    paddingTop: Platform.OS === 'ios' ? 45 : 15,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerText: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+
+  // Date Section Styles - Compact
+  dateSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  dateCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  dateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  dateTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginLeft: 6,
+  },
+  dateControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateInput: {
+    flex: 1,
+    fontSize: 13,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    backgroundColor: '#F9FAFB',
+    marginRight: 8,
+  },
+  dateDisplay: {
+    flex: 1,
+    fontSize: 13,
+    color: '#374151',
+    fontWeight: '500',
+    paddingVertical: 8,
+  },
+  historyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#EBF4FF',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  historyButtonText: {
+    color: '#3B82F6',
+    fontWeight: '600',
+    marginLeft: 4,
+    fontSize: 12,
+  },
+
+  // Major Section Styles - Different backgrounds
+  majorSection: {
+    marginBottom: 12,
+  },
+  majorSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: 'white',
+    borderTopWidth: 2,
+    borderTopColor: '#3B82F6',
+  },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  majorSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginLeft: 8,
+  },
+  sectionContent: {
+    paddingHorizontal: 16,
+    paddingTop: 2,
+    // Physical Fitness Tests - Light Blue Background
+    backgroundColor: '#F0F8FF',
+  },
+  
+  // Lab Section Content - Light Green Background
+  labSectionContent: {
+    paddingHorizontal: 16,
+    paddingTop: 2,
+    backgroundColor: '#F0FDF4',
+  },
+
+  // Action Button Styles - Compact
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    minWidth: 70,
+    justifyContent: 'center',
+  },
+  editButton: {
+    backgroundColor: '#3B82F6',
+  },
+  saveButton: {
+    backgroundColor: '#10B981',
+  },
+  actionButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    marginLeft: 4,
+    fontSize: 12,
+  },
+
+  // Category Card Styles - Compact
+  categoryCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    marginBottom: 8,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  categoryHeader: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  categoryHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  categoryTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'white',
+    marginLeft: 6,
+  },
+
+  // Test Item Styles - Very Compact
+  testItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  testItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  testContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  testDetails: {
+    flex: 1,
+  },
+  testName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 6,
+  },
+
+  // Results Container Styles - Compact
+  resultsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  resultItem: {
+    flex: 1,
+  },
+  resultLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  resultInput: {
+    fontSize: 12,
+    padding: 6,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 4,
+    backgroundColor: '#F9FAFB',
+    textAlign: 'center',
+    minHeight: 28,
+  },
+  resultDisplay: {
+    padding: 6,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    minHeight: 28,
+    justifyContent: 'center',
+  },
+  resultText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+    textAlign: 'center',
+  },
+  resultTextEmpty: {
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+  },
+
+  // Lab Test Styles - Very Compact
+  labTestItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  labTestContent: {
+    flex: 1,
+  },
+  labTestHeader: {
+    marginBottom: 6,
+  },
+  labTestName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  normalRange: {
+    fontSize: 10,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  labResultsContainer: {
+    flexDirection: 'row',
+  },
+  labResultItem: {
+    flex: 1,
+    maxWidth: 120,
+  },
+
+  // Modal Styles - Compact
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    paddingTop: Platform.OS === 'ios' ? 45 : 15,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  closeButton: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: '#F3F4F6',
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+
+  // History Item Styles - Compact
+  historyItem: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectedHistoryItem: {
+    borderWidth: 2,
+    borderColor: '#10B981',
+    backgroundColor: '#ECFDF5',
+  },
+  historyItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  historyItemText: {
+    marginLeft: 8,
+    flex: 1,
+  },
+  historyDate: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 1,
+  },
+  historySubtext: {
+    fontSize: 10,
+    color: '#6B7280',
+  },
+
+  // Empty State Styles - Compact
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 30,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 12,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+
+  // Completion Progress Styles - Compact
+  progressContainer: {
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  progressBar: {
+    height: 3,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 1.5,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 1.5,
+  },
+  progressText: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginTop: 2,
+    textAlign: 'right',
+  },
+
+  // Additional Utility Styles - Compact
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 8,
+  },
+  spacer: {
+    height: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  flex1: {
+    flex: 1,
+  },
+  textCenter: {
+    textAlign: 'center',
+  },
+  textRight: {
+    textAlign: 'right',
+  },
+  marginBottom4: {
+    marginBottom: 4,
+  },
+  marginBottom6: {
+    marginBottom: 6,
+  },
+  marginBottom8: {
+    marginBottom: 8,
+  },
+  paddingHorizontal12: {
+    paddingHorizontal: 12,
+  },
+  paddingVertical4: {
+    paddingVertical: 4,
+  },
+  paddingVertical6: {
+    paddingVertical: 6,
+  },
+
+  // Status Indicator Styles - Compact
+  statusIndicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginLeft: 6,
+  },
+  statusNormal: {
+    backgroundColor: '#10B981',
+  },
+  statusHigh: {
+    backgroundColor: '#EF4444',
+  },
+  statusLow: {
+    backgroundColor: '#F59E0B',
+  },
+  
+
+  // Responsive adjustments for larger screens
+  ...(Platform.OS === 'web' && {
     container: {
-        flex: 1,
-        backgroundColor: '#F9FAFB',
-    },
-    header: {
-        backgroundColor: 'white',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 3,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-    },
-    headerContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    headerText: {
-        flex: 1,
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#111827',
-    },
-    subtitle: {
-        fontSize: 14,
-        color: '#6B7280',
-        marginTop: 2,
-    },
-    dateSection: {
-        backgroundColor: 'white',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-    },
-    dateHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 8,
-    },
-    dateLabel: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#374151',
-    },
-    dateControls: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    dateInput: {
-        flex: 1,
-        borderWidth: 1,
-        borderColor: '#D1D5DB',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        fontSize: 14,
-        backgroundColor: 'white',
-        marginRight: 12,
-    },
-    dateDisplay: {
-        flex: 1,
-        fontSize: 14,
-        color: '#374151',
-        paddingVertical: 8,
-    },
-    historyButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#3B82F6',
-        backgroundColor: '#EFF6FF',
-    },
-    historyButtonText: {
-        fontSize: 14,
-        color: '#3B82F6',
-        fontWeight: '500',
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#F3F4F6',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#111827',
-    },
-    actionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 6,
-    },
-    editButton: {
-        backgroundColor: '#3B82F6',
-    },
-    saveButton: {
-        backgroundColor: '#10B981',
-    },
-    actionButtonText: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    content: {
-        padding: 12,
-        gap: 12,
-    },
-    categoryCard: {
-        backgroundColor: 'white',
-        borderRadius: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 2,
-        overflow: 'hidden',
-    },
-    categoryHeader: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-    },
-    categoryHeaderContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    iconContainer: {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        padding: 4,
-        borderRadius: 4,
-    },
-    categoryTitle: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    testItem: {
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-    },
-    testItemBorder: {
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
-    },
-    testContent: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 8,
-    },
-    testNumber: {
-        width: 24,
-        height: 24,
-        backgroundColor: '#F3F4F6',
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    testNumberText: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: '#6B7280',
-    },
-    testDetails: {
-        flex: 1,
-    },
-    testName: {
-        fontSize: 13,
-        fontWeight: '500',
-        color: '#111827',
-        marginBottom: 8,
-    },
-    resultsContainer: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    resultItem: {
-        flex: 1,
-    },
-    resultLabel: {
-        fontSize: 11,
-        fontWeight: '500',
-        color: '#6B7280',
-        marginBottom: 2,
-    },
-    resultInput: {
-        borderWidth: 1,
-        borderColor: '#D1D5DB',
-        borderRadius: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 6,
-        fontSize: 13,
-        backgroundColor: 'white',
-    },
-    resultDisplay: {
-        backgroundColor: '#F9FAFB',
-        borderRadius: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 6,
-        minHeight: 28,
-        justifyContent: 'center',
-    },
-    resultText: {
-        fontSize: 13,
-        color: '#374151',
-    },
-    resultTextEmpty: {
-        color: '#9CA3AF',
-    },
-    labTestItem: {
-        paddingHorizontal: 12,
-        paddingVertical: 12,
-    },
-    labTestContent: {
-        flex: 1,
-    },
-    labTestHeader: {
-        marginBottom: 8,
-    },
-    labTestName: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#111827',
-        marginBottom: 2,
-    },
-    normalRange: {
-        fontSize: 12,
-        color: '#6B7280',
-        fontStyle: 'italic',
-    },
-    labResultsContainer: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    labResultItem: {
-        flex: 1,
-    },
-    progressCard: {
-        backgroundColor: 'white',
-        borderRadius: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 2,
-        padding: 16,
-    },
-    progressTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#111827',
-        marginBottom: 16,
-    },
-    progressSubtitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#374151',
-        marginTop: 8,
-        marginBottom: 8,
-    },
-    progressContent: {
-        gap: 8,
-        marginBottom: 12,
-    },
-    progressItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    progressCategory: {
-        fontSize: 14,
-        color: '#6B7280',
-        flex: 1,
-    },
-    progressRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    progressBar: {
-        width: 64,
-        height: 8,
-        backgroundColor: '#E5E7EB',
-        borderRadius: 4,
-        overflow: 'hidden',
-    },
-    progressFill: {
-        height: '100%',
-        backgroundColor: '#3B82F6',
-        borderRadius: 4,
-    },
-    progressPercentage: {
-        fontSize: 12,
-        color: '#6B7280',
-        width: 32,
-        textAlign: 'right',
-    },
-    modalContainer: {
-        flex: 1,
-        backgroundColor: 'white',
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-        backgroundColor: 'white',
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#111827',
-    },
-    closeButton: {
-        padding: 4,
-    },
-    modalContent: {
-        flex: 1,
-        paddingHorizontal: 16,
-    },
-    historyItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 16,
-        paddingHorizontal: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
-    },
-    selectedHistoryItem: {
-        backgroundColor: '#F0FDF4',
-        borderRadius: 8,
-        marginVertical: 2,
-    },
-    historyItemContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        flex: 1,
-    },
-    historyItemText: {
-        flex: 1,
-    },
-    historyDate: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#111827',
-    },
-    historySubtext: {
-        fontSize: 14,
-        color: '#6B7280',
-        marginTop: 2,
-    },
-    emptyState: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 48,
-    },
-    emptyStateText: {
-        fontSize: 16,
-        color: '#9CA3AF',
-        marginTop: 12,
-    },
+      maxWidth: 700,
+      alignSelf: 'center',
+      width: '100%',
+    },
+  }),
 });
