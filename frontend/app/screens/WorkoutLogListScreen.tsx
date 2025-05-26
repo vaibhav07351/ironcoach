@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import {
     View,
     Text,
@@ -32,10 +32,30 @@ type WorkoutLog = {
 type Props = {
     route: { params: { trainee: any } };
     navigation: any;
-    trainee: Trainee;
+    trainee?: Trainee; // Make this optional since it might come from route
 };
 
-export default function WorkoutLogListScreen({ route, navigation, trainee }: Props) {
+// Helper function outside component to prevent recreation
+const getISTDate = () => {
+    const date = new Date();
+    date.setMinutes(date.getMinutes() + 330);
+    return date;
+};
+
+export default function WorkoutLogListScreen({ route, navigation, trainee: propTrainee }: Props) {
+    // Get trainee from props or route params - extract early to prevent issues
+    const routeTrainee = route?.params?.trainee;
+    const trainee = propTrainee || routeTrainee;
+    
+    // Extract primitive values immediately to prevent object reference issues
+    const traineeId = trainee?.id;
+    const traineeName = trainee?.name;
+    
+    // Early validation
+    if (!traineeId) {
+        console.warn('No trainee ID found in props or route params');
+    }
+    
     const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
@@ -47,112 +67,173 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
     const [showTodayOnly, setShowTodayOnly] = useState(false);
     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
     const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-    const dateInIST = new Date();
-    dateInIST.setMinutes(dateInIST.getMinutes() + 330);
-    const [selectedDate, setSelectedDate] = useState(dateInIST);
+    
+    // Initialize selectedDate only once
+    const [selectedDate, setSelectedDate] = useState(() => getISTDate());
+    
     // Sidebar state for animation
     const [sidebarVisible, setSidebarVisible] = useState(false);
-    const slideAnim = useState(new Animated.Value(-300))[0]; // Start off-screen
-    const [showDatePicker, setShowDatePicker] = useState(false); // State to control DateTimePicker visibility
+    const slideAnim = useState(new Animated.Value(-300))[0];
+    const [showDatePicker, setShowDatePicker] = useState(false);
+
+    // Refs to prevent multiple requests
+    const fetchingRef = useRef(false);
+    const lastFetchDateRef = useRef<string>('');
 
     const styles = createStyles(isDarkMode);
 
-    const fetchWorkoutLogs = async (date: string) => {
-        setIsLoading(true);
-        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-        try {
-            const token = await AsyncStorage.getItem('token');
-            if (!token) {
-                console.error('No token found. Redirecting to login.');
-                navigation.navigate('Login');
-                return;
+    // Memoize the formatted date to prevent recreation
+    const currentFormattedDate = useMemo(() => {
+        return selectedDate.toISOString().split('T')[0];
+    }, [selectedDate]);
+
+    // Remove the standalone fetchWorkoutLogs function since we inline it above
+
+    // Use useFocusEffect with minimal dependencies - remove fetchWorkoutLogs from deps
+    // Add at top level
+const fetchControllerRef = useRef<AbortController | null>(null);
+
+// Replace useFocusEffect with this:
+useFocusEffect(
+    useCallback(() => {
+        let isActive = true;
+        
+        const performFetch = async () => {
+            if (fetchingRef.current) return;
+            
+            // Cancel any ongoing request
+            if (fetchControllerRef.current) {
+                fetchControllerRef.current.abort();
             }
+            
+            const controller = new AbortController();
+            fetchControllerRef.current = controller;
+            
+            fetchingRef.current = true;
+            setIsLoading(true);
+            
+            try {
+                const token = await AsyncStorage.getItem('token');
+                if (!token) {
+                    navigation.navigate('Login');
+                    return;
+                }
+                const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+                const response = await fetch(
+                    `${backendUrl}/workout_logs/${traineeId}?date=${currentFormattedDate}`,
+                    {
+                        headers: { Authorization: `${token}` },
+                        signal: controller.signal
+                    }
+                );
 
-            const response = await fetch(`${backendUrl}/workout_logs/${trainee.id}?date=${date}`, {
-                headers: {
-                    Authorization: `${token}`,
-                },
-            });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-            if (!response.ok) {
-                throw new Error(`Failed to fetch workout logs: ${response.statusText}`);
+                const data = await response.json();
+                if (isActive) {
+                    setWorkoutLogs(Array.isArray(data) ? data : []);
+                }
+            } catch (error) {
+                if (error instanceof Error) {
+                    if (error.name !== 'AbortError' && isActive) {
+                        console.error('Fetch error:', error.message);
+                        setWorkoutLogs([]);
+                    }
+                } else {
+                    console.error('An unexpected error occurred:', error);
+                    if (isActive) {
+                        setWorkoutLogs([]);
+                    }
+                }
+            } finally {
+                if (isActive) {
+                    setIsLoading(false);
+                    fetchingRef.current = false;
+                }
             }
+        };
 
-            const data = await response.json();
-            if (!data || !Array.isArray(data)) {
-            console.warn("Received unexpected data format:", data);
-            setWorkoutLogs([]); // fallback to empty array
-            }  // Ensure `workoutLogs` is always an array
-        } catch (error) {
-            console.error('Error fetching workout logs:', error);
-            setWorkoutLogs([]); // Fallback to empty array
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        // Debounce the fetch
+        const debounceTimer = setTimeout(performFetch, 300);
+        
+        return () => {
+            isActive = false;
+            clearTimeout(debounceTimer);
+            if (fetchControllerRef.current) {
+                fetchControllerRef.current.abort();
+            }
+            fetchingRef.current = false;
+        };
+    }, [traineeId, currentFormattedDate, navigation])
+);
 
-    useFocusEffect(
-        useCallback(() => {
-            fetchWorkoutLogs(formatPickDate(selectedDate));
-        }, [trainee,selectedDate])
-    );
+    // Memoize today's date calculation
+    const todayDate = useMemo(() => {
+        const istDate = getISTDate();
+        return istDate.toISOString().split('T')[0];
+    }, []);
 
-    // Today's logs
-    // const dateInIST = new Date();
-    // dateInIST.setMinutes(dateInIST.getMinutes() + 330); // Add 330 minutes (5 hours 30 minutes)
+    const todayLogs = useMemo(() => {
+        return workoutLogs.filter((log) => log.date === todayDate);
+    }, [workoutLogs, todayDate]);
 
-    const todayDate = dateInIST.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-    const todayLogs = workoutLogs.filter((log) => log.date === todayDate);
+    const filteredLogs = useMemo(() => {
+        return workoutLogs.filter((log) => {
+            const logDate = new Date(log.date);
+            const matchesDate =
+                (!startDate || logDate >= startDate) && (!endDate || logDate <= endDate);
+            const matchesExercise =
+                !exerciseFilter ||
+                (log.workouts || []).some((workout) => workout.exercise.includes(exerciseFilter));
 
-    const filteredLogs = workoutLogs.filter((log) => {
-        const logDate = new Date(log.date);
-        const matchesDate =
-            (!startDate || logDate >= startDate) && (!endDate || logDate <= endDate);
-        const matchesExercise =
-            !exerciseFilter ||
-            (log.workouts || []).some((workout) => workout.exercise.includes(exerciseFilter));
+            return matchesDate && matchesExercise;
+        });
+    }, [workoutLogs, startDate, endDate, exerciseFilter]);
 
-        return matchesDate && matchesExercise;
-    });
+    const sortedLogs = useMemo(() => {
+        return [...filteredLogs].sort((a, b) => {
+            if (sortOption === 'date') {
+                return new Date(b.date).getTime() - new Date(a.date).getTime();
+            }
+            if (sortOption === 'weight') {
+                const totalWeightA = (a.workouts || []).reduce(
+                    (sum, w) => sum + (w.weight || []).reduce((s, w) => s + w, 0),
+                    0
+                );
+                const totalWeightB = (b.workouts || []).reduce(
+                    (sum, w) => sum + (w.weight || []).reduce((s, w) => s + w, 0),
+                    0
+                );
+                return totalWeightB - totalWeightA;
+            }
+            return 0;
+        });
+    }, [filteredLogs, sortOption]);
 
-    const sortedLogs = [...filteredLogs].sort((a, b) => {
-        if (sortOption === 'date') {
-            return new Date(b.date).getTime() - new Date(a.date).getTime(); // Newest first
-        }
-        if (sortOption === 'weight') {
-            const totalWeightA = (a.workouts || []).reduce(
-                (sum, w) => sum + (w.weight || []).reduce((s, w) => s + w, 0),
-                0
-            );
-            const totalWeightB = (b.workouts || []).reduce(
-                (sum, w) => sum + (w.weight || []).reduce((s, w) => s + w, 0),
-                0
-            );
-            return totalWeightB - totalWeightA; // Heaviest first
-        }
-        return 0;
-    });
-
-    const resetFilters = () => {
+    const resetFilters = useCallback(() => {
         setStartDate(null);
         setEndDate(null);
         setExerciseFilter('');
         setSortOption(null);
-    };
+    }, []);
 
-    const logsToDisplay = showTodayOnly ? todayLogs : sortedLogs;
+    const logsToDisplay = useMemo(() => {
+        return showTodayOnly ? todayLogs : sortedLogs;
+    }, [showTodayOnly, todayLogs, sortedLogs]);
 
-    const toggleSidebar = () => {
-        setSidebarVisible((prev) => !prev);
-        Animated.timing(slideAnim, {
-            toValue: sidebarVisible ? -300 : 0,
-            duration: 300,
-            useNativeDriver: true,
-        }).start();
-    };
+    const toggleSidebar = useCallback(() => {
+        setSidebarVisible((prev) => {
+            const newValue = !prev;
+            Animated.timing(slideAnim, {
+                toValue: newValue ? 0 : -300,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+            return newValue;
+        });
+    }, [slideAnim]);
 
-    const handleDelete = async (logId: string) => {
-        // Show confirmation toast
+    const handleDelete = useCallback(async (logId: string) => {
         Toast.show({
             type: 'info',
             text1: 'Confirm Deletion',
@@ -197,19 +278,19 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
                 }
             }
         });
-    };
+    }, []);
     
     // Function to format date from YYYY-MM-DD to DD-MM-YYYY
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString); // Convert to Date object
-        const day = String(date.getDate()).padStart(2, '0'); // Get day with leading zero if needed
-        const month = String(date.getMonth() + 1).padStart(2, '0'); // Get month with leading zero (months are 0-indexed)
-        const year = date.getFullYear(); // Get full year
-        return `${day}-${month}-${year}`; // Return in DD-MM-YYYY format
-    };
+    const formatDate = useCallback((dateString: string) => {
+        const date = new Date(dateString);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}-${month}-${year}`;
+    }, []);
     
-    const renderWorkoutLog = ({ item }: { item: WorkoutLog }) => {
-        const workouts = item.workouts || []; // Ensure workouts is always an array
+    const renderWorkoutLog = useCallback(({ item }: { item: WorkoutLog }) => {
+        const workouts = item.workouts || [];
         return (
             <TouchableOpacity
                 style={styles.logCard}
@@ -221,7 +302,6 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
                             <Text style={styles.exerciseName}>{workout.exercise}</Text>
                             <Text style={styles.sets}>Sets: {workout.sets}</Text>
                             <Text style={styles.sets}>Date: {formatDate(item.date)}</Text>
-                 
                         </View>
                     ))}
                 </View>
@@ -234,22 +314,36 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
                 </TouchableOpacity>
             </TouchableOpacity>
         );
-    };
+    }, [styles, navigation, trainee, formatDate, handleDelete]);
 
-      // Handle date navigation
-  const navigateDate = (direction: 'previous' | 'next') => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(
-      direction === 'previous' ? newDate.getDate() - 1 : newDate.getDate() + 1
-    );
-    setSelectedDate(newDate);
-  };
+    // Handle date navigation - add console log for debugging
+    const navigateDate = useCallback((direction: 'previous' | 'next') => {
+        console.log('Navigating date:', direction);
+        setSelectedDate(prevDate => {
+            const newDate = new Date(prevDate);
+            newDate.setDate(
+                direction === 'previous' ? newDate.getDate() - 1 : newDate.getDate() + 1
+            );
+            console.log('New date selected:', newDate.toISOString().split('T')[0]);
+            return newDate;
+        });
+        // Reset the last fetch date to allow new fetch
+        lastFetchDateRef.current = '';
+    }, []);
 
     // Format date as YYYY-MM-DD
-    const formatPickDate = (date: Date) => {
+    const formatPickDate = useCallback((date: Date) => {
         return date.toISOString().split('T')[0];
-      };
-    
+    }, []);
+
+    // Early return if no trainee
+    if (!trainee || !traineeId) {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.emptyMessage}>No trainee data available</Text>
+            </View>
+        );
+    }
 
     if (isLoading) {
         return <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />;
@@ -259,15 +353,16 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.container}>
                 <View style={styles.title}>
-                    <Text style={styles.titleText}>Workout Logs for {trainee.name}</Text>
+                    <Text style={styles.titleText}>Workout Logs for {traineeName}</Text>
                 </View>
+                
                 {/* Header for navigation between dates */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigateDate('previous')}>
                         <Icon name="chevron-left" size={30} color="#6200ee" />
                     </TouchableOpacity>
 
-                    <Text style={styles.headerDate}>{formatPickDate(selectedDate)}</Text>
+                    <Text style={styles.headerDate}>{currentFormattedDate}</Text>
 
                     {/* Show DateTimePicker when clicked */}
                     <TouchableOpacity onPress={() => setShowDatePicker(true)}>
@@ -279,20 +374,21 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
                     </TouchableOpacity>
                 </View>
 
-                    {/* Date Picker Modal */}
-                      {showDatePicker && (
-                            <DateTimePicker
-                            value={selectedDate}
-                            mode="date"
-                            display="default"
-                            onChange={(event, selectedDate) => {
-                                if (selectedDate) {
+                {/* Date Picker Modal */}
+                {showDatePicker && (
+                    <DateTimePicker
+                        value={selectedDate}
+                        mode="date"
+                        display="default"
+                        onChange={(event, selectedDate) => {
+                            setShowDatePicker(false);
+                            if (selectedDate) {
                                 setSelectedDate(selectedDate);
-                                setShowDatePicker(false);
-                                }
-                            }}
-                            />
-                      )}
+                            }
+                        }}
+                    />
+                )}
+                
                 {/* Sidebar Toggle Button */}
                 <TouchableOpacity
                     style={styles.sidebarToggle}
@@ -346,7 +442,6 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
                                 <Text style={styles.resetButtonText}>Reset Filters</Text>
                             </TouchableOpacity>
                         </View>
-
                     </ScrollView>
                 </Animated.View>
 
@@ -361,7 +456,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee }: Pro
                 {/* Add Button */}
                 <TouchableOpacity
                     style={styles.addButton}
-                    onPress={() => navigation.navigate('WorkoutCategories', { traineeId: trainee.id })}>
+                    onPress={() => navigation.navigate('WorkoutCategories', { traineeId: traineeId })}>
                     <Text style={styles.addButtonText}>+ Add Workout Log</Text>
                 </TouchableOpacity>
             </View>
@@ -375,11 +470,10 @@ const createStyles = (isDarkMode: boolean) =>
             flex: 1,
             backgroundColor: isDarkMode ? '#000' : '#fff',
             padding: 16,
-            
         },
         title: {
-            justifyContent: 'center', // Align items vertically in the center
-            alignItems: 'center', // Align items horizontally in the center
+            justifyContent: 'center',
+            alignItems: 'center',
         },
         titleText: {
             fontSize: 20,
@@ -397,7 +491,7 @@ const createStyles = (isDarkMode: boolean) =>
             backgroundColor: isDarkMode ? '#222' : '#fff',
             padding: 16,
             zIndex: 10,
-            paddingTop:70,
+            paddingTop: 70,
         },
         sidebarToggle: {
             position: 'absolute',
@@ -486,11 +580,11 @@ const createStyles = (isDarkMode: boolean) =>
         },
         resetContainer: {
             alignItems: 'center',
-            marginTop:20,
+            marginTop: 20,
             marginBottom: 16,
         },
         resetButton: {
-            backgroundColor: '#ff6347', // A bright color for visibility
+            backgroundColor: '#ff6347',
             paddingVertical: 5,
             paddingHorizontal: 10,
             borderRadius: 8,
@@ -509,24 +603,24 @@ const createStyles = (isDarkMode: boolean) =>
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.1,
             shadowRadius: 4,
-            elevation: 5, // For Android
+            elevation: 5,
         },
         header: {
             flexDirection: 'row',
-            justifyContent: 'center', // Centering the items
+            justifyContent: 'center',
             alignItems: 'center',
             marginBottom: 16,
-            width: '100%', // Ensure it takes the full width
-            paddingHorizontal: 50, // Add some padding to the left and right
-          },
-          headerDate: {
+            width: '100%',
+            paddingHorizontal: 50,
+        },
+        headerDate: {
             fontSize: 20,
             fontWeight: 'bold',
             color: isDarkMode ? '#fff' : '#000',
-            marginHorizontal: 20, // Add space around the date text
-            textAlign: 'center', // Ensure the date text is centered
-          },
-          nextArrowButton: {
-            marginLeft: 20, // Adds spacing between the calendar icon and the right arrow
-          },
+            marginHorizontal: 20,
+            textAlign: 'center',
+        },
+        nextArrowButton: {
+            marginLeft: 20,
+        },
     });

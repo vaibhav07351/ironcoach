@@ -20,6 +20,12 @@ const withTrainee = (Component: React.ComponentType<any>, trainee: any) => {
 export default function TraineeDetailScreen({ route }: Props) {
     const { trainee } = route.params;
 
+    // Memoized wrapped components
+    const AboutTrainee = React.useMemo(() => withTrainee(AboutTraineeScreen, trainee), [trainee]);
+    const WorkoutLogs = React.useMemo(() => withTrainee(WorkoutLogListScreen, trainee), [trainee]);
+    const DietEntry = React.useMemo(() => withTrainee(DietEntryScreen, trainee), [trainee]);
+    const Progress = React.useMemo(() => withTrainee(ProgressScreen, trainee), [trainee]);
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -36,23 +42,10 @@ export default function TraineeDetailScreen({ route }: Props) {
                 headerShown: false,
             })}
         >
-            <Tab.Screen
-                name="AboutTrainee"
-                component={withTrainee(AboutTraineeScreen, trainee)} // Wrap AboutTraineeScreen
-            />
-            <Tab.Screen
-                name="WorkoutLogs"
-                component={withTrainee(WorkoutLogListScreen, trainee)} // Wrap ProgressScreen
-            />
-
-            <Tab.Screen
-                name="DietEntry"
-                component={withTrainee(DietEntryScreen, trainee)} // Wrap DietEntryScreen
-            />
-            <Tab.Screen
-                name="Progress"
-                component={withTrainee(ProgressScreen, trainee)} // Wrap ProgressScreen
-            />
+            <Tab.Screen name="AboutTrainee" component={AboutTrainee} />
+            <Tab.Screen name="WorkoutLogs" component={WorkoutLogs} />
+            <Tab.Screen name="DietEntry" component={DietEntry} />
+            <Tab.Screen name="Progress" component={Progress} />
         </Tab.Navigator>
     );
 }
