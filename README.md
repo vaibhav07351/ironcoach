@@ -1,7 +1,7 @@
-# 🏋️‍♂️ IronCoach 
-<p>
-  <img src="./frontend/assets/images/ironcoach.png" alt="IronCoach Banner" width="100" />
-</p>
+<h1>
+  🏋️‍♂️ IronCoach
+  <img src="./frontend/assets/images/ironcoach.png" alt="IronCoach Banner" width="100" style="vertical-align: middle; margin-left: 10px;" />
+</h1>
 
 > **Your Personal Fitness Companion** - A comprehensive fitness tracking and coaching application designed to help trainers manage their clients and trainees achieve their fitness goals.
 
