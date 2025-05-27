@@ -1,10 +1,10 @@
-# 🏋️‍♂️ IronCoach
-
-> **Your Personal Fitness Companion** - A comprehensive fitness tracking and coaching application designed to help trainers manage their clients and trainees achieve their fitness goals.
-
+# 🏋️‍♂️ IronCoach 
 <p>
   <img src="./frontend/assets/images/ironcoach.png" alt="IronCoach Banner" width="100" />
 </p>
+
+> **Your Personal Fitness Companion** - A comprehensive fitness tracking and coaching application designed to help trainers manage their clients and trainees achieve their fitness goals.
+
 
 [![Go Version](https://img.shields.io/badge/Go-1.19+-00ADD8?logo=go)](https://golang.org/)
 [![React Native](https://img.shields.io/badge/React_Native-0.72+-20232A?logo=react)](https://reactnative.dev/)
