@@ -2,7 +2,7 @@
 
 > **Your Personal Fitness Companion** - A comprehensive fitness tracking and coaching application designed to help trainers manage their clients and trainees achieve their fitness goals.
 
-<p align="center">
+<p>
   <img src="./frontend/assets/images/ironcoach.png" alt="IronCoach Banner" width="100" />
 </p>
 
