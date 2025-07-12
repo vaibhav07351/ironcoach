@@ -1,321 +1,401 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Platform, Modal } from 'react-native';
-import { Trainee } from '../types/trainee';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Platform, Modal, Alert, ToastAndroid } from 'react-native';
+import { Trainee, FitnessTest, LabTest } from '../types/trainee';
 import { MaterialIcons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { FitnessTestWithUI, LabTestWithUI, TestRecord, CategoryGroup, LabCategoryGroup, fitnessTestTemplates, labTestTemplates } from '../types/trainee';
 
 type Props = {
     trainee: Trainee;
     navigation: any;
 };
 
-interface FitnessTest {
-    id: number;
-    category: string;
-    test: string;
-    result1: string;
-    result2: string;
-    icon: string;
-    color: string;
-}
-
-interface LabTest {
-    id: number;
-    category: string;
-    test: string;
-    value: string;
-    unit: string;
-    normalRange: string;
-    icon: string;
-    color: string;
-}
-
-interface TestRecord {
-    date: string;
-    fitnessTests: FitnessTest[];
-    labTests: LabTest[];
-}
-
-interface CategoryGroup {
-    [key: string]: FitnessTest[];
-}
-
-interface LabCategoryGroup {
-    [key: string]: LabTest[];
-}
-
 export default function FitnessTestScreen({ trainee, navigation }: Props) {
     const [isEditing, setIsEditing] = useState(false);
-    const [isLabEditing, setIsLabEditing] = useState(false);
     const [currentTestDate, setCurrentTestDate] = useState('');
     const [showHistoryModal, setShowHistoryModal] = useState(false);
+    const [loading, setLoading] = useState(false);
     
-    // Remove all sample data - will come from backend
+    // Backend data
+    const [traineeData, setTraineeData] = useState<Trainee>(trainee);
     const [testHistory, setTestHistory] = useState<TestRecord[]>([]);
 
-    const [results, setResults] = useState<FitnessTest[]>([
-        { 
-            id: 1, 
-            category: 'Aerobic Endurance', 
-            test: 'Rockport Test', 
-            result1: '', 
-            result2: '',
-            icon: 'directions-run',
-            color: '#3B82F6'
-        },
-        { 
-            id: 2, 
-            category: 'Muscular Strength', 
-            test: '1 Rep Max (Upper)', 
-            result1: '', 
-            result2: '',
-            icon: 'fitness-center',
-            color: '#EF4444'
-        },
-        { 
-            id: 3, 
-            category: 'Muscular Strength', 
-            test: '1 Rep Max (Lower)', 
-            result1: '', 
-            result2: '',
-            icon: 'fitness-center',
-            color: '#EF4444'
-        },
-        { 
-            id: 4, 
-            category: 'Muscular Endurance', 
-            test: 'Ab Crunches/min', 
-            result1: '', 
-            result2: '',
-            icon: 'timer',
-            color: '#F97316'
-        },
-        { 
-            id: 5, 
-            category: 'Muscular Endurance', 
-            test: 'Free Squats/min', 
-            result1: '', 
-            result2: '',
-            icon: 'timer',
-            color: '#F97316'
-        },
-        { 
-            id: 6, 
-            category: 'Flexibility', 
-            test: 'Sit & Reach', 
-            result1: '', 
-            result2: '',
-            icon: 'accessibility',
-            color: '#10B981'
-        },
-        { 
-            id: 7, 
-            category: 'Flexibility', 
-            test: 'Shoulder Mobility', 
-            result1: '', 
-            result2: '',
-            icon: 'accessibility',
-            color: '#10B981'
-        },
-        { 
-            id: 8, 
-            category: 'Body Composition', 
-            test: 'Push-ups', 
-            result1: '', 
-            result2: '',
-            icon: 'trending-up',
-            color: '#8B5CF6'
-        }
-    ]);
+    const [results, setResults] = useState<FitnessTestWithUI[]>([]);
+    const [labResults, setLabResults] = useState<LabTestWithUI[]>([]);
 
-    const [labResults, setLabResults] = useState<LabTest[]>([
-        // Complete Blood Count (CBC) - Essential
-        { 
-            id: 1, 
-            category: 'Complete Blood Count (CBC)', 
-            test: 'Hemoglobin', 
-            value: '', 
-            unit: 'g/dL',
-            normalRange: '12-16',
-            icon: 'opacity',
-            color: '#EA580C'
-        },
-        { 
-            id: 2, 
-            category: 'Complete Blood Count (CBC)', 
-            test: 'White Blood Cells', 
-            value: '', 
-            unit: '/μL',
-            normalRange: '4000-11000',
-            icon: 'opacity',
-            color: '#EA580C'
-        },
-        
-        // Lipid Profile - Heart Health
-        { 
-            id: 3, 
-            category: 'Lipid Profile', 
-            test: 'Total Cholesterol', 
-            value: '', 
-            unit: 'mg/dL',
-            normalRange: '<200',
-            icon: 'favorite',
-            color: '#7C3AED'
-        },
-        { 
-            id: 4, 
-            category: 'Lipid Profile', 
-            test: 'HDL Cholesterol', 
-            value: '', 
-            unit: 'mg/dL',
-            normalRange: '>40',
-            icon: 'favorite',
-            color: '#7C3AED'
-        },
-        { 
-            id: 5, 
-            category: 'Lipid Profile', 
-            test: 'LDL Cholesterol', 
-            value: '', 
-            unit: 'mg/dL',
-            normalRange: '<100',
-            icon: 'favorite',
-            color: '#7C3AED'
-        },
-        
-        // Kidney Function - Essential
-        { 
-            id: 6, 
-            category: 'Kidney Function Test', 
-            test: 'Creatinine', 
-            value: '', 
-            unit: 'mg/dL',
-            normalRange: '0.6-1.2',
-            icon: 'healing',
-            color: '#DC2626'
-        },
-        
-        // Liver Function - Essential
-        { 
-            id: 7, 
-            category: 'Liver Function Test', 
-            test: 'ALT (SGPT)', 
-            value: '', 
-            unit: 'U/L',
-            normalRange: '7-56',
-            icon: 'local-hospital',
-            color: '#059669'
-        },
-        
-        // Metabolic - Essential
-        { 
-            id: 8, 
-            category: 'Metabolic Panel', 
-            test: 'Fasting Glucose', 
-            value: '', 
-            unit: 'mg/dL',
-            normalRange: '70-100',
-            icon: 'psychology',
-            color: '#0891B2'
-        },
-        { 
-            id: 9, 
-            category: 'Metabolic Panel', 
-            test: 'HbA1c', 
-            value: '', 
-            unit: '%',
-            normalRange: '<5.7',
-            icon: 'psychology',
-            color: '#0891B2'
-        },
-        
-        // Vitamins - Most Important
-        { 
-            id: 10, 
-            category: 'Vitamins', 
-            test: 'Vitamin D', 
-            value: '', 
-            unit: 'ng/mL',
-            normalRange: '30-100',
-            icon: 'wb-sunny',
-            color: '#CA8A04'
-        },
-        { 
-            id: 11, 
-            category: 'Vitamins', 
-            test: 'Vitamin B12', 
-            value: '', 
-            unit: 'pg/mL',
-            normalRange: '200-900',
-            icon: 'wb-sunny',
-            color: '#CA8A04'
+    const backendUrl = Constants.expoConfig?.extra?.backendUrl; 
+
+    // Toast function for cross-platform compatibility
+    const showToast = (message: string) => {
+        if (Platform.OS === 'android') {
+            ToastAndroid.show(message, ToastAndroid.SHORT);
+        } else {
+            Alert.alert('Success', message);
         }
-    ]);
+    };
+
+    useEffect(() => {
+        fetchTraineeData();
+    }, []);
+
+    const fetchTraineeData = async () => {
+        setLoading(true);
+        try {
+            const token = await AsyncStorage.getItem('token');
+            const response = await fetch(`${backendUrl}/trainees/${trainee.id}`, {
+                headers: { Authorization: `${token}` },
+            });
+            console.log(response)
+            if (response.ok) {
+                const data = await response.json();
+                const traineeOnly = {
+                    ...data,
+                    fitness_tests: data.fitness_tests || [],
+                    lab_tests: data.lab_tests || []
+                };
+                setTraineeData(traineeOnly);
+                processTraineeData(traineeOnly);
+            }
+        } catch (error) {
+            console.error('Error fetching trainee data:', error);
+            Alert.alert('Error', 'Failed to fetch trainee data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const processTraineeData = (data: Trainee) => {
+        // Process fitness tests from backend data
+        const fitnessTests = (data.fitness_tests || []).map(test => ({
+            ...test,
+            date: new Date(test.date).toISOString().slice(0, 10)
+        }));
+        const labTests = (data.lab_tests || []).map(test => ({
+            ...test,
+            date: new Date(test.date).toISOString().slice(0, 10)
+        }));
+
+
+        console.log('Processing trainee data:', { fitnessTests, labTests }); // Debug log
+
+        // Group tests by date for history
+        const groupedByDate: { [date: string]: { fitnessTests: FitnessTest[], labTests: LabTest[] } } = {};
+        
+        fitnessTests.forEach(test => {
+            if (!groupedByDate[test.date]) {
+                groupedByDate[test.date] = { fitnessTests: [], labTests: [] };
+            }
+            groupedByDate[test.date].fitnessTests.push(test);
+        });
+
+        labTests.forEach(test => {
+            if (!groupedByDate[test.date]) {
+                groupedByDate[test.date] = { fitnessTests: [], labTests: [] };
+            }
+            groupedByDate[test.date].labTests.push(test);
+        });
+
+        // Convert to history format and sort by date (newest first)
+        const history = Object.entries(groupedByDate).map(([date, tests]) => ({
+            date,
+            fitnessTests: tests.fitnessTests,
+            labTests: tests.labTests
+        })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        console.log('Test history:', history); // Debug log
+        setTestHistory(history);
+
+        // Load most recent data if available, otherwise initialize with today's date
+        if (history.length > 0) {
+            const mostRecentDate = history[0].date;
+            setTestHistory(history); // ✅ update history first
+            setCurrentTestDate(mostRecentDate);
+            
+            // ✅ use data directly from history to avoid relying on async state
+            const record = history.find(record => record.date === mostRecentDate);
+            if (record) {
+                const fitnessMap = new Map(record.fitnessTests.map(test => [test.test, test]));
+                const labMap = new Map(record.labTests.map(test => [test.test, test]));
+
+                const updatedResults = fitnessTestTemplates.map(template => {
+                    const item = fitnessMap.get(template.test);
+                    return {
+                        ...template,
+                        result1: item?.result1 || '',
+                        result2: item?.result2 || '',
+                        date: mostRecentDate
+                    };
+                });
+                setResults(updatedResults);
+
+                const updatedLabResults = labTestTemplates.map(template => {
+                    const item = labMap.get(template.test);
+                    return {
+                        ...template,
+                        value: item?.value || '',
+                        date: mostRecentDate
+                    };
+                });
+                setLabResults(updatedLabResults);
+            }
+        } else {
+            // No history, initialize with today's date and empty data
+            const today = getCurrentDate();
+            setCurrentTestDate(today);
+            initializeResultsWithDate(today);
+        }
+    };
+
+    const initializeResultsWithDate = (date: string) => {
+        // Initialize fitness test results
+        const fitnessResults = fitnessTestTemplates.map(template => ({
+            ...template,
+            date: date,
+            result1: '',
+            result2: ''
+        }));
+        setResults(fitnessResults);
+
+        // Initialize lab test results
+        const labResultsData = labTestTemplates.map(template => ({
+            ...template,
+            date: date,
+            value: ''
+        }));
+        setLabResults(labResultsData);
+    };
 
     const handleToggleEdit = () => {
-        if (!isEditing && !currentTestDate) {
-            setCurrentTestDate(getCurrentDate());
+        if (!isEditing) {
+            // When starting to edit, ensure we have a valid date
+            if (!currentTestDate) {
+                const today = getCurrentDate();
+                setCurrentTestDate(today);
+                initializeResultsWithDate(today);
+            }
         }
         setIsEditing(!isEditing);
     };
 
-    const handleToggleLabEdit = () => {
-        if (!isLabEditing && !currentTestDate) {
-            setCurrentTestDate(getCurrentDate());
-        }
-        setIsLabEditing(!isLabEditing);
+    const generateTestHistory = (data: Trainee): TestRecord[] => {
+        const groupedByDate: { [date: string]: { fitnessTests: FitnessTest[], labTests: LabTest[] } } = {};
+
+        (data.fitness_tests || []).forEach(test => {
+            const date = test.date; // ✅ Use as-is
+            if (!groupedByDate[date]) groupedByDate[date] = { fitnessTests: [], labTests: [] };
+            groupedByDate[date].fitnessTests.push(test);
+        });
+
+        (data.lab_tests || []).forEach(test => {
+            const date = test.date; // ✅ Use as-is
+            if (!groupedByDate[date]) groupedByDate[date] = { fitnessTests: [], labTests: [] };
+            groupedByDate[date].labTests.push(test);
+        });
+
+        return Object.entries(groupedByDate).map(([date, tests]) => ({
+            date,
+            fitnessTests: tests.fitnessTests,
+            labTests: tests.labTests
+        })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     };
 
-    const handleSave = () => {
-        if (currentTestDate) {
-            // Save current results to history
-            const newRecord: TestRecord = {
-                date: currentTestDate,
-                fitnessTests: [...results],
-                labTests: [...labResults]
+
+    const preloadTestDataFromRecord = (record: TestRecord, date: string) => {
+        const fitnessMap = new Map(record.fitnessTests.map(test => [test.test, test]));
+        const labMap = new Map(record.labTests.map(test => [test.test, test]));
+
+        const updatedResults = fitnessTestTemplates.map(template => {
+            const item = fitnessMap.get(template.test);
+            return {
+                ...template,
+                result1: item?.result1 || '',
+                result2: item?.result2 || '',
+                date
             };
-            
-            // Remove existing record for same date if exists
-            const updatedHistory = testHistory.filter(record => record.date !== currentTestDate);
-            setTestHistory([...updatedHistory, newRecord].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        });
+        setResults(updatedResults);
+
+        const updatedLabResults = labTestTemplates.map(template => {
+            const item = labMap.get(template.test);
+            return {
+                ...template,
+                value: item?.value || '',
+                date
+            };
+        });
+        setLabResults(updatedLabResults);
+    };
+
+
+    const handleSave = async () => {
+        if (!currentTestDate) {
+            Alert.alert('Error', 'Please select a test date');
+            return;
         }
-        
-        setIsEditing(false);
-        setIsLabEditing(false);
-        console.log('Saving results for date:', currentTestDate);
+
+        setLoading(true);
+        try {
+            // Prepare fitness tests data (only include tests with results)
+            const fitnessTestsToSave = results
+                .filter(test => test.result1.trim() || test.result2.trim())
+                .map(test => ({
+                    date: currentTestDate,
+                    category: test.category,
+                    test: test.test,
+                    result1: test.result1.trim(),
+                    result2: test.result2.trim()
+                }));
+
+            // Prepare lab tests data (only include tests with values)
+            const labTestsToSave = labResults
+                .filter(test => test.value.trim())
+                .map(test => ({
+                    date: currentTestDate,
+                    category: test.category,
+                    test: test.test,
+                    value: test.value.trim()
+                }));
+
+            // Get existing tests that are not from current date
+            const existingFitnessTests = (traineeData.fitness_tests || []).filter(test => test.date !== currentTestDate);
+            const existingLabTests = (traineeData.lab_tests || []).filter(test => test.date !== currentTestDate);
+
+            // Combine existing tests with new ones
+            const updatedFitnessTests = [...existingFitnessTests, ...fitnessTestsToSave];
+            const updatedLabTests = [...existingLabTests, ...labTestsToSave];
+
+            // Update trainee data
+            const updatedData = {
+                ...traineeData,
+                fitness_tests: updatedFitnessTests,
+                lab_tests: updatedLabTests
+            };
+
+            // Send to backend
+            const token = await AsyncStorage.getItem('token');
+            const response = await fetch(`${backendUrl}/trainees/${trainee.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `${token}`,
+                },
+                body: JSON.stringify(updatedData),
+            });
+
+            if (response.ok) {
+            const savedData = await response.json();
+
+            // ✅ Extract only trainee data
+            const traineeOnly = {
+    ...traineeData,
+    fitness_tests: updatedFitnessTests,
+    lab_tests: updatedLabTests
+};
+
+            setTraineeData(traineeOnly);
+            // Instead of waiting for async state to update, do it immediately
+            const history = generateTestHistory(traineeOnly); // ✅ generate locally
+            console.log('Generated history after save:', history); 
+            setTestHistory(history);
+            setTraineeData(traineeOnly);
+
+            setCurrentTestDate(currentTestDate); // 🔁 re-set same date
+
+            const record = history.find(record => record.date === currentTestDate);
+            if (record) {
+                preloadTestDataFromRecord(record, currentTestDate);
+            }
+            
+            setIsEditing(false);
+            showToast('Assessment saved successfully!');
+        } else {
+                throw new Error('Failed to save data');
+            }
+        } catch (error) {
+            console.error('Error saving data:', error);
+            Alert.alert('Error', 'Failed to save assessment data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Helper function to validate numeric input
+    const validateNumericInput = (text: string): string => {
+        // Allow numbers, decimal points, and empty string
+        const numericRegex = /^\d*\.?\d*$/;
+        return numericRegex.test(text) ? text : '';
     };
 
     const updateResult = (id: number, field: 'result1' | 'result2', value: string) => {
-        setResults(prev => prev.map(item => 
-            item.id === id ? { ...item, [field]: value } : item
-        ));
+        const validatedValue = validateNumericInput(value);
+        if (value === '' || validatedValue === value) {
+            setResults(prev => prev.map(item => 
+                item.id === id ? { ...item, [field]: validatedValue } : item
+            ));
+        }
     };
 
     const updateLabResult = (id: number, field: 'value', value: string) => {
-        setLabResults(prev => prev.map(item => 
-            item.id === id ? { ...item, [field]: value } : item
-        ));
+        const validatedValue = validateNumericInput(value);
+        if (value === '' || validatedValue === value) {
+            setLabResults(prev => prev.map(item => 
+                item.id === id ? { ...item, [field]: validatedValue } : item
+            ));
+        }
     };
 
     const loadHistoryData = (date: string) => {
+        console.log('Loading history data for date:', date); // Debug log
+        console.log('Available test history:', testHistory); // Debug log
+        
         const historyRecord = testHistory.find(record => record.date === date);
+        console.log('Found history record:', historyRecord); // Debug log
+        
         if (historyRecord) {
             // Create a map for quick lookup
             const fitnessMap = new Map(historyRecord.fitnessTests.map(test => [test.test, test]));
             const labMap = new Map(historyRecord.labTests.map(test => [test.test, test]));
             
+            console.log('Fitness map:', fitnessMap); // Debug log
+            console.log('Lab map:', labMap); // Debug log
+            
             // Update current results with historical data
             setResults(prev => prev.map(item => {
                 const historyItem = fitnessMap.get(item.test);
-                return historyItem ? { ...item, result1: historyItem.result1, result2: historyItem.result2 } : item;
+                return historyItem ? { 
+                    ...item, 
+                    result1: historyItem.result1 || '', 
+                    result2: historyItem.result2 || '',
+                    date: date
+                } : { ...item, result1: '', result2: '', date: date };
             }));
             
             setLabResults(prev => prev.map(item => {
                 const historyItem = labMap.get(item.test);
-                return historyItem ? { ...item, value: historyItem.value } : item;
+                return historyItem ? { 
+                    ...item, 
+                    value: historyItem.value || '',
+                    date: date
+                } : { ...item, value: '', date: date };
             }));
+        } else {
+            // If no history record found, initialize with empty values for the selected date
+            setResults(prev => prev.map(item => ({ 
+                ...item, 
+                result1: '', 
+                result2: '', 
+                date: date 
+            })));
             
-            setCurrentTestDate(date);
+            setLabResults(prev => prev.map(item => ({ 
+                ...item, 
+                value: '', 
+                date: date 
+            })));
         }
+        
+        setCurrentTestDate(date);
     };
 
     const getCategoryGroups = (): CategoryGroup => {
@@ -343,22 +423,6 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
     const categoryGroups = getCategoryGroups();
     const labCategoryGroups = getLabCategoryGroups();
 
-    const getCompletionPercentage = (items: FitnessTest[]): number => {
-        const completed = items.reduce((acc: number, item: FitnessTest) => {
-            return acc + (item.result1 ? 1 : 0) + (item.result2 ? 1 : 0);
-        }, 0);
-        const total = items.length * 2;
-        return Math.round((completed / total) * 100);
-    };
-
-    const getLabCompletionPercentage = (items: LabTest[]): number => {
-        const completed = items.reduce((acc: number, item: LabTest) => {
-            return acc + (item.value ? 1 : 0);
-        }, 0);
-        const total = items.length;
-        return Math.round((completed / total) * 100);
-    };
-
     const formatDate = (dateString: string): string => {
         if (!dateString) return '';
         const date = new Date(dateString);
@@ -373,10 +437,18 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
         return `${year}-${month}-${day}`;
     };
 
-    const clearCurrentData = () => {
-        setResults(prev => prev.map(item => ({ ...item, result1: '', result2: '' })));
-        setLabResults(prev => prev.map(item => ({ ...item, value: '' })));
-        setCurrentTestDate('');
+    const createNewAssessment = () => {
+        const today = getCurrentDate();
+        setCurrentTestDate(today);
+        initializeResultsWithDate(today);
+        setShowHistoryModal(false);
+    };
+
+    // Check if any data has been entered
+    const hasDataEntered = () => {
+        const hasFitnessData = results.some(test => test.result1.trim() || test.result2.trim());
+        const hasLabData = labResults.some(test => test.value.trim());
+        return hasFitnessData || hasLabData;
     };
 
     return (
@@ -391,7 +463,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                 </View>
             </View>
 
-            {/* Test Date Section - More prominent */}
+            {/* Test Date Section */}
             <View style={styles.dateSection}>
                 <View style={styles.dateCard}>
                     <View style={styles.dateHeader}>
@@ -399,7 +471,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                         <Text style={styles.dateTitle}>Assessment Date</Text>
                     </View>
                     <View style={styles.dateControls}>
-                        {(isEditing || isLabEditing) ? (
+                        {isEditing ? (
                             <TextInput
                                 value={currentTestDate}
                                 onChangeText={setCurrentTestDate}
@@ -422,6 +494,24 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                 </View>
             </View>
 
+            {/* Single Action Button */}
+            <View style={styles.actionButtonContainer}>
+                <TouchableOpacity
+                    onPress={isEditing ? handleSave : handleToggleEdit}
+                    style={[styles.mainActionButton, isEditing ? styles.saveButton : styles.editButton]}
+                    disabled={loading}
+                >
+                    <MaterialIcons 
+                        name={isEditing ? "save" : "edit"} 
+                        size={20} 
+                        color="white" 
+                    />
+                    <Text style={styles.mainActionButtonText}>
+                        {loading ? 'Saving...' : (isEditing ? 'Save Assessment' : 'Edit Assessment')}
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
             {/* Physical Fitness Tests Section */}
             <View style={styles.majorSection}>
                 <View style={styles.majorSectionHeader}>
@@ -429,19 +519,6 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                         <MaterialIcons name="fitness-center" size={24} color="#3B82F6" />
                         <Text style={styles.majorSectionTitle}>Physical Fitness Tests</Text>
                     </View>
-                    <TouchableOpacity
-                        onPress={isEditing ? handleSave : handleToggleEdit}
-                        style={[styles.actionButton, isEditing ? styles.saveButton : styles.editButton]}
-                    >
-                        <MaterialIcons 
-                            name={isEditing ? "save" : "edit"} 
-                            size={16} 
-                            color="white" 
-                        />
-                        <Text style={styles.actionButtonText}>
-                            {isEditing ? 'Save' : 'Edit'}
-                        </Text>
-                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.sectionContent}>
@@ -480,6 +557,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                                                                 onChangeText={(text) => updateResult(item.id, 'result1', text)}
                                                                 placeholder="Enter result"
                                                                 style={styles.resultInput}
+                                                                keyboardType="numeric"
                                                             />
                                                         ) : (
                                                             <View style={styles.resultDisplay}>
@@ -498,6 +576,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                                                                 onChangeText={(text) => updateResult(item.id, 'result2', text)}
                                                                 placeholder="Enter result"
                                                                 style={styles.resultInput}
+                                                                keyboardType="numeric"
                                                             />
                                                         ) : (
                                                             <View style={styles.resultDisplay}>
@@ -525,19 +604,6 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                         <MaterialIcons name="science" size={24} color="#10B981" />
                         <Text style={styles.majorSectionTitle}>Laboratory Tests</Text>
                     </View>
-                    <TouchableOpacity
-                        onPress={isLabEditing ? handleSave : handleToggleLabEdit}
-                        style={[styles.actionButton, isLabEditing ? styles.saveButton : styles.editButton]}
-                    >
-                        <MaterialIcons 
-                            name={isLabEditing ? "save" : "edit"} 
-                            size={16} 
-                            color="white" 
-                        />
-                        <Text style={styles.actionButtonText}>
-                            {isLabEditing ? 'Save' : 'Edit'}
-                        </Text>
-                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.sectionContent}>
@@ -570,7 +636,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                                             <View style={styles.labResultsContainer}>
                                                 <View style={styles.labResultItem}>
                                                     <Text style={styles.resultLabel}>Value</Text>
-                                                    {isLabEditing ? (
+                                                    {isEditing ? (
                                                         <TextInput
                                                             value={item.value}
                                                             onChangeText={(text) => updateLabResult(item.id, 'value', text)}
@@ -615,10 +681,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                     
                     <ScrollView style={styles.modalContent}>
                         <TouchableOpacity
-                            onPress={() => {
-                                clearCurrentData();
-                                setShowHistoryModal(false);
-                            }}
+                            onPress={createNewAssessment}
                             style={styles.historyItem}
                         >
                             <View style={styles.historyItemContent}>
@@ -644,8 +707,8 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                                     <View style={styles.historyItemText}>
                                         <Text style={styles.historyDate}>{formatDate(record.date)}</Text>
                                         <Text style={styles.historySubtext}>
-                                            {record.fitnessTests.filter(t => t.result1 || t.result2).length} fitness tests, {' '}
-                                            {record.labTests.filter(t => t.value).length} lab tests
+                                            {record.fitnessTests.length} fitness tests, {' '}
+                                            {record.labTests.length} lab tests
                                         </Text>
                                     </View>
                                 </View>
@@ -669,12 +732,42 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
     );
 }
 
+
 const styles = StyleSheet.create({
+  
   container: {
     flex: 1,
     backgroundColor: '#FAFBFC',
   },
+// Action Button Container - NEW
+  actionButtonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#FAFBFC',
+  },
 
+  // Main Action Button - NEW
+  mainActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+
+  // Main Action Button Text - NEW
+  mainActionButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
   // Header Styles - Compact
   header: {
     backgroundColor: 'white',

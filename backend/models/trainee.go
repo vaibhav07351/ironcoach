@@ -27,4 +27,27 @@ type Trainee struct {
 	ImageURL          string             `json:"image_url,omitempty" bson:"image_url,omitempty"`               // Add image URL field
 	ActiveSupplements string             `json:"active_supplements" bson:"active_supplements"`                 // Training start date
 
+ 	FitnessTests         []FitnessTest       `json:"fitness_tests,omitempty" bson:"fitness_tests,omitempty"`
+    LabTests             []LabTest           `json:"lab_tests,omitempty" bson:"lab_tests,omitempty"`
+    HealthQuestionnaire  *HealthQuestionnaire `json:"health_questionnaire,omitempty" bson:"health_questionnaire,omitempty"`
+}
+
+type FitnessTest struct {
+    Date         string `json:"date" bson:"date"`
+    Category     string `json:"category" bson:"category"`
+    Test         string `json:"test" bson:"test"`
+    Result1      string `json:"result1" bson:"result1"`
+    Result2      string `json:"result2,omitempty" bson:"result2,omitempty"`
+}
+
+type LabTest struct {
+    Date     string `json:"date" bson:"date"`         
+    Category string `json:"category" bson:"category"` 
+    Test     string `json:"test" bson:"test"`         
+    Value    string `json:"value" bson:"value"`
+}
+
+type HealthQuestionnaire struct {
+    Responses map[string]bool `json:"responses" bson:"responses"`
+    Comments  string          `json:"comments" bson:"comments"`
 }
