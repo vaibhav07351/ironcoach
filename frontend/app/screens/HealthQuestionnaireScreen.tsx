@@ -1,25 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, Switch, StyleSheet, TextInput, ScrollView, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
-import { Trainee } from '../types/trainee';
-
-type Responses = {
-    heartProblems: boolean;
-    bloodPressure: boolean;
-    chronicIllness: boolean;
-    physicalDifficulty: boolean;
-    physicianAdvice: boolean;
-    recentSurgery: boolean;
-    pregnancy: boolean;
-    breathingDifficulty: boolean;
-    muscleInjury: boolean;
-    diabetes: boolean;
-    smoking: boolean;
-    obesity: boolean;
-    cholesterol: boolean;
-    familyHeartProblems: boolean;
-    hernia: boolean;
-    frequentFalls: boolean;
-};
+import React, { useState, useEffect } from 'react';
+import {
+    View, Text, Switch, StyleSheet, TextInput, ScrollView,
+    SafeAreaView, TouchableOpacity
+} from 'react-native';
+import { Trainee, HealthQuestionnaireResponses, questionMapping } from '../types/trainee';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
+import Constants from 'expo-constants';
 
 type Props = {
     trainee: Trainee;
@@ -27,7 +14,7 @@ type Props = {
 };
 
 export default function HealthQuestionnaireScreen({ trainee, navigation }: Props) {
-    const [responses, setResponses] = useState<Responses>({
+    const [responses, setResponses] = useState<HealthQuestionnaireResponses>({
         heartProblems: false,
         bloodPressure: false,
         chronicIllness: false,
@@ -47,66 +34,119 @@ export default function HealthQuestionnaireScreen({ trainee, navigation }: Props
     });
 
     const [comments, setComments] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
 
-    const toggleSwitch = (key: keyof Responses) => {
+    useEffect(() => {
+        if (trainee.health_questionnaire) {
+            setResponses(trainee.health_questionnaire.responses || responses);
+            setComments(trainee.health_questionnaire.comments || "");
+        }
+    }, [trainee]);
+
+    const toggleSwitch = (key: keyof HealthQuestionnaireResponses) => {
         setResponses({ ...responses, [key]: !responses[key] });
     };
 
-    const handleSave = () => {
-        // Check if any health issues are marked as true
-        const hasHealthIssues = Object.values(responses).some(value => value === true);
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+        Toast.show({
+            type: type,
+            text1: message,
+            position: 'bottom',
+            visibilityTime: 3000,
+        });
+    };
+
+    const handleSave = async () => {
+        console.log("Save button clicked!"); // Debug log
         
-        // If health issues exist but no comments provided, show warning
+        const hasHealthIssues = Object.values(responses).some(value => value === true);
+
         if (hasHealthIssues && !comments.trim()) {
-            Alert.alert(
-                "Comments Required",
-                "Please provide details about the health conditions you've marked as 'Yes'.",
-                [{ text: "OK" }]
-            );
+            showToast("Please provide details about the health conditions you've marked as 'Yes'.", 'error');
             return;
         }
 
-        // Save logic here - you can implement your save functionality
-        const healthData = {
-            responses,
-            comments: comments.trim(),
-            traineeId: trainee.id,
-            submittedAt: new Date().toISOString()
-        };
+        setIsSaving(true);
+        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
 
-        console.log('Saving health questionnaire:', healthData);
-        
-        Alert.alert(
-            "Success",
-            "Health questionnaire saved successfully!",
-            [
-                {
-                    text: "OK",
-                    onPress: () => navigation.goBack()
-                }
-            ]
-        );
+        try {
+            const token = await AsyncStorage.getItem("token");
+            // const backendUrl = await AsyncStorage.getItem("backendUrl");
+
+            console.log("Token:", token ? "Present" : "Missing");
+            console.log("Backend URL:", backendUrl);
+            console.log("Trainee ID:", trainee.id);
+
+            if (!token || !backendUrl) {
+                throw new Error("Missing authentication token or backend URL");
+            }
+
+            // Prepare the health questionnaire data to match Go struct
+            const healthQuestionnaireData = {
+                responses: responses,
+                comments: comments.trim(),
+            };
+
+            console.log("Sending health questionnaire data:", healthQuestionnaireData);
+
+            const response = await fetch(`${backendUrl}/trainees/${trainee.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `${token}`,
+                },
+                body: JSON.stringify({
+                    ...trainee,
+                    health_questionnaire: healthQuestionnaireData
+                }),
+            });
+
+            console.log("Response status:", response.status);
+            console.log("Response headers:", response.headers);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("Error response:", errorText);
+                throw new Error(`Failed to update health questionnaire: ${response.status} ${response.statusText}`);
+            }
+
+            const responseData = await response.json();
+            console.log("Success response:", responseData);
+
+            showToast("Health questionnaire saved successfully!", 'success');
+            
+            // Optional: Navigate back after a short delay
+            setTimeout(() => {
+                navigation.goBack();
+            }, 1000);
+
+        } catch (error) {
+            console.error("Save failed:", error);
+            showToast("Failed to save health questionnaire", 'error');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
         <SafeAreaView style={styles.safeArea}>
             <View style={styles.container}>
-                {/** Header */}
                 <View style={styles.header}>
                     <Text style={styles.title}>Health Questionnaire</Text>
                     <Text style={styles.subtitle}>Answer honestly</Text>
                 </View>
 
-                {/** Save Button - Top */}
-                <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                    <Text style={styles.saveButtonText}>✓ Save</Text>
+                <TouchableOpacity 
+                    style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
+                    onPress={handleSave}
+                    disabled={isSaving}
+                >
+                    <Text style={styles.saveButtonText}>
+                        {isSaving ? "Saving..." : "✓ Save"}
+                    </Text>
                 </TouchableOpacity>
 
-                <ScrollView 
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                >
-                    {/** Questions Section */}
+                <ScrollView contentContainerStyle={styles.scrollContent}>
                     <View style={styles.questionsContainer}>
                         {Object.keys(responses).map((key, index) => (
                             <View key={index} style={styles.item}>
@@ -115,10 +155,10 @@ export default function HealthQuestionnaireScreen({ trainee, navigation }: Props
                                         {questionMapping[key as keyof typeof questionMapping]}
                                     </Text>
                                     <Switch
-                                        value={responses[key as keyof Responses]}
-                                        onValueChange={() => toggleSwitch(key as keyof Responses)}
+                                        value={responses[key as keyof HealthQuestionnaireResponses]}
+                                        onValueChange={() => toggleSwitch(key as keyof HealthQuestionnaireResponses)}
                                         trackColor={{ false: '#e0e0e0', true: '#4CAF50' }}
-                                        thumbColor={responses[key as keyof Responses] ? '#ffffff' : '#f4f3f4'}
+                                        thumbColor={responses[key as keyof HealthQuestionnaireResponses] ? '#ffffff' : '#f4f3f4'}
                                         style={styles.switch}
                                     />
                                 </View>
@@ -126,7 +166,6 @@ export default function HealthQuestionnaireScreen({ trainee, navigation }: Props
                         ))}
                     </View>
 
-                    {/** Comments Section */}
                     <View style={styles.commentsSection}>
                         <Text style={styles.commentLabel}>
                             Elaborate on "Yes" answers:
@@ -141,29 +180,12 @@ export default function HealthQuestionnaireScreen({ trainee, navigation }: Props
                         />
                     </View>
                 </ScrollView>
+                
+                <Toast />
             </View>
         </SafeAreaView>
     );
 }
-
-const questionMapping = {
-    heartProblems: "History of heart problems, chest pain, or stroke",
-    bloodPressure: "Increased blood pressure",
-    chronicIllness: "Any chronic illness or condition",
-    physicalDifficulty: "Difficulty in physical exercise",
-    physicianAdvice: "Advice from physician not to exercise",
-    recentSurgery: "Recent surgery (last 12 months)",
-    pregnancy: "Pregnancy (now or within last 3 months)",
-    breathingDifficulty: "History of breathing difficulty or lung problems",
-    muscleInjury: "Muscle, joint, or back disorder, or any previous injury",
-    diabetes: "Diabetes or thyroid condition",
-    smoking: "Cigarette smoking habit",
-    obesity: "Obesity (more than 20% over ideal body weight)",
-    cholesterol: "Increased blood cholesterol",
-    familyHeartProblems: "History of heart problems in immediate family",
-    hernia: "Hernia or any condition that may be aggravated by lifting weights",
-    frequentFalls: "Do you have frequent falls / lose consciousness / balance",
-};
 
 const styles = StyleSheet.create({
     safeArea: {
@@ -200,6 +222,10 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         alignSelf: 'flex-end',
         minWidth: 80,
+    },
+    saveButtonDisabled: {
+        backgroundColor: '#9ca3af',
+        opacity: 0.7,
     },
     saveButtonText: {
         color: '#ffffff',

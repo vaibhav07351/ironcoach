@@ -288,10 +288,10 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
 
             // ✅ Extract only trainee data
             const traineeOnly = {
-    ...traineeData,
-    fitness_tests: updatedFitnessTests,
-    lab_tests: updatedLabTests
-};
+                ...traineeData,
+                fitness_tests: updatedFitnessTests,
+                lab_tests: updatedLabTests
+            };
 
             setTraineeData(traineeOnly);
             // Instead of waiting for async state to update, do it immediately

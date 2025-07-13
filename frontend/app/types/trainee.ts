@@ -34,6 +34,25 @@ export type HealthQuestionnaireResponses = {
     frequentFalls: boolean;
 };
 
+export const questionMapping = {
+    heartProblems: "History of heart problems, chest pain, or stroke",
+    bloodPressure: "Increased blood pressure",
+    chronicIllness: "Any chronic illness or condition",
+    physicalDifficulty: "Difficulty in physical exercise",
+    physicianAdvice: "Advice from physician not to exercise",
+    recentSurgery: "Recent surgery (last 12 months)",
+    pregnancy: "Pregnancy (now or within last 3 months)",
+    breathingDifficulty: "History of breathing difficulty or lung problems",
+    muscleInjury: "Muscle, joint, or back disorder, or any previous injury",
+    diabetes: "Diabetes or thyroid condition",
+    smoking: "Cigarette smoking habit",
+    obesity: "Obesity (more than 20% over ideal body weight)",
+    cholesterol: "Increased blood cholesterol",
+    familyHeartProblems: "History of heart problems in immediate family",
+    hernia: "Hernia or any condition that may be aggravated by lifting weights",
+    frequentFalls: "Do you have frequent falls / lose consciousness / balance",
+};
+
 export type Trainee = {
     id: string;
     name: string;
