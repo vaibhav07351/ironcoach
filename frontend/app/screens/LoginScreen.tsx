@@ -10,7 +10,7 @@ import {
     Dimensions, 
     Platform,
     KeyboardAvoidingView,
-    ScrollView
+    ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,8 +22,6 @@ import { useWindowDimensions } from 'react-native';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
-const { width } = useWindowDimensions();
-
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -31,6 +29,7 @@ export default function LoginScreen() {
     
     const navigation = useNavigation<NavigationProp>();
     const { login } = useContext(AuthContext);
+    const { width } = useWindowDimensions(); // Moved inside the component
 
     const handleLogin = async () => {
         setIsLoading(true);
@@ -99,7 +98,7 @@ export default function LoginScreen() {
                     </View>
 
                     {/* Login Form */}
-                    <View style={styles.formCard}>
+                    <View style={[styles.formCard, { width: Math.max(width * 0.9, 400) }]}>
                         <Text style={styles.title}>Login</Text>
                         
                         <TextInput
@@ -222,7 +221,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
         borderRadius: 20,
         padding: 30,
-        width: Math.max(width * 0.9, 400),  // ensure a minimum width
         maxWidth: 400,
         shadowColor: '#000',
         shadowOffset: {
