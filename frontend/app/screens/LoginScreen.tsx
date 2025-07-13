@@ -98,7 +98,7 @@ export default function LoginScreen() {
                     </View>
 
                     {/* Login Form */}
-                    <View style={[styles.formCard, { width: Math.max(width * 0.9, 400) }]}>
+                    <View style={[styles.formCard, { width: Math.max(width * 0.9, 350) }]}>
                         <Text style={styles.title}>Login</Text>
                         
                         <TextInput
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
         borderRadius: 20,
         padding: 30,
-        maxWidth: 400,
+        maxWidth: 350,
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
