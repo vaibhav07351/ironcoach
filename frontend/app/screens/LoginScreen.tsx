@@ -18,10 +18,11 @@ import { RootStackParamList } from '../types/navigation';
 import { AuthContext } from '../contexts/AuthContext';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
+import { useWindowDimensions } from 'react-native';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
-const { width } = Dimensions.get('window');
+const { width } = useWindowDimensions();
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
         borderRadius: 20,
         padding: 30,
-        width: width * 0.9,
+        width: Math.max(width * 0.9, 400),  // ensure a minimum width
         maxWidth: 400,
         shadowColor: '#000',
         shadowOffset: {
