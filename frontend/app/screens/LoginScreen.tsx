@@ -1,24 +1,38 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Linking, ActivityIndicator } from 'react-native';
+import { 
+    View, 
+    Text, 
+    TextInput, 
+    TouchableOpacity, 
+    StyleSheet, 
+    Linking, 
+    ActivityIndicator, 
+    Dimensions, 
+    Platform,
+    KeyboardAvoidingView,
+    ScrollView
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
-import { AuthContext } from '../contexts/AuthContext'; // Import AuthContext
+import { AuthContext } from '../contexts/AuthContext';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
+const { width } = Dimensions.get('window');
+
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false); // State for loading
+    const [isLoading, setIsLoading] = useState(false);
+    
     const navigation = useNavigation<NavigationProp>();
-
-    const { login } = useContext(AuthContext); // Use login function from AuthContext
+    const { login } = useContext(AuthContext);
 
     const handleLogin = async () => {
-        setIsLoading(true); // Start loading
+        setIsLoading(true);
         try {
             const backendUrl = Constants.expoConfig?.extra?.backendUrl;
             const response = await fetch(`${backendUrl}/login`, {
@@ -36,7 +50,6 @@ export default function LoginScreen() {
             const { token } = await response.json();
             console.log('login token:', token);
 
-            // Call login function from AuthContext
             await login(token);
 
             Toast.show({
@@ -44,7 +57,7 @@ export default function LoginScreen() {
                 text1: 'Login Successful',
                 text2: 'Welcome back!',
             });
-            navigation.navigate('Dashboard'); // Navigate after successful login
+            navigation.navigate('Dashboard');
         } catch (error: unknown) {
             if (error instanceof Error) {
                 Toast.show({
@@ -53,111 +66,253 @@ export default function LoginScreen() {
                     text2: error.message,
                 });
             } else {
-                 Toast.show({
+                Toast.show({
                     type: 'error',
                     text1: 'Login Failed',
                     text2: 'An unknown error occurred.',
                 });
             }
         } finally {
-            setIsLoading(false); // Stop loading
+            setIsLoading(false);
         }
     };
 
-    // if (isLoading) {
-    //     return <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />;
-    // }
-
     return (
-        <View style={styles.container}>
-            <View style={styles.formContainer}>
-                <Text style={styles.title}>Login</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                />
+        <KeyboardAvoidingView 
+            style={styles.container} 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+            <ScrollView 
+                contentContainerStyle={styles.scrollContainer}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Background decorative elements */}
+                <View style={styles.decorativeCircle1} />
+                <View style={styles.decorativeCircle2} />
                 
-                {/* Show loading spinner when isLoading is true */}
-                {isLoading ? (
-                    <ActivityIndicator size="large" color="#6200ee" />
-                ) : (
-                    <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                        <Text style={styles.buttonText}>Login</Text>
+                <View style={styles.formContainer}>
+                    {/* Welcome Section */}
+                    <View style={styles.welcomeSection}>
+                        <Text style={styles.welcomeTitle}>Welcome Back</Text>
+                        <Text style={styles.welcomeSubtitle}>Sign in to continue</Text>
+                    </View>
+
+                    {/* Login Form */}
+                    <View style={styles.formCard}>
+                        <Text style={styles.title}>Login</Text>
+                        
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Email"
+                            placeholderTextColor="#999"
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                            autoCorrect={false}
+                        />
+                        
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Password"
+                            placeholderTextColor="#999"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                        />
+
+                        {/* Login Button */}
+                        <TouchableOpacity
+                            style={[styles.button, isLoading && styles.buttonDisabled]}
+                            onPress={handleLogin}
+                            disabled={isLoading}
+                            activeOpacity={0.8}
+                        >
+                            {isLoading ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                                <Text style={styles.buttonText}>Login</Text>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            onPress={() => navigation.navigate('Signup')}
+                            style={styles.linkContainer}
+                        >
+                            <Text style={styles.linkText}>
+                                Don't have an account? <Text style={styles.linkTextBold}>Sign up</Text>
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Footer */}
+                <View style={styles.footer}>
+                    <Text style={styles.footerText}>Crafted with ❤️ by Vaibhav Bhardwaj</Text>
+                    <Text style={styles.footerText}>Questions? Let's connect!</Text>
+                    <TouchableOpacity 
+                        onPress={() => Linking.openURL('mailto:vaibhav07351@gmail.com')}
+                        style={styles.emailContainer}
+                    >
+                        <Text style={styles.footerLink}>vaibhav07351@gmail.com</Text>
                     </TouchableOpacity>
-                )}
-                
-
-                <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-                    <Text style={styles.linkText}>Don't have an account? Sign up</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Footer */}
-            <View style={styles.footer}>
-                <Text style={styles.footerText}>Developed by Vaibhav Bhardwaj</Text>
-                <Text style={styles.footerText}>For inquiries, feel free to reach out at:</Text>
-                <TouchableOpacity onPress={() => Linking.openURL('mailto:vaibhav07351@gmail.com')}>
-                    <Text style={[styles.footerText, styles.footerLink]}>vaibhav07351@gmail.com</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
+                </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 16,
-        justifyContent: 'space-between', // This will push the footer to the bottom
+        backgroundColor: '#667eea',
+    },
+    scrollContainer: {
+        flexGrow: 1,
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        paddingBottom: 20,
+    },
+    decorativeCircle1: {
+        position: 'absolute',
+        width: 200,
+        height: 200,
+        borderRadius: 100,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        top: -100,
+        right: -100,
+    },
+    decorativeCircle2: {
+        position: 'absolute',
+        width: 150,
+        height: 150,
+        borderRadius: 75,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        bottom: 100,
+        left: -75,
     },
     formContainer: {
         flex: 1,
-        justifyContent: 'center', // Centers the form content
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    title: { fontSize: 24, fontWeight: 'bold', marginBottom: 24, textAlign: 'center' },
+    welcomeSection: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    welcomeTitle: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginBottom: 8,
+        textShadowColor: 'rgba(0, 0, 0, 0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
+    },
+    welcomeSubtitle: {
+        fontSize: 16,
+        color: 'rgba(255, 255, 255, 0.8)',
+        fontWeight: '300',
+    },
+    formCard: {
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderRadius: 20,
+        padding: 30,
+        width: width * 0.9,
+        maxWidth: 400,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 10,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 15,
+        elevation: 10,
+    },
+    title: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        marginBottom: 30,
+        textAlign: 'center',
+        color: '#333',
+    },
     input: {
-        padding: 12,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        marginBottom: 16,
+        padding: 16,
+        borderWidth: 2,
+        borderColor: '#e0e0e0',
+        borderRadius: 12,
+        marginBottom: 20,
+        fontSize: 16,
+        color: '#333',
+        backgroundColor: '#f8f9fa',
     },
     button: {
-        backgroundColor: '#6200ee',
-        padding: 12,
-        borderRadius: 8,
-        marginBottom: 16,
+        backgroundColor: '#ff6b6b',
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        marginBottom: 20,
+        shadowColor: '#ff6b6b',
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
-    buttonText: { color: '#fff', textAlign: 'center', fontSize: 16 },
-    linkText: { color: '#6200ee', textAlign: 'center' },
+    buttonDisabled: {
+        backgroundColor: '#ccc',
+        shadowOpacity: 0.1,
+    },
+    buttonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    linkContainer: {
+        marginTop: 10,
+        alignItems: 'center',
+    },
+    linkText: {
+        color: '#666',
+        fontSize: 14,
+        textAlign: 'center',
+    },
+    linkTextBold: {
+        color: '#667eea',
+        fontWeight: '600',
+    },
     footer: {
         alignItems: 'center',
-        marginTop: 20, // Add some space between the form and the footer
-        paddingVertical: 8,
-        borderTopWidth: 1,
-        borderTopColor: '#ddd', // Subtle border at the top
-        width: '100%', // Ensure footer spans the full width
+        marginTop: 30,
+        paddingVertical: 20,
+        paddingHorizontal: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 15,
+        marginHorizontal: 10,
     },
     footerText: {
         fontSize: 14,
-        color: '#555', // A softer gray for the text
-        fontWeight: '500', // Slightly lighter font weight for a modern feel
+        color: 'rgba(255, 255, 255, 0.8)',
         textAlign: 'center',
-        marginBottom: 1, // Adds spacing between footer lines
+        marginBottom: 5,
+        fontWeight: '300',
+    },
+    emailContainer: {
+        marginTop: 5,
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
     },
     footerLink: {
-        color: '#6200ee', // Keep the link color consistent with buttons
-        fontWeight: '600',
-        textDecorationLine: 'underline', // Adds underline for links
+        color: '#fff',
+        fontWeight: '500',
+        fontSize: 14,
     },
 });
