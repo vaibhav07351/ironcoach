@@ -61,10 +61,10 @@ export default function HealthQuestionnaireScreen({ trainee, navigation }: Props
         
         const hasHealthIssues = Object.values(responses).some(value => value === true);
 
-        if (hasHealthIssues && !comments.trim()) {
-            showToast("Please provide details about the health conditions you've marked as 'Yes'.", 'error');
-            return;
-        }
+        // if (hasHealthIssues && !comments.trim()) {
+        //     showToast("Please provide details about the health conditions you've marked as 'Yes'.", 'error');
+        //     return;
+        // }
 
         setIsSaving(true);
         const backendUrl = Constants.expoConfig?.extra?.backendUrl;
