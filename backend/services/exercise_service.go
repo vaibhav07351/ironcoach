@@ -4,6 +4,7 @@ import (
 	"errors"
 	"ironcoach/models"
 	"ironcoach/repositories"
+	"time"
 )
 
 type ExerciseService struct {
@@ -37,6 +38,7 @@ func (s *ExerciseService) AddExercise(exercise models.Exercise) error {
         return errors.New("exercise already exists in this category")
     }
 
+	exercise.CreatedAt = time.Now()
     // Add exercise to the database
     return s.repository.AddExercise(exercise)
 	

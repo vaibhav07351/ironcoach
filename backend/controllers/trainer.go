@@ -36,6 +36,7 @@ func (ctrl *TrainerController) RegisterTrainer(c *gin.Context) {
 		return
 	}
 
+		
 	c.JSON(http.StatusOK, gin.H{"message": "Trainer registered Successfully!"})
 }
 

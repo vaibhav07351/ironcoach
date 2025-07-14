@@ -1,5 +1,5 @@
 import React, { useState,useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,6 +31,8 @@ export default function SignupScreen() {
     const [trainerType, setTrainerType] = useState('');
     const [image, setImage] = useState<{ uri: string } | null>(null);
     const [errors, setErrors] = useState<{[key: string]: string}>({});
+    const [isLoading, setIsLoading] = useState(false);
+    const [loadingStep, setLoadingStep] = useState('');
 
     const navigation = useNavigation<NavigationProp>();
 
@@ -190,6 +192,8 @@ const handleDateChange = (text: string) => {
             console.log("Please select an image to upload")
             return null;
         }
+
+        setLoadingStep('Uploading profile image...');
     
         const formData = new FormData();
         formData.append('image', {
@@ -249,8 +253,13 @@ const handleDateChange = (text: string) => {
             return;
         }
 
+        setIsLoading(true);
+        setLoadingStep('Creating your account...');
+
         try {
             const imageUrl = await uploadImage();
+
+            setLoadingStep('Finalizing registration...');
 
             const backendUrl = Constants.expoConfig?.extra?.backendUrl;
             const response = await fetch(`${backendUrl}/registerTrainer`, {
@@ -284,9 +293,17 @@ const handleDateChange = (text: string) => {
                 throw new Error(data.error || 'Signup failed');
             }
 
-            Toast.show({ type: 'success', text1: 'Signup Successful', text2: 'Account created successfully' });
-            navigation.navigate('Login');
+            setLoadingStep('Account created successfully!');
+            
+            // Small delay to show success message
+            setTimeout(() => {
+                setIsLoading(false);
+                Toast.show({ type: 'success', text1: 'Signup Successful', text2: 'Account created successfully' });
+                navigation.navigate('Login');
+            }, 1000);
+
         } catch (error: unknown) {
+            setIsLoading(false);
             if (error instanceof Error) {
                  Toast.show({ type: 'error', text1: 'Signup Failed', text2: error.message });
             } else {
@@ -338,6 +355,7 @@ const handleDateChange = (text: string) => {
                 placeholderTextColor="#aaa"
                 placeholder={options?.placeholder}
                 maxLength={options?.maxLength}
+                editable={!isLoading}
             />
             {errors[fieldName] && (
                 <Text style={styles.errorText}>{errors[fieldName]}</Text>
@@ -345,157 +363,193 @@ const handleDateChange = (text: string) => {
         </View>
     );
 
-    return (
-        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-            {/* Header */}
-            <View style={styles.header}>
-                <Text style={styles.title}>Create Your Profile</Text>
-                <Text style={styles.subtitle}>Join our trainer community</Text>
-            </View>
-
-            {/* Profile Image Section */}
-            <View style={styles.imageSection}>
-                <View style={styles.imageContainer}>
-                    {image ? (
-                        <Image source={{ uri: image.uri }} style={styles.profileImage} />
-                    ) : (
-                        <View style={styles.placeholder}>
-                            <Ionicons name="person-circle-outline" size={80} color="#ccc" />
+    const LoadingModal = () => (
+        <Modal visible={isLoading} transparent animationType="fade">
+            <View style={styles.modalOverlay}>
+                <View style={styles.loadingContainer}>
+                    <View style={styles.loadingContent}>
+                        <ActivityIndicator size="large" color="#007AFF" />
+                        <Text style={styles.loadingText}>{loadingStep}</Text>
+                        <View style={styles.loadingBar}>
+                            <View style={styles.loadingProgress} />
                         </View>
-                    )}
-                    <View style={styles.imageOverlay}>
-                        <TouchableOpacity style={styles.imageButton} onPress={handlePickImage}>
-                            <Ionicons name="camera" size={16} color="#fff" />
-                        </TouchableOpacity>
-                        {image && (
-                            <TouchableOpacity style={styles.removeImageButton} onPress={handleRemoveImage}>
-                                <Ionicons name="trash" size={16} color="#fff" />
-                            </TouchableOpacity>
+                        <Text style={styles.loadingSubtext}>Please wait while we set up your account</Text>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+
+    return (
+        <View style={{ flex: 1 }}>
+            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <Text style={styles.title}>Create Your Profile</Text>
+                    <Text style={styles.subtitle}>Join our trainer community</Text>
+                </View>
+
+                {/* Profile Image Section */}
+                <View style={styles.imageSection}>
+                    <View style={styles.imageContainer}>
+                        {image ? (
+                            <Image source={{ uri: image.uri }} style={styles.profileImage} />
+                        ) : (
+                            <View style={styles.placeholder}>
+                                <Ionicons name="person-circle-outline" size={80} color="#ccc" />
+                            </View>
                         )}
+                        <View style={styles.imageOverlay}>
+                            <TouchableOpacity style={styles.imageButton} onPress={handlePickImage} disabled={isLoading}>
+                                <Ionicons name="camera" size={16} color="#fff" />
+                            </TouchableOpacity>
+                            {image && (
+                                <TouchableOpacity style={styles.removeImageButton} onPress={handleRemoveImage} disabled={isLoading}>
+                                    <Ionicons name="trash" size={16} color="#fff" />
+                                </TouchableOpacity>
+                            )}
+                        </View>
                     </View>
-                </View>
-                <Text style={styles.imageHint}>Upload profile photo (Max 2MB)</Text>
-            </View>
-
-            {/* Form Section */}
-            <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>Personal Information</Text>
-                
-                {renderInputField('Full Name', name, setName, 'name', { 
-                    required: true,
-                    placeholder: 'Enter your full name',
-                    autoCapitalize: 'words'
-                })}
-                
-                {renderInputField('Email Address', email, setEmail, 'email', { 
-                    required: true, 
-                    keyboardType: 'email-address',
-                    autoCapitalize: 'none',
-                    placeholder: 'your.email@example.com'
-                })}
-                
-                {renderInputField('Password', password, setPassword, 'password', { 
-                    required: true, 
-                    secureTextEntry: true,
-                    placeholder: 'Enter your password'
-                })}
-                
-                {renderInputField('Confirm Password', confirmPassword, setConfirmPassword, 'confirmPassword', { 
-                    required: true, 
-                    secureTextEntry: true,
-                    placeholder: 'Re-enter your password'
-                })}
-
-                <View style={styles.row}>
-                    <View style={styles.halfWidth}>
-                        {renderInputField('Phone Number', phoneNumber, setPhoneNumber, 'phoneNumber', { 
-                            keyboardType: 'phone-pad',
-                            placeholder: '9876543210',
-                            maxLength: 10
-                        })}
-                    </View>
-                    <View style={styles.halfWidth}>
-                        {renderInputField('Date of Birth', dateOfBirth, setDateOfBirth, 'dateOfBirth', {
-                            keyboardType: 'numeric',
-                            placeholder: 'DD/MM/YYYY',
-                            maxLength: 10
-                        })}
-                    </View>
+                    <Text style={styles.imageHint}>Upload profile photo (Max 2MB)</Text>
                 </View>
 
-                {renderInputField('Gender', gender, setGender, 'gender', {
-                    placeholder: 'Male, Female, or Other',
-                    autoCapitalize: 'words'
-                })}
-                
-                {renderInputField('Address', address, setAddress, 'address', {
-                    placeholder: 'Your complete address',
-                    autoCapitalize: 'words'
-                })}
+                {/* Form Section */}
+                <View style={styles.formSection}>
+                    <Text style={styles.sectionTitle}>Personal Information</Text>
+                    
+                    {renderInputField('Full Name', name, setName, 'name', { 
+                        required: true,
+                        placeholder: 'Enter your full name',
+                        autoCapitalize: 'words'
+                    })}
+                    
+                    {renderInputField('Email Address', email, setEmail, 'email', { 
+                        required: true, 
+                        keyboardType: 'email-address',
+                        autoCapitalize: 'none',
+                        placeholder: 'your.email@example.com'
+                    })}
+                    
+                    {renderInputField('Password', password, setPassword, 'password', { 
+                        required: true, 
+                        secureTextEntry: true,
+                        placeholder: 'Enter your password'
+                    })}
+                    
+                    {renderInputField('Confirm Password', confirmPassword, setConfirmPassword, 'confirmPassword', { 
+                        required: true, 
+                        secureTextEntry: true,
+                        placeholder: 'Re-enter your password'
+                    })}
 
-                <Text style={styles.sectionTitle}>Professional Details</Text>
-                
-                {renderInputField('Speciality', speciality, setSpeciality, 'speciality', {
-                    placeholder: 'e.g., Strength Training, Yoga, Cardio',
-                    autoCapitalize: 'words'
-                })}
-                
-                {renderInputField('Trainer Type', trainerType, setTrainerType, 'trainerType', {
-                    placeholder: 'e.g., Personal, Group, Online, Rehabilitation',
-                    autoCapitalize: 'words'
-                })}
-                
-                <View style={styles.row}>
-                    <View style={styles.halfWidth}>
-                        {renderInputField('Experience (Years)', experience, setExperience, 'experience', { 
-                            keyboardType: 'numeric',
-                            placeholder: '0-50',
-                            maxLength: 2
-                        })}
+                    <View style={styles.row}>
+                        <View style={styles.halfWidth}>
+                            {renderInputField('Phone Number', phoneNumber, setPhoneNumber, 'phoneNumber', { 
+                                keyboardType: 'phone-pad',
+                                placeholder: '9876543210',
+                                maxLength: 10
+                            })}
+                        </View>
+                        <View style={styles.halfWidth}>
+                            {renderInputField('Date of Birth', dateOfBirth, setDateOfBirth, 'dateOfBirth', {
+                                keyboardType: 'numeric',
+                                placeholder: 'DD/MM/YYYY',
+                                maxLength: 10
+                            })}
+                        </View>
                     </View>
-                    <View style={styles.halfWidth}>
-                        {renderInputField('Hourly Rate (₹)', hourlyRate, setHourlyRate, 'hourlyRate', { 
-                            keyboardType: 'numeric',
-                            placeholder: '100-10000',
-                            maxLength: 5
-                        })}
+
+                    {renderInputField('Gender', gender, setGender, 'gender', {
+                        placeholder: 'Male, Female, or Other',
+                        autoCapitalize: 'words'
+                    })}
+                    
+                    {renderInputField('Address', address, setAddress, 'address', {
+                        placeholder: 'Your complete address',
+                        autoCapitalize: 'words'
+                    })}
+
+                    <Text style={styles.sectionTitle}>Professional Details</Text>
+                    
+                    {renderInputField('Speciality', speciality, setSpeciality, 'speciality', {
+                        placeholder: 'e.g., Strength Training, Yoga, Cardio',
+                        autoCapitalize: 'words'
+                    })}
+                    
+                    {renderInputField('Trainer Type', trainerType, setTrainerType, 'trainerType', {
+                        placeholder: 'e.g., Personal, Group, Online, Rehabilitation',
+                        autoCapitalize: 'words'
+                    })}
+                    
+                    <View style={styles.row}>
+                        <View style={styles.halfWidth}>
+                            {renderInputField('Experience (Years)', experience, setExperience, 'experience', { 
+                                keyboardType: 'numeric',
+                                placeholder: '0-50',
+                                maxLength: 2
+                            })}
+                        </View>
+                        <View style={styles.halfWidth}>
+                            {renderInputField('Hourly Rate (₹)', hourlyRate, setHourlyRate, 'hourlyRate', { 
+                                keyboardType: 'numeric',
+                                placeholder: '100-10000',
+                                maxLength: 5
+                            })}
+                        </View>
                     </View>
+
+                    {renderInputField('Bio', bio, setBio, 'bio', { 
+                        multiline: true,
+                        placeholder: 'Tell us about yourself and your training philosophy (max 500 characters)',
+                        maxLength: 500
+                    })}
+                    
+                    {renderInputField('Certifications', certifications, setCertifications, 'certifications', {
+                        placeholder: 'List your certifications separated by commas',
+                        autoCapitalize: 'words'
+                    })}
+                    
+                    {renderInputField('Availability', availability, setAvailability, 'availability', {
+                        placeholder: 'e.g., Mon-Fri 9 AM to 6 PM',
+                        autoCapitalize: 'words'
+                    })}
+                    
+                    {renderInputField('Social Handle', socialHandle, setSocialHandle, 'socialHandle', { 
+                        autoCapitalize: 'none',
+                        placeholder: '@your_instagram or LinkedIn profile'
+                    })}
+
+                    <TouchableOpacity 
+                        style={[styles.signupButton, isLoading && styles.signupButtonDisabled]} 
+                        onPress={handleSignup}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                            <>
+                                <Text style={styles.signupButtonText}>Create Account</Text>
+                                <Ionicons name="arrow-forward" size={20} color="#fff" style={styles.buttonIcon} />
+                            </>
+                        )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                        onPress={() => navigation.navigate('Login')} 
+                        style={styles.loginLink}
+                        disabled={isLoading}
+                    >
+                        <Text style={styles.loginLinkText}>Already have an account? </Text>
+                        <Text style={styles.loginLinkTextBold}>Sign In</Text>
+                    </TouchableOpacity>
                 </View>
+            </ScrollView>
 
-                {renderInputField('Bio', bio, setBio, 'bio', { 
-                    multiline: true,
-                    placeholder: 'Tell us about yourself and your training philosophy (max 500 characters)',
-                    maxLength: 500
-                })}
-                
-                {renderInputField('Certifications', certifications, setCertifications, 'certifications', {
-                    placeholder: 'List your certifications separated by commas',
-                    autoCapitalize: 'words'
-                })}
-                
-                {renderInputField('Availability', availability, setAvailability, 'availability', {
-                    placeholder: 'e.g., Mon-Fri 9 AM to 6 PM',
-                    autoCapitalize: 'words'
-                })}
-                
-                {renderInputField('Social Handle', socialHandle, setSocialHandle, 'socialHandle', { 
-                    autoCapitalize: 'none',
-                    placeholder: '@your_instagram or LinkedIn profile'
-                })}
-
-                <TouchableOpacity style={styles.signupButton} onPress={handleSignup}>
-                    <Text style={styles.signupButtonText}>Create Account</Text>
-                    <Ionicons name="arrow-forward" size={20} color="#fff" style={styles.buttonIcon} />
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.loginLink}>
-                    <Text style={styles.loginLinkText}>Already have an account? </Text>
-                    <Text style={styles.loginLinkTextBold}>Sign In</Text>
-                </TouchableOpacity>
-            </View>
-        </ScrollView>
+            <LoadingModal />
+        </View>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: {
@@ -689,5 +743,59 @@ const styles = StyleSheet.create({
         color: '#e53935',
         marginTop: 4,
         marginLeft: 4,
+    },
+    // Loading Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingContainer: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 30,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+        minWidth: 280,
+    },
+    loadingContent: {
+        alignItems: 'center',
+    },
+    loadingText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginTop: 15,
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    loadingBar: {
+        width: 200,
+        height: 4,
+        backgroundColor: '#e0e0e0',
+        borderRadius: 2,
+        marginBottom: 15,
+        overflow: 'hidden',
+    },
+    loadingProgress: {
+        height: '100%',
+        backgroundColor: '#007AFF',
+        borderRadius: 2,
+        width: '70%',
+        
+    },
+    loadingSubtext: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        lineHeight: 20,
+    },
+    signupButtonDisabled: {
+        backgroundColor: '#ccc',
     },
 });

@@ -11,6 +11,7 @@ func RegisterTraineeRoutes(router *gin.Engine) {
     protected := router.Group("/trainees").Use(middlewares.AuthMiddleware())
 
     protected.POST("", traineeController.AddTrainee)
+    protected.POST("/", traineeController.AddTrainee)
     protected.GET("", traineeController.GetTrainees)
     protected.GET("/", traineeController.GetTrainees)
     protected.GET("/:trainee_id", traineeController.GetTraineeByID)

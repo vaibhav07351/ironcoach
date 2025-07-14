@@ -4,6 +4,7 @@ import (
 	"errors"
 	"ironcoach/models"
 	"ironcoach/repositories"
+	"time"
 )
 
 type CategoryService struct {
@@ -28,6 +29,7 @@ func (s *CategoryService) AddCategory(category models.Category) error {
     if exists {
         return errors.New("category already exists")
     }
+    category.CreatedAt= time.Now()
     return s.repository.AddCategory(category)
 }
 
