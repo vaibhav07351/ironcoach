@@ -23,7 +23,7 @@ import Toast from 'react-native-toast-message';
 type Props = NativeStackScreenProps<RootStackParamList, 'AddExerciseForm'>;
 
 export default function AddExerciseFormScreen({ route, navigation }: Props) {
-    const { exercise, exercise_id, traineeId } = route.params;
+    const { exercise, exercise_id, traineeId, selectedDate} = route.params;
     const [weight, setWeight] = useState('');
     const [reps, setReps] = useState('');
     const [sets, setSets] = useState<number[]>([]);
@@ -110,7 +110,8 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
 
             const workoutLog = {
                 trainee_id: traineeId,
-                date: dateInIST.toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+                date: selectedDate?.toISOString().split('T')[0],
+                // date: dateInIST.toISOString().split('T')[0], // Current date in YYYY-MM-DD format
                 workouts: [
                     {
                         exercise,

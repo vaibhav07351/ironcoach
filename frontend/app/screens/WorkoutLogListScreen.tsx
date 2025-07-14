@@ -445,30 +445,33 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
         });
         lastFetchDateRef.current = '';
     }, []);
-
+    
     // Format date display
     const formatDisplayDate = useCallback((date: Date) => {
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        const dateStr = date.toISOString().split('T')[0];
-        const todayStr = today.toISOString().split('T')[0];
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        
-        if (dateStr === todayStr) return 'Today';
-        if (dateStr === yesterdayStr) return 'Yesterday';
-        if (dateStr === tomorrowStr) return 'Tomorrow';
-        
-        return date.toLocaleDateString('en-US', { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric' 
+        const toISTDateString = (d: Date) => {
+            const istOffsetMs = 5.5 * 60 * 60 * 1000;
+            const istTime = new Date(d.getTime() + istOffsetMs);
+            return istTime.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+        };
+
+        const todayStr = toISTDateString(new Date());
+        const yesterdayStr = toISTDateString(new Date(Date.now() - 24 * 60 * 60 * 1000));
+        const tomorrowStr = toISTDateString(new Date(Date.now() + 24 * 60 * 60 * 1000));
+        const targetDateStr = toISTDateString(date);
+
+        if (targetDateStr === todayStr) return 'Today';
+        if (targetDateStr === yesterdayStr) return 'Yesterday';
+        if (targetDateStr === tomorrowStr) return 'Tomorrow';
+
+        // Use IST for formatting too (optional)
+        const istLocaleDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+        return istLocaleDate.toLocaleDateString('en-IN', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
         });
     }, []);
+
 
     // Early return if no trainee
     if (!trainee || !traineeId) {
@@ -680,7 +683,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                 {/* Floating Add Button */}
                 <TouchableOpacity
                     style={styles.addButton}
-                    onPress={() => navigation.navigate('WorkoutCategories', { traineeId: traineeId })}
+                    onPress={() => navigation.navigate('WorkoutCategories', { traineeId: traineeId, selectedDate })}
                     activeOpacity={0.8}
                 >
                     <LinearGradient

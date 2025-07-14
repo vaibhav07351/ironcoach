@@ -46,7 +46,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
             const response = await fetch(`${backendUrl}/trainees/${trainee.id}`, {
                 headers: { Authorization: `${token}` },
             });
-            console.log(response)
+            
             if (response.ok) {
                 const data = await response.json();
                 const traineeOnly = {
@@ -77,8 +77,6 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
         }));
 
 
-        console.log('Processing trainee data:', { fitnessTests, labTests }); // Debug log
-
         // Group tests by date for history
         const groupedByDate: { [date: string]: { fitnessTests: FitnessTest[], labTests: LabTest[] } } = {};
         
@@ -103,7 +101,6 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
             labTests: tests.labTests
         })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-        console.log('Test history:', history); // Debug log
         setTestHistory(history);
 
         // Load most recent data if available, otherwise initialize with today's date
@@ -296,7 +293,6 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
             setTraineeData(traineeOnly);
             // Instead of waiting for async state to update, do it immediately
             const history = generateTestHistory(traineeOnly); // ✅ generate locally
-            console.log('Generated history after save:', history); 
             setTestHistory(history);
             setTraineeData(traineeOnly);
 
@@ -346,19 +342,19 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
     };
 
     const loadHistoryData = (date: string) => {
-        console.log('Loading history data for date:', date); // Debug log
-        console.log('Available test history:', testHistory); // Debug log
+        // console.log('Loading history data for date:', date); // Debug log
+        // console.log('Available test history:', testHistory); // Debug log
         
         const historyRecord = testHistory.find(record => record.date === date);
-        console.log('Found history record:', historyRecord); // Debug log
+        // console.log('Found history record:', historyRecord); // Debug log
         
         if (historyRecord) {
             // Create a map for quick lookup
             const fitnessMap = new Map(historyRecord.fitnessTests.map(test => [test.test, test]));
             const labMap = new Map(historyRecord.labTests.map(test => [test.test, test]));
             
-            console.log('Fitness map:', fitnessMap); // Debug log
-            console.log('Lab map:', labMap); // Debug log
+            // console.log('Fitness map:', fitnessMap); // Debug log
+            // console.log('Lab map:', labMap); // Debug log
             
             // Update current results with historical data
             setResults(prev => prev.map(item => {

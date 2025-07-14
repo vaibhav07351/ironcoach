@@ -39,15 +39,16 @@ export type RootStackParamList = {
     Progress: { trainee: Trainee };
 
     // Flow for Adding Workout Logs
-    WorkoutCategories: { traineeId: string }; // Categories screen
+    WorkoutCategories: { traineeId: string; selectedDate:Date }; // Categories screen
     AddCustomCategory: {
         traineeId: string;
         categoryId?: string; // Optional categoryId for editing
         currentName?: string; // Optional currentName for pre-filling during editing
+        selectedDate?:Date;
     };
-    WorkoutExercises: { category: string; category_id:string; traineeId: string }; // Exercises under a category
-    AddCustomExercise: { category: string; category_id:string; traineeId: string; exerciseId?: string; currentName?: string };
-    AddExerciseForm: { exercise: string; exercise_id:string; traineeId: string }; // Add exercise details
+    WorkoutExercises: { category: string; category_id:string; traineeId: string; selectedDate: Date}; // Exercises under a category
+    AddCustomExercise: { category: string; category_id:string; traineeId: string; exerciseId?: string; currentName?: string; };
+    AddExerciseForm: { exercise: string; exercise_id:string; traineeId: string; selectedDate:Date }; // Add exercise details
 
     // Trainer Profile
     TrainerProfile: { trainerId: string }; // Trainer profile screen

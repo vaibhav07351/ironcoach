@@ -20,7 +20,7 @@ import Constants from 'expo-constants';
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutExercises'>;
 
 export default function WorkoutExercisesScreen({ route, navigation }: Props) {
-    const { category, category_id, traineeId } = route.params;
+    const { category, category_id, traineeId, selectedDate } = route.params;
     const [exercises, setExercises] = useState<{ id: string; name: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(
@@ -152,7 +152,7 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props) {
     };
 
     const handleExerciseSelect = (exercise: { id: string; name: string }) => {
-        navigation.navigate('AddExerciseForm', { exercise: exercise.name, exercise_id: exercise.id, traineeId });
+        navigation.navigate('AddExerciseForm', { exercise: exercise.name, exercise_id: exercise.id, traineeId, selectedDate });
     };
     
     return (

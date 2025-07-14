@@ -81,6 +81,13 @@ const CustomDatePicker = ({
     onClose();
   };
 
+  const formatDateForInput = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (`0${date.getMonth() + 1}`).slice(-2);
+    const day = (`0${date.getDate()}`).slice(-2);
+    return `${year}-${month}-${day}`;
+  };
+
   if (Platform.OS === 'web') {
     return (
       <Modal
@@ -101,7 +108,7 @@ const CustomDatePicker = ({
             <View style={styles.dateInputContainer}>
               <input
                 type="date"
-                value={tempDate.toISOString().split('T')[0]}
+                value={formatDateForInput(tempDate)}
                 onChange={(e) => {
                   const newDate = new Date(e.target.value);
                   setTempDate(newDate);
@@ -183,28 +190,43 @@ const CustomDatePicker = ({
 
 export default function DietListScreen({ route, navigation, trainee }: Props) {
   const [dietEntry, setDietEntry] = useState<DietEntry | null>(null);
-  // Get current date in IST properly
+  
+  // Get current date in IST properly and normalize to start of day
   const getCurrentDateIST = () => {
     const now = new Date();
-    const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
-    const istTime = new Date(now.getTime() + istOffset);
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const istOffset = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
+    const istTime = new Date(utc + istOffset);
+    
+    // Normalize to start of day (00:00:00)
     return new Date(istTime.getFullYear(), istTime.getMonth(), istTime.getDate());
   };
-  
+
+  // Normalize any date to start of day
+  const normalizeDate = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  };
+
   const [selectedDate, setSelectedDate] = useState(getCurrentDateIST());
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Format date as YYYY-MM-DD
+  // Format date as YYYY-MM-DD (always use the date as-is, no timezone conversion)
   const formatDate = (date: Date) => {
-    return date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = (`0${date.getMonth() + 1}`).slice(-2);
+    const day = (`0${date.getDate()}`).slice(-2);
+    return `${year}-${month}-${day}`;
   };
 
   // Get relative date label (Today, Tomorrow, Yesterday)
   const getRelativeDateLabel = (date: Date) => {
     const today = getCurrentDateIST();
-    const diffTime = date.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const normalizedDate = normalizeDate(date);
+    
+    // Calculate difference in days
+    const diffTime = normalizedDate.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Tomorrow';
@@ -230,13 +252,12 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
   const formatFullDate = (date: Date) => {
     const relativeLabel = getRelativeDateLabel(date);
     const formattedDate = date.toLocaleDateString('en-US', {
-      // weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
     
-    return relativeLabel ? ` ${formattedDate}` : formattedDate;
+    return relativeLabel ? `${formattedDate}` : formattedDate;
   };
 
   // Fetch diet entry for a specific date
@@ -263,16 +284,17 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
 
       if (!response.ok) {
         setDietEntry(null);
-        throw new Error('No diet entry found.');
+        return;
       }
 
       const data = await response.json();
       setDietEntry(Array.isArray(data) ? data[0] : data);
     } catch (error) {
       console.error('Error fetching diet entry:', error);
+      setDietEntry(null);
       Toast.show({
         type: 'info',
-        text1: 'Failed to load Diet Entry',
+        text1: 'No Diet Data',
         text2: 'No diet data found for this date.',
       });
     } finally {
@@ -289,11 +311,20 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
     setSelectedDate(newDate);
   };
 
+  // Handle date picker change
+  const handleDateChange = (date: Date) => {
+    // Normalize the selected date to ensure consistency
+    const normalizedDate = normalizeDate(date);
+    setSelectedDate(normalizedDate);
+  };
+
   // Fetch data on date change
   useFocusEffect(
     useCallback(() => {
-      fetchDietEntry(formatDate(selectedDate));
-    }, [selectedDate])
+      const dateString = formatDate(selectedDate);
+      console.log('Fetching data for date:', dateString, 'Selected date:', selectedDate);
+      fetchDietEntry(dateString);
+    }, [selectedDate, trainee.id])
   );
 
   const navigateToAddFood = (mealName: string) => {
@@ -381,7 +412,7 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
     >
       {/* Header */}
       <View style={styles.headerContainer}>
-        <Text style={styles.titleText}>Diet Logs {trainee.name}</Text>
+        <Text style={styles.titleText}>Diet Logs - {trainee.name}</Text>
         
         {/* Date Navigation */}
         <View style={styles.dateNavigation}>
@@ -438,7 +469,7 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
         visible={showDatePicker}
         onClose={() => setShowDatePicker(false)}
         selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
+        onDateChange={handleDateChange}
       />
     </KeyboardAvoidingView>
   );

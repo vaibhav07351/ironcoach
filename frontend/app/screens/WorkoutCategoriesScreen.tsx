@@ -18,7 +18,7 @@ import Toast from 'react-native-toast-message';
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutCategories'>;
 
 export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
-    const { traineeId } = route.params;
+    const { traineeId, selectedDate } = route.params;
     const [isLoading, setIsLoading] = useState(false);
     const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<{ id: string; name: string } | null>(null);
@@ -128,6 +128,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
             category: category.name,
             category_id: category.id,
             traineeId,
+            selectedDate,
         });
     };
 

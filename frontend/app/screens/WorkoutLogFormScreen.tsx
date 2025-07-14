@@ -109,7 +109,7 @@ export default function WorkoutLogFormScreen({ route, navigation }: Props) {
                 navigation.navigate('Login');
                 return;
             }
-
+            
             const updatedLog = {
                 trainee_id: trainee.id,
                 date,
