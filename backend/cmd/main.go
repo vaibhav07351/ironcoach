@@ -20,6 +20,7 @@ func main() {
 		AllowOrigins: []string{
 			"https://ironcoach--nuhvn6qnqp.expo.app",
 			"http://localhost:8081",
+			"http://localhost:8080",
 			"https://ironcoach--ironcoach-staging.expo.app",
 			"https://ironcoach.expo.app",
 		},
