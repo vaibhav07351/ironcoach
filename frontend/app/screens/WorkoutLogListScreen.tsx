@@ -11,6 +11,8 @@ import {
     KeyboardAvoidingView,
     Platform,
     Animated,
+    Modal,
+    Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -21,6 +23,9 @@ import { Trainee } from '../types/trainee';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 type WorkoutLog = {
     id: string;
@@ -32,7 +37,89 @@ type WorkoutLog = {
 type Props = {
     route: { params: { trainee: any } };
     navigation: any;
-    trainee?: Trainee; // Make this optional since it might come from route
+    trainee?: Trainee;
+};
+
+// Cross-platform date picker component
+const CrossPlatformDatePicker = ({ 
+    visible, 
+    onClose, 
+    onDateChange, 
+    selectedDate,
+    isDarkMode 
+}: {
+    visible: boolean;
+    onClose: () => void;
+    onDateChange: (date: Date) => void;
+    selectedDate: Date;
+    isDarkMode: boolean;
+}) => {
+    const [tempDate, setTempDate] = useState(selectedDate);
+    const styles = createStyles(isDarkMode);
+    if (Platform.OS === 'web') {
+        return (
+            <Modal
+                visible={visible}
+                transparent
+                animationType="fade"
+                onRequestClose={onClose}
+            >
+                <View style={styles.webDatePickerOverlay}>
+                    <View style={[styles.webDatePickerContainer, { backgroundColor: isDarkMode ? '#333' : '#fff' }]}>
+                        <Text style={[styles.webDatePickerTitle, { color: isDarkMode ? '#fff' : '#000' }]}>
+                            Select Date
+                        </Text>
+                        <input
+                            type="date"
+                            value={tempDate.toISOString().split('T')[0]}
+                            onChange={(e) => setTempDate(new Date(e.target.value))}
+                            style={{
+                                padding: 12,
+                                borderRadius: 8,
+                                border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
+                                backgroundColor: isDarkMode ? '#444' : '#fff',
+                                color: isDarkMode ? '#fff' : '#000',
+                                fontSize: 16,
+                                width: '100%',
+                                marginBottom: 20,
+                            }}
+                        />
+                        <View style={styles.webDatePickerButtons}>
+                            <TouchableOpacity
+                                style={[styles.webDatePickerButton, styles.cancelButton]}
+                                onPress={onClose}
+                            >
+                                <Text style={styles.webDatePickerButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.webDatePickerButton, styles.confirmButton]}
+                                onPress={() => {
+                                    onDateChange(tempDate);
+                                    onClose();
+                                }}
+                            >
+                                <Text style={styles.webDatePickerButtonText}>Confirm</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        );
+    }
+
+    return visible ? (
+        <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            display="default"
+            onChange={(event, date) => {
+                onClose();
+                if (date) {
+                    onDateChange(date);
+                }
+            }}
+        />
+    ) : null;
 };
 
 // Helper function outside component to prevent recreation
@@ -79,6 +166,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
     // Refs to prevent multiple requests
     const fetchingRef = useRef(false);
     const lastFetchDateRef = useRef<string>('');
+    const fetchControllerRef = useRef<AbortController | null>(null);
 
     const styles = createStyles(isDarkMode);
 
@@ -87,85 +175,79 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
         return selectedDate.toISOString().split('T')[0];
     }, [selectedDate]);
 
-    // Remove the standalone fetchWorkoutLogs function since we inline it above
-
-    // Use useFocusEffect with minimal dependencies - remove fetchWorkoutLogs from deps
-    // Add at top level
-const fetchControllerRef = useRef<AbortController | null>(null);
-
-// Replace useFocusEffect with this:
-useFocusEffect(
-    useCallback(() => {
-        let isActive = true;
-        
-        const performFetch = async () => {
-            if (fetchingRef.current) return;
+    // Use useFocusEffect with minimal dependencies
+    useFocusEffect(
+        useCallback(() => {
+            let isActive = true;
             
-            // Cancel any ongoing request
-            if (fetchControllerRef.current) {
-                fetchControllerRef.current.abort();
-            }
-            
-            const controller = new AbortController();
-            fetchControllerRef.current = controller;
-            
-            fetchingRef.current = true;
-            setIsLoading(true);
-            
-            try {
-                const token = await AsyncStorage.getItem('token');
-                if (!token) {
-                    navigation.navigate('Login');
-                    return;
+            const performFetch = async () => {
+                if (fetchingRef.current) return;
+                
+                // Cancel any ongoing request
+                if (fetchControllerRef.current) {
+                    fetchControllerRef.current.abort();
                 }
-                const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-                const response = await fetch(
-                    `${backendUrl}/workout_logs/${traineeId}?date=${currentFormattedDate}`,
-                    {
-                        headers: { Authorization: `${token}` },
-                        signal: controller.signal
+                
+                const controller = new AbortController();
+                fetchControllerRef.current = controller;
+                
+                fetchingRef.current = true;
+                setIsLoading(true);
+                
+                try {
+                    const token = await AsyncStorage.getItem('token');
+                    if (!token) {
+                        navigation.navigate('Login');
+                        return;
                     }
-                );
+                    const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+                    const response = await fetch(
+                        `${backendUrl}/workout_logs/${traineeId}?date=${currentFormattedDate}`,
+                        {
+                            headers: { Authorization: `${token}` },
+                            signal: controller.signal
+                        }
+                    );
 
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-                const data = await response.json();
-                if (isActive) {
-                    setWorkoutLogs(Array.isArray(data) ? data : []);
-                }
-            } catch (error) {
-                if (error instanceof Error) {
-                    if (error.name !== 'AbortError' && isActive) {
-                        console.error('Fetch error:', error.message);
-                        setWorkoutLogs([]);
-                    }
-                } else {
-                    console.error('An unexpected error occurred:', error);
+                    const data = await response.json();
                     if (isActive) {
-                        setWorkoutLogs([]);
+                        setWorkoutLogs(Array.isArray(data) ? data : []);
+                    }
+                } catch (error) {
+                    if (error instanceof Error) {
+                        if (error.name !== 'AbortError' && isActive) {
+                            console.error('Fetch error:', error.message);
+                            setWorkoutLogs([]);
+                        }
+                    } else {
+                        console.error('An unexpected error occurred:', error);
+                        if (isActive) {
+                            setWorkoutLogs([]);
+                        }
+                    }
+                } finally {
+                    if (isActive) {
+                        setIsLoading(false);
+                        fetchingRef.current = false;
                     }
                 }
-            } finally {
-                if (isActive) {
-                    setIsLoading(false);
-                    fetchingRef.current = false;
-                }
-            }
-        };
+            };
 
-        // Debounce the fetch
-        const debounceTimer = setTimeout(performFetch, 300);
-        
-        return () => {
-            isActive = false;
-            clearTimeout(debounceTimer);
-            if (fetchControllerRef.current) {
-                fetchControllerRef.current.abort();
-            }
-            fetchingRef.current = false;
-        };
-    }, [traineeId, currentFormattedDate, navigation])
-);
+            // Debounce the fetch
+            const debounceTimer = setTimeout(performFetch, 300);
+            
+            return () => {
+                isActive = false;
+                clearTimeout(debounceTimer);
+                if (fetchControllerRef.current) {
+                    fetchControllerRef.current.abort();
+                }
+                fetchingRef.current = false;
+            };
+        }, [traineeId, currentFormattedDate, navigation])
+    );
 
     // Memoize today's date calculation
     const todayDate = useMemo(() => {
@@ -295,28 +377,62 @@ useFocusEffect(
             <TouchableOpacity
                 style={styles.logCard}
                 onPress={() => navigation.navigate('WorkoutLogForm', { workoutLog: item, trainee })}
+                activeOpacity={0.8}
             >
-                <View>
-                    {item.workouts.map((workout, index) => (
-                        <View key={index} style={styles.workoutDetails}>
-                            <Text style={styles.exerciseName}>{workout.exercise}</Text>
-                            <Text style={styles.sets}>Sets: {workout.sets}</Text>
-                            <Text style={styles.sets}>Date: {formatDate(item.date)}</Text>
-                        </View>
-                    ))}
-                </View>
-
-                <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDelete(item.id)}
+                <LinearGradient
+                    colors={isDarkMode ? ['#2a2a2a', '#1a1a1a'] : ['#ffffff', '#f8f9fa']}
+                    style={styles.logCardGradient}
                 >
-                    <Icon name="trash-can-outline" size={24} color="#ff3b30" />
-                </TouchableOpacity>
+                    {/* <View style={styles.logCardHeader}>
+                        <View style={styles.dateContainer}>
+                            <Icon name="calendar" size={20} color="#6200ee" />
+                            <Text style={styles.logDate}>{formatDate(item.date)}</Text>
+                        </View>
+                        <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={() => handleDelete(item.id)}
+                            activeOpacity={0.7}
+                        >
+                            <Icon name="trash-can-outline" size={24} color="#ff3b30" />
+                        </TouchableOpacity>
+                    </View> */}
+                    
+                    <View style={styles.workoutContainer}>
+                        {item.workouts.map((workout, index) => (
+                            <View key={index} style={styles.workoutDetails}>
+                                <View style={styles.exerciseHeader}>
+                                    <Icon name="dumbbell" size={16} color="#6200ee" />
+                                    <Text style={styles.exerciseName}>{workout.exercise}</Text>
+                                </View>
+                                <View style={styles.setsContainer}>
+                                    <View style={styles.setsInfo}>
+                                        <Text style={styles.setsLabel}>Sets:</Text>
+                                        <Text style={styles.setsValue}>{workout.sets}</Text>
+                                    </View>
+                                    <View style={styles.totalWeightContainer}>
+                                        <Text style={styles.totalWeightLabel}>Total Weight:</Text>
+                                        <Text style={styles.totalWeightValue}>
+                                            {(workout.weight || []).reduce((sum, w) => sum + w, 0)} kg
+                                        </Text>
+                                        <TouchableOpacity
+                                            style={styles.deleteButton}
+                                            onPress={() => handleDelete(item.id)}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Icon name="trash-can-outline" size={24} color="#ff3b30" />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </View>
+                            
+                        ))}
+                    </View>
+                </LinearGradient>
             </TouchableOpacity>
         );
-    }, [styles, navigation, trainee, formatDate, handleDelete]);
+    }, [styles, navigation, trainee, formatDate, handleDelete, isDarkMode]);
 
-    // Handle date navigation - add console log for debugging
+    // Handle date navigation
     const navigateDate = useCallback((direction: 'previous' | 'next') => {
         console.log('Navigating date:', direction);
         setSelectedDate(prevDate => {
@@ -327,13 +443,31 @@ useFocusEffect(
             console.log('New date selected:', newDate.toISOString().split('T')[0]);
             return newDate;
         });
-        // Reset the last fetch date to allow new fetch
         lastFetchDateRef.current = '';
     }, []);
 
-    // Format date as YYYY-MM-DD
-    const formatPickDate = useCallback((date: Date) => {
-        return date.toISOString().split('T')[0];
+    // Format date display
+    const formatDisplayDate = useCallback((date: Date) => {
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const dateStr = date.toISOString().split('T')[0];
+        const todayStr = today.toISOString().split('T')[0];
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        
+        if (dateStr === todayStr) return 'Today';
+        if (dateStr === yesterdayStr) return 'Yesterday';
+        if (dateStr === tomorrowStr) return 'Tomorrow';
+        
+        return date.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric' 
+        });
     }, []);
 
     // Early return if no trainee
@@ -346,120 +480,218 @@ useFocusEffect(
     }
 
     if (isLoading) {
-        return <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />;
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#6200ee" />
+                <Text style={styles.loadingText}>Loading workout logs...</Text>
+            </View>
+        );
     }
 
     return (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <View style={styles.container}>
-                <View style={styles.title}>
-                    <Text style={styles.titleText}>Workout Logs for {traineeName}</Text>
+            <LinearGradient
+                colors={isDarkMode ? ['#1a1a1a', '#000000'] : ['#f8f9fa', '#ffffff']}
+                style={styles.container}
+            >
+                {/* Header */}
+                <View style={styles.headerContainer}>
+                    <LinearGradient
+                        colors={['#6200ee', '#8e24aa']}
+                        style={styles.titleGradient}
+                    >
+                        <Text style={styles.titleText}>Workout Logs</Text>
+                        <Text style={styles.traineeNameText}>{traineeName}</Text>
+                    </LinearGradient>
                 </View>
                 
-                {/* Header for navigation between dates */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigateDate('previous')}>
-                        <Icon name="chevron-left" size={30} color="#6200ee" />
+                {/* Date Navigation Header */}
+                <View style={styles.dateNavigationContainer}>
+                    <TouchableOpacity 
+                        style={styles.dateNavButton}
+                        onPress={() => navigateDate('previous')}
+                        activeOpacity={0.7}
+                    >
+                        <Icon name="chevron-left" size={28} color="#6200ee" />
                     </TouchableOpacity>
 
-                    <Text style={styles.headerDate}>{currentFormattedDate}</Text>
-
-                    {/* Show DateTimePicker when clicked */}
-                    <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-                        <Icon name="calendar" size={30} color="#6200ee" />
+                    <TouchableOpacity 
+                        style={styles.dateDisplayContainer}
+                        onPress={() => setShowDatePicker(true)}
+                        activeOpacity={0.8}
+                    >
+                     <View style={styles.inlineRow}>
+                     
+                        <Icon name="calendar" size={24} color="#6200ee" style={styles.calendarIcon} />
+                        <Text style={styles.dateDisplayText}>
+                            {formatDisplayDate(selectedDate)}
+                        </Text>
+                        </View>
+                        <Text style={styles.dateDisplaySubText}>
+                            {selectedDate.toISOString().split('T')[0]}
+                        </Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity onPress={() => navigateDate('next')} style={styles.nextArrowButton}>
-                        <Icon name="chevron-right" size={30} color="#6200ee" />
+                    <TouchableOpacity 
+                        style={styles.dateNavButton}
+                        onPress={() => navigateDate('next')}
+                        activeOpacity={0.7}
+                    >
+                        <Icon name="chevron-right" size={28} color="#6200ee" />
                     </TouchableOpacity>
                 </View>
 
-                {/* Date Picker Modal */}
-                {showDatePicker && (
-                    <DateTimePicker
-                        value={selectedDate}
-                        mode="date"
-                        display="default"
-                        onChange={(event, selectedDate) => {
-                            setShowDatePicker(false);
-                            if (selectedDate) {
-                                setSelectedDate(selectedDate);
-                            }
-                        }}
-                    />
-                )}
+                {/* Cross-platform Date Picker */}
+                <CrossPlatformDatePicker
+                    visible={showDatePicker}
+                    onClose={() => setShowDatePicker(false)}
+                    onDateChange={setSelectedDate}
+                    selectedDate={selectedDate}
+                    isDarkMode={isDarkMode}
+                />
                 
                 {/* Sidebar Toggle Button */}
                 <TouchableOpacity
                     style={styles.sidebarToggle}
-                    onPress={toggleSidebar}>
-                    <Icon name={sidebarVisible ? 'chevron-left' : 'chevron-right'} size={30} color={isDarkMode ? '#fff' : '#000'} />
+                    onPress={toggleSidebar}
+                    activeOpacity={0.7}
+                >
+                    <LinearGradient
+                        colors={['#6200ee', '#8e24aa']}
+                        style={styles.sidebarToggleGradient}
+                    >
+                        <Icon name="filter-variant" size={24} color="#fff" />
+                    </LinearGradient>
                 </TouchableOpacity>
 
-                {/* Sidebar with Filters */}
+                {/* Enhanced Sidebar */}
                 <Animated.View
                     style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}>
-                    {/* Advanced Filter Content */}
-                    <ScrollView contentContainerStyle={styles.dropdown}>
-                        <Text style={styles.filterLabel}>Filter by Exercise:</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Filter by Exercise"
-                            value={exerciseFilter}
-                            onChangeText={setExerciseFilter}
-                        />
-
-                        <Text style={styles.filterLabel}>Start Date:</Text>
-                        <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-                            <Text style={styles.datePickerText}>
-                                {startDate ? startDate.toDateString() : 'Select Start Date'}
-                            </Text>
-                        </TouchableOpacity>
-
-                        <Text style={styles.filterLabel}>End Date:</Text>
-                        <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-                            <Text style={styles.datePickerText}>
-                                {endDate ? endDate.toDateString() : 'Select End Date'}
-                            </Text>
-                        </TouchableOpacity>
-
-                        <View style={styles.sortButtons}>
-                            <TouchableOpacity
-                                style={[styles.sortButton, sortOption === 'date' && styles.selectedSortButton]}
-                                onPress={() => setSortOption('date')}>
-                                <Text style={styles.sortButtonText}>Date</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.sortButton, sortOption === 'weight' && styles.selectedSortButton]}
-                                onPress={() => setSortOption('weight')}>
-                                <Text style={styles.sortButtonText}>Total Weight</Text>
+                    <LinearGradient
+                        colors={isDarkMode ? ['#2a2a2a', '#1a1a1a'] : ['#ffffff', '#f8f9fa']}
+                        style={styles.sidebarGradient}
+                    >
+                        <View style={styles.sidebarHeader}>
+                            <Text style={styles.sidebarTitle}>Filters & Sort</Text>
+                            <TouchableOpacity onPress={toggleSidebar}>
+                                <Icon name="close" size={24} color={isDarkMode ? '#fff' : '#000'} />
                             </TouchableOpacity>
                         </View>
+                        
+                        <ScrollView contentContainerStyle={styles.sidebarContent}>
+                            <View style={styles.filterSection}>
+                                <Text style={styles.filterLabel}>
+                                    <Icon name="magnify" size={16} color="#6200ee" /> Exercise Filter
+                                </Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Search exercises..."
+                                    placeholderTextColor={isDarkMode ? '#888' : '#666'}
+                                    value={exerciseFilter}
+                                    onChangeText={setExerciseFilter}
+                                />
+                            </View>
 
-                        {/* Reset Filters */}
-                        <View style={styles.resetContainer}>
-                            <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
+                            <View style={styles.filterSection}>
+                                <Text style={styles.filterLabel}>
+                                    <Icon name="calendar-range" size={16} color="#6200ee" /> Date Range
+                                </Text>
+                                <TouchableOpacity 
+                                    style={styles.datePickerButton}
+                                    onPress={() => setShowStartDatePicker(true)}
+                                >
+                                    <Icon name="calendar-start" size={20} color="#6200ee" />
+                                    <Text style={styles.datePickerText}>
+                                        {startDate ? startDate.toLocaleDateString() : 'Start Date'}
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity 
+                                    style={styles.datePickerButton}
+                                    onPress={() => setShowEndDatePicker(true)}
+                                >
+                                    <Icon name="calendar-end" size={20} color="#6200ee" />
+                                    <Text style={styles.datePickerText}>
+                                        {endDate ? endDate.toLocaleDateString() : 'End Date'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.filterSection}>
+                                <Text style={styles.filterLabel}>
+                                    <Icon name="sort" size={16} color="#6200ee" /> Sort By
+                                </Text>
+                                <View style={styles.sortButtons}>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.sortButton, 
+                                            sortOption === 'date' && styles.selectedSortButton
+                                        ]}
+                                        onPress={() => setSortOption('date')}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Icon name="calendar-clock" size={16} color="#fff" />
+                                        <Text style={styles.sortButtonText}>Date</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.sortButton, 
+                                            sortOption === 'weight' && styles.selectedSortButton
+                                        ]}
+                                        onPress={() => setSortOption('weight')}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Icon name="weight-kilogram" size={16} color="#fff" />
+                                        <Text style={styles.sortButtonText}>Weight</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            <TouchableOpacity 
+                                style={styles.resetButton} 
+                                onPress={resetFilters}
+                                activeOpacity={0.8}
+                            >
+                                <Icon name="refresh" size={18} color="#fff" />
                                 <Text style={styles.resetButtonText}>Reset Filters</Text>
                             </TouchableOpacity>
-                        </View>
-                    </ScrollView>
+                        </ScrollView>
+                    </LinearGradient>
                 </Animated.View>
 
-                {/* Workout Logs */}
+                {/* Workout Logs List */}
                 <FlatList
                     data={logsToDisplay}
                     renderItem={renderWorkoutLog}
                     keyExtractor={(item) => item.id}
-                    ListEmptyComponent={<Text style={styles.emptyMessage}>Workout Log Empty</Text>}
+                    contentContainerStyle={styles.listContainer}
+                    showsVerticalScrollIndicator={false}
+                    ListEmptyComponent={
+                        <View style={styles.emptyStateContainer}>
+                            <Icon name="clipboard-text-outline" size={64} color="#ccc" />
+                            <Text style={styles.emptyMessage}>No workout logs found</Text>
+                            <Text style={styles.emptySubMessage}>
+                                Start by adding your first workout log!
+                            </Text>
+                        </View>
+                    }
                 />
 
-                {/* Add Button */}
+                {/* Floating Add Button */}
                 <TouchableOpacity
                     style={styles.addButton}
-                    onPress={() => navigation.navigate('WorkoutCategories', { traineeId: traineeId })}>
-                    <Text style={styles.addButtonText}>+ Add Workout Log</Text>
+                    onPress={() => navigation.navigate('WorkoutCategories', { traineeId: traineeId })}
+                    activeOpacity={0.8}
+                >
+                    <LinearGradient
+                        colors={['#6200ee', '#8e24aa']}
+                        style={styles.addButtonGradient}
+                    >
+                        <Icon name="plus" size={24} color="#fff" />
+                        <Text style={styles.addButtonText}>Add Workout Log</Text>
+                    </LinearGradient>
                 </TouchableOpacity>
-            </View>
+            </LinearGradient>
         </KeyboardAvoidingView>
     );
 }
@@ -468,159 +700,394 @@ const createStyles = (isDarkMode: boolean) =>
     StyleSheet.create({
         container: {
             flex: 1,
-            backgroundColor: isDarkMode ? '#000' : '#fff',
-            padding: 16,
+            paddingTop: Platform.OS === 'ios' ? 30 : 10,
         },
-        title: {
-            justifyContent: 'center',
+        headerContainer: {
+            marginBottom: 20,
+            paddingHorizontal: 5,
+        },
+        titleGradient: {
+            borderRadius: 15,
+            padding: 10,
             alignItems: 'center',
         },
         titleText: {
-            fontSize: 20,
+            fontSize: 22,
+            fontWeight: 'bold',
+            color: '#fff',
+            textAlign: 'center',
+        },
+        traineeNameText: {
+            fontSize: 16,
+            color: '#fff',
+            opacity: 0.9,
+            marginTop: 5,
+        },
+        dateNavigationContainer: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginHorizontal: 20,
+            marginBottom: 10,
+            paddingHorizontal: 10,
+        },
+        dateNavButton: {
+            padding: 10,
+            borderRadius: 25,
+            backgroundColor: isDarkMode ? '#333' : '#fff',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+        },
+        dateDisplayContainer: {
+            flex: 1,
+            alignItems: 'center',
+            backgroundColor: isDarkMode ? '#333' : '#fff',
+            marginHorizontal: 15,
+            paddingVertical: 10,
+            paddingHorizontal: 20,
+            borderRadius: 15,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+        },
+        inlineRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8, // Optional: Adds spacing between icon and text (or use margin)
+        },
+        calendarIcon: {
+            marginBottom: 0,
+        },
+        dateDisplayText: {
+            fontSize: 18,
             fontWeight: 'bold',
             color: isDarkMode ? '#fff' : '#000',
-            marginBottom: 16,
-            textAlign: 'center'
+            marginBottom: 1,
+        },
+        dateDisplaySubText: {
+            fontSize: 14,
+            color: isDarkMode ? '#aaa' : '#666',
+        },
+        loadingContainer: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: isDarkMode ? '#000' : '#fff',
+        },
+        loadingText: {
+            marginTop: 10,
+            fontSize: 16,
+            color: isDarkMode ? '#fff' : '#000',
         },
         sidebar: {
             position: 'absolute',
             left: 0,
             top: 0,
             bottom: 0,
-            width: 250,
-            backgroundColor: isDarkMode ? '#222' : '#fff',
-            padding: 16,
-            zIndex: 10,
-            paddingTop: 70,
+            width: 300,
+            zIndex: 1000,
+            paddingTop: Platform.OS === 'ios' ? 50 : 30,
+
+        },
+        sidebarGradient: {
+            flex: 1,
+            padding: 20,
+             borderRadius: 15,
+        },
+        sidebarHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 20,
+            paddingBottom: 15,
+            borderBottomWidth: 1,
+            borderBottomColor: isDarkMode ? '#444' : '#eee',
+        },
+        sidebarTitle: {
+            fontSize: 20,
+            fontWeight: 'bold',
+            color: isDarkMode ? '#fff' : '#000',
+        },
+        sidebarContent: {
+            paddingBottom: 20,
+        },
+        filterSection: {
+            marginBottom: 25,
         },
         sidebarToggle: {
             position: 'absolute',
-            top: 20,
-            left: 10,
-            zIndex: 20,
+            top: Platform.OS === 'ios' ? 50 : 20,
+            left: 20,
+            zIndex: 1001,
+            borderRadius: 25,
+            overflow: 'hidden',
+        },
+        sidebarToggleGradient: {
+            width: 50,
+            height: 50,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        filterLabel: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: isDarkMode ? '#fff' : '#000',
+            marginBottom: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+        },
+        input: {
+            padding: 15,
+            borderWidth: 1,
+            borderColor: isDarkMode ? '#555' : '#ddd',
+            borderRadius: 12,
+            color: isDarkMode ? '#fff' : '#000',
+            backgroundColor: isDarkMode ? '#444' : '#f8f9fa',
+            fontSize: 16,
+        },
+        datePickerButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: 15,
+            borderWidth: 1,
+            borderColor: isDarkMode ? '#555' : '#ddd',
+            borderRadius: 12,
+            marginBottom: 10,
+            backgroundColor: isDarkMode ? '#444' : '#f8f9fa',
+        },
+        datePickerText: {
+            fontSize: 16,
+            color: isDarkMode ? '#fff' : '#000',
+            marginLeft: 10,
+        },
+        sortButtons: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            gap: 10,
+        },
+        sortButton: {
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#6200ee',
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+            borderRadius: 12,
+            gap: 5,
+        },
+        selectedSortButton: {
+            backgroundColor: '#8e24aa',
+        },
+        sortButtonText: {
+            color: '#fff',
+            fontSize: 14,
+            fontWeight: '600',
+        },
+        resetButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#ff6347',
+            paddingVertical: 15,
+            paddingHorizontal: 20,
+            borderRadius: 12,
+            marginTop: 10,
+            gap: 8,
+        },
+        resetButtonText: {
+            color: '#fff',
+            fontSize: 16,
+            fontWeight: '600',
+        },
+        listContainer: {
+            paddingHorizontal: 20,
+            paddingBottom: 0,
+        },
+        logCard: {
+            marginBottom: 10,
+            borderRadius: 15,
+            overflow: 'hidden',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 6,
+            elevation: 5,
+        },
+        logCardGradient: {
+            padding: 4,
+        },
+        logCardHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 10,
+        },
+        dateContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+        },
+        logDate: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: isDarkMode ? '#fff' : '#000',
+        },
+        deleteButton: {
+            padding: 8,
+            borderRadius: 20,
+            backgroundColor: isDarkMode ? '#333' : '#f0f0f0',
+            marginLeft:10,
+        },
+        workoutContainer: {
+            gap: 1,
         },
         workoutDetails: {
-            marginBottom: 8,
+            backgroundColor: isDarkMode ? '#333' : '#f8f9fa',
+            padding: 8,
+            borderRadius: 12,
+            borderLeftWidth: 4,
+            borderLeftColor: '#6200ee',
+        },
+        exerciseHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 5,
+            gap: 8,
         },
         exerciseName: {
             fontSize: 18,
             fontWeight: 'bold',
             color: isDarkMode ? '#fff' : '#000',
         },
-        sets: {
+        setsContainer: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        setsInfo: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 5,
+        },
+        setsLabel: {
             fontSize: 14,
-            color: isDarkMode ? '#aaa' : '#555',
+            color: isDarkMode ? '#aaa' : '#666',
+        },
+        setsValue: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: '#6200ee',
+        },
+        totalWeightContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 5,
+        },
+        totalWeightLabel: {
+            fontSize: 14,
+            color: isDarkMode ? '#aaa' : '#666',
+        },
+        totalWeightValue: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: '#8e24aa',
+        },
+        emptyStateContainer: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingVertical: 60,
         },
         emptyMessage: {
-            fontSize: 23,
-            color: isDarkMode ? '#aaa' : '#555',
+            fontSize: 20,
+            fontWeight: '600',
+            color: isDarkMode ? '#aaa' : '#666',
             textAlign: 'center',
-            marginTop: 50,
+            marginTop: 20,
         },
-        input: {
-            padding: 12,
-            borderWidth: 1,
-            borderColor: isDarkMode ? '#555' : '#ccc',
-            borderRadius: 8,
-            marginBottom: 12,
-            color: isDarkMode ? '#fff' : '#000',
-            backgroundColor: isDarkMode ? '#333' : '#fff',
-        },
-        filterLabel: {
+        emptySubMessage: {
             fontSize: 16,
-            fontWeight: 'bold',
-            color: isDarkMode ? '#fff' : '#000',
-            marginVertical: 8,
-        },
-        datePickerText: {
-            fontSize: 16,
-            padding: 12,
-            borderWidth: 1,
-            borderColor: isDarkMode ? '#555' : '#ccc',
-            borderRadius: 8,
-            marginBottom: 12,
-            color: isDarkMode ? '#fff' : '#000',
-            backgroundColor: isDarkMode ? '#333' : '#fff',
+            color: isDarkMode ? '#777' : '#888',
+            textAlign: 'center',
+            marginTop: 10,
         },
         addButton: {
-            backgroundColor: '#6200ee',
-            paddingVertical: 12,
-            borderRadius: 8,
-            marginTop: 20,
+            position: 'absolute',
+            bottom: 30,
+            right: 20,
+            borderRadius: 25,
+            overflow: 'hidden',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+        },
+        addButtonGradient: {
+            flexDirection: 'row',
             alignItems: 'center',
+            paddingVertical: 15,
+            paddingHorizontal: 20,
+            gap: 8,
         },
         addButtonText: {
             color: '#fff',
-            fontSize: 18,
+            fontSize: 16,
+            fontWeight: '600',
         },
-        deleteButton: {
-            position: 'absolute',
-            top: 10,
-            right: 10,
-        },
-        dropdown: {
-            paddingBottom: 60,
-        },
-        sortButtons: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            marginTop: 20,
-        },
-        sortButton: {
-            backgroundColor: '#6200ee',
-            paddingVertical: 8,
-            paddingHorizontal: 16,
-            borderRadius: 8,
-        },
-        selectedSortButton: {
-            backgroundColor: '#ff3b30',
-        },
-        sortButtonText: {
-            color: '#fff',
-        },
-        resetContainer: {
-            alignItems: 'center',
-            marginTop: 20,
-            marginBottom: 16,
-        },
-        resetButton: {
-            backgroundColor: '#ff6347',
-            paddingVertical: 5,
-            paddingHorizontal: 10,
-            borderRadius: 8,
-        },
-        resetButtonText: {
-            color: '#fff',
-            fontSize: 13,
-            fontWeight: 'bold',
-        },
-        logCard: {
-            backgroundColor: isDarkMode ? '#444' : '#fff',
-            padding: 16,
-            marginBottom: 16,
-            borderRadius: 8,
-            shadowColor: isDarkMode ? '#000' : '#ccc',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 5,
-        },
-        header: {
-            flexDirection: 'row',
+        // Web-specific date picker styles
+        webDatePickerOverlay: {
+            flex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
             justifyContent: 'center',
             alignItems: 'center',
-            marginBottom: 16,
-            width: '100%',
-            paddingHorizontal: 50,
         },
-        headerDate: {
-            fontSize: 20,
+        webDatePickerContainer: {
+            width: screenWidth * 0.8,
+            maxWidth: 400,
+            padding: 20,
+            paddingRight:30,
+            borderRadius: 15,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 10,
+        },
+        webDatePickerTitle: {
+            fontSize: 18,
             fontWeight: 'bold',
-            color: isDarkMode ? '#fff' : '#000',
-            marginHorizontal: 20,
             textAlign: 'center',
+            marginBottom: 20,
         },
-        nextArrowButton: {
-            marginLeft: 20,
+        webDatePickerButtons: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            gap: 10,
+        },
+        webDatePickerButton: {
+            flex: 1,
+            paddingVertical: 12,
+            paddingHorizontal: 20,
+            borderRadius: 8,
+            alignItems: 'center',
+            
+        },
+        cancelButton: {
+            backgroundColor: '#ff6347',
+        },
+        confirmButton: {
+            backgroundColor: '#6200ee',
+        },
+        webDatePickerButtonText: {
+            color: '#fff',
+            fontSize: 16,
+            fontWeight: '600',
         },
     });

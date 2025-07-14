@@ -8,14 +8,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Trainee } from '../types/trainee';
-import DateTimePicker from '@react-native-community/datetimepicker'; // Import DateTimePicker
+import DateTimePicker from '@react-native-community/datetimepicker';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
+
+const { width } = Dimensions.get('window');
 
 type Food = {
   name: string;
@@ -47,17 +51,192 @@ type Props = {
   trainee: Trainee;
 };
 
+// Enhanced Custom Date Picker Component for Web Compatibility
+const CustomDatePicker = ({ 
+  visible, 
+  onClose, 
+  selectedDate, 
+  onDateChange 
+}: {
+  visible: boolean;
+  onClose: () => void;
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
+}) => {
+  const [tempDate, setTempDate] = useState(selectedDate);
+
+  useEffect(() => {
+    if (visible) {
+      setTempDate(selectedDate);
+    }
+  }, [visible, selectedDate]);
+
+  const handleConfirm = () => {
+    onDateChange(tempDate);
+    onClose();
+  };
+
+  const handleCancel = () => {
+    setTempDate(selectedDate); // Reset to original date
+    onClose();
+  };
+
+  if (Platform.OS === 'web') {
+    return (
+      <Modal
+        visible={visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.webDatePickerContainer}>
+            {/* Header */}
+            <View style={styles.datePickerHeader}>
+              <Icon name="calendar" size={24} color="#6200ee" />
+              <Text style={styles.datePickerTitle}>Select Date</Text>
+            </View>
+            
+            {/* Date Input */}
+            <View style={styles.dateInputContainer}>
+              <input
+                type="date"
+                value={tempDate.toISOString().split('T')[0]}
+                onChange={(e) => {
+                  const newDate = new Date(e.target.value);
+                  setTempDate(newDate);
+                }}
+                style={{
+                  width: '100%',
+                  padding: 16,
+                  fontSize: 16,
+                  border: '2px solid #e9ecef',
+                  borderRadius: 12,
+                  outline: 'none',
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  backgroundColor: '#f8f9fa',
+                  color: '#2c3e50',
+                  transition: 'border-color 0.2s ease',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#6200ee';
+                  e.target.style.backgroundColor = '#fff';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e9ecef';
+                  e.target.style.backgroundColor = '#f8f9fa';
+                }}
+              />
+            </View>
+
+            {/* Selected Date Preview */}
+            <View style={styles.datePreview}>
+              <Text style={styles.datePreviewLabel}>Selected Date:</Text>
+              <Text style={styles.datePreviewValue}>
+                {tempDate.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </Text>
+            </View>
+            
+            {/* Action Buttons */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.cancelButton]} 
+                onPress={handleCancel}
+              >
+                <Icon name="close" size={16} color="#6c757d" />
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.confirmButton]} 
+                onPress={handleConfirm}
+              >
+                <Icon name="check" size={16} color="#fff" />
+                <Text style={styles.confirmButtonText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  return visible ? (
+    <DateTimePicker
+      value={selectedDate}
+      mode="date"
+      display="default"
+      onChange={(event, date) => {
+        if (date) {
+          onDateChange(date);
+        }
+        onClose();
+      }}
+    />
+  ) : null;
+};
+
 export default function DietListScreen({ route, navigation, trainee }: Props) {
   const [dietEntry, setDietEntry] = useState<DietEntry | null>(null);
-  const dateInIST = new Date();
-  dateInIST.setMinutes(dateInIST.getMinutes() + 330);
-  const [selectedDate, setSelectedDate] = useState(dateInIST);
+  // Get current date in IST properly
+  const getCurrentDateIST = () => {
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
+    const istTime = new Date(now.getTime() + istOffset);
+    return new Date(istTime.getFullYear(), istTime.getMonth(), istTime.getDate());
+  };
+  
+  const [selectedDate, setSelectedDate] = useState(getCurrentDateIST());
   const [isLoading, setIsLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false); // State to control DateTimePicker visibility
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Format date as YYYY-MM-DD
   const formatDate = (date: Date) => {
     return date.toISOString().split('T')[0];
+  };
+
+  // Get relative date label (Today, Tomorrow, Yesterday)
+  const getRelativeDateLabel = (date: Date) => {
+    const today = getCurrentDateIST();
+    const diffTime = date.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    if (diffDays === -1) return 'Yesterday';
+    return null;
+  };
+
+  // Format date for display
+  const formatDisplayDate = (date: Date) => {
+    const relativeLabel = getRelativeDateLabel(date);
+    if (relativeLabel) {
+      return relativeLabel;
+    }
+    
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  // Format full date for header
+  const formatFullDate = (date: Date) => {
+    const relativeLabel = getRelativeDateLabel(date);
+    const formattedDate = date.toLocaleDateString('en-US', {
+      // weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    
+    return relativeLabel ? ` ${formattedDate}` : formattedDate;
   };
 
   // Fetch diet entry for a specific date
@@ -66,7 +245,7 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-         Toast.show({
+        Toast.show({
           type: 'error',
           text1: 'Authentication Failed',
           text2: 'Please log in again.',
@@ -92,10 +271,10 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
     } catch (error) {
       console.error('Error fetching diet entry:', error);
       Toast.show({
-          type: 'info',
-          text1: 'Failed to load Diet Entry',
-          text2: 'No diet data found for this date.',
-        });
+        type: 'info',
+        text1: 'Failed to load Diet Entry',
+        text2: 'No diet data found for this date.',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +298,7 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
 
   const navigateToAddFood = (mealName: string) => {
     if (dietEntry != null) {
-      const currentDietEntry = dietEntry; // Access first item if it's an array
+      const currentDietEntry = dietEntry;
       navigation.navigate('AddFood', {
         trainee,
         mealName,
@@ -141,26 +320,34 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
   const renderMeal = ({ item }: { item: Meal }) => (
     <View style={styles.mealCard}>
       <View style={styles.mealHeader}>
-        <Text style={styles.mealTitle}>{item.name}</Text>
-        <TouchableOpacity onPress={() => navigateToAddFood(item.name)}>
-          <Icon name="plus" size={24} color="#6200ee" />
+        <View style={styles.mealTitleContainer}>
+          <Text style={styles.mealTitle}>{item.name}</Text>
+          <Text style={styles.mealStats}>
+            {item.calories} cal • {item.proteins}g protein
+          </Text>
+        </View>
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => navigateToAddFood(item.name)}
+        >
+          <Icon name="plus" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
       {item.foods.length > 0 ? (
-        <FlatList
-          data={item.foods}
-          keyExtractor={(food, index) => index.toString()}
-          renderItem={({ item: food }) => (
-            <View style={styles.foodItem}>
-              <Text style={styles.foodName}>{food.name}</Text>
+        <View style={styles.foodList}>
+          {item.foods.map((food, index) => (
+            <View key={index} style={styles.foodItem}>
+              <Text style={styles.foodName} numberOfLines={1}>
+                {food.name}
+              </Text>
               <Text style={styles.foodStats}>
-                {food.calories} cal | {food.proteins} g
+                {food.calories} cal • {food.proteins}g
               </Text>
             </View>
-          )}
-        />
+          ))}
+        </View>
       ) : (
-        <Text style={styles.emptyText}>No food logged yet.</Text>
+        <Text style={styles.emptyText}>No food logged yet</Text>
       )}
     </View>
   );
@@ -179,7 +366,12 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
   });
 
   if (isLoading) {
-    return <ActivityIndicator size="large" color="#6200ee" style={styles.loader} />;
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6200ee" />
+        <Text style={styles.loadingText}>Loading diet data...</Text>
+      </View>
+    );
   }
 
   return (
@@ -187,44 +379,49 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.title}>
-            <Text style={styles.titleText}>Diet Entry Logs for {trainee.name}</Text>
-        </View>
-      {/* Header for navigation between dates */}
-      <View style={styles.header}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <Text style={styles.titleText}>Diet Logs {trainee.name}</Text>
         
-        <TouchableOpacity onPress={() => navigateDate('previous')}>
-          <Icon name="chevron-left" size={30} color="#6200ee" />
-        </TouchableOpacity>
-        <Text style={styles.headerDate}>{formatDate(selectedDate)}</Text>
-        {/* Show DateTimePicker when clicked */}
-        <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-          <Icon name="calendar" size={30} color="#6200ee" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigateDate('next')}>
-          <Icon name="chevron-right" size={30} color="#6200ee" />
-        </TouchableOpacity>
+        {/* Date Navigation */}
+        <View style={styles.dateNavigation}>
+          <TouchableOpacity 
+            style={styles.navButton}
+            onPress={() => navigateDate('previous')}
+          >
+            <Icon name="chevron-left" size={24} color="#6200ee" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.dateButton}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <View style={styles.dateContainer}>
+              <Text style={styles.dateText}>{formatDisplayDate(selectedDate)}</Text>
+              <Text style={styles.fullDateText}>{formatFullDate(selectedDate)}</Text>
+            </View>
+            <Icon name="calendar" size={18} color="#6200ee" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.navButton}
+            onPress={() => navigateDate('next')}
+          >
+            <Icon name="chevron-right" size={24} color="#6200ee" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Date Picker Modal */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={selectedDate}
-          mode="date"
-          display="default"
-          onChange={(event, selectedDate) => {
-            if (selectedDate) {
-              setSelectedDate(selectedDate);
-              setShowDatePicker(false);
-            }
-          }}
-        />
-      )}
-
-      {/* Top Page Diet Summary Section */}
-      <View style={styles.summary}>
-        <Text style={styles.summaryText}>Total Calories: {dietEntry?.total_calories || 0}</Text>
-        <Text style={styles.summaryText}>Total Proteins: {dietEntry?.total_proteins || 0} g</Text>
+      {/* Summary Cards */}
+      <View style={styles.summaryContainer}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryLabel}>Total Calories</Text>
+          <Text style={styles.summaryValue}>{dietEntry?.total_calories || 0}</Text>
+        </View>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryLabel}>Total Protein</Text>
+          <Text style={styles.summaryValue}>{dietEntry?.total_proteins || 0}g</Text>
+        </View>
       </View>
 
       {/* Meal List */}
@@ -232,51 +429,290 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
         data={mergedMeals}
         keyExtractor={(meal) => meal.name}
         renderItem={renderMeal}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+      />
+
+      {/* Enhanced Custom Date Picker */}
+      <CustomDatePicker
+        visible={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
       />
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {
-    justifyContent: 'center', // Align items vertically in the center
-    alignItems: 'center', // Align items horizontally in the center
-},
-titleText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    // color: isDarkMode ? '#fff' : '#000',
-    marginBottom: 16,
-    textAlign: 'center'
-},
-
-  container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
-  header: {
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  headerContainer: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  titleText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  dateNavigation: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  headerDate: { fontSize: 20, fontWeight: 'bold', color: '#000' },
-  summary: { marginBottom: 16, backgroundColor: '#e3f2fd', padding: 10, borderRadius: 8 },
-  summaryText: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-  mealCard: { marginBottom: 16, backgroundColor: '#fff', padding: 12, borderRadius: 8 },
+  navButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 20,
+    gap: 8,
+    flex: 1,
+    marginHorizontal: 12,
+  },
+  dateContainer: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  dateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  fullDateText: {
+    fontSize: 12,
+    color: '#6c757d',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  summaryContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#6c757d',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#6200ee',
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  mealCard: {
+    backgroundColor: '#fff',
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 5,
+  },
   mealHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  mealTitle: { fontSize: 18, fontWeight: 'bold', color: '#6200ee' },
+  mealTitleContainer: {
+    flex: 1,
+  },
+  mealTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 2,
+  },
+  mealStats: {
+    fontSize: 12,
+    color: '#6c757d',
+    fontWeight: '500',
+  },
+  addButton: {
+    backgroundColor: '#6200ee',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  foodList: {
+    gap: 8,
+  },
   foodItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    alignItems: 'center',
+    paddingVertical: 1,
   },
-  foodName: { fontSize: 16 },
-  foodStats: { fontSize: 14, color: '#555' },
-  emptyText: { fontSize: 14, color: '#999' },
-  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  listContent: { paddingBottom: 16 },
+  foodName: {
+    fontSize: 14,
+    color: '#2c3e50',
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 8,
+  },
+  foodStats: {
+    fontSize: 12,
+    color: '#6c757d',
+    fontWeight: '500',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#adb5bd',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6c757d',
+  },
+  // Enhanced Web Date Picker Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  webDatePickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 0,
+    minWidth: 320,
+    maxWidth: 400,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    backgroundColor: '#f8f9fa',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+    gap: 8,
+  },
+  datePickerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2c3e50',
+  },
+  dateInputContainer: {
+    padding: 20,
+    paddingRight:50,
+    paddingBottom: 16,
+  },
+  datePreview: {
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    alignItems: 'center',
+  },
+  datePreviewLabel: {
+    fontSize: 12,
+    color: '#6c757d',
+    fontWeight: '500',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  datePreviewValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    textAlign: 'center',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+    backgroundColor: '#f8f9fa',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    gap: 6,
+  },
+  cancelButton: {
+    borderRightWidth: 1,
+    borderRightColor: '#e9ecef',
+    borderBottomLeftRadius: 20,
+  },
+  confirmButton: {
+    backgroundColor: '#6200ee',
+    borderBottomRightRadius: 20,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6c757d',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
 });
