@@ -51,6 +51,7 @@ export default function LoginScreen() {
             const { token } = await response.json();
             console.log('login token:', token);
 
+            // Wait for login to complete before navigating
             await login(token);
 
             Toast.show({
@@ -58,7 +59,12 @@ export default function LoginScreen() {
                 text1: 'Login Successful',
                 text2: 'Welcome back!',
             });
-            navigation.navigate('Dashboard');
+            
+            // Add a small delay to ensure state updates have propagated
+            setTimeout(() => {
+                navigation.navigate('Dashboard');
+            }, 100);
+            
         } catch (error: unknown) {
             if (error instanceof Error) {
                 Toast.show({

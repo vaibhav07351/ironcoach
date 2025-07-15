@@ -24,45 +24,53 @@ export default function DashboardScreen({ navigation }: Props) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            Toast.show({
-                type: 'error',
-                text1: 'Session Expired',
-                text2: 'Please log in to continue.',
-            });
-            navigation.navigate('Login');
-            return;
-        }
-
-        const fetchTrainerDetails = async () => {
-            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-            try {
-                const response = await fetch(`${backendUrl}/getTrainerDetails`, {
-                    headers: {
-                        Authorization: `${await AsyncStorage.getItem('token')}`,
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch trainer details');
-                }
-
-                const data = await response.json();
-                setTrainerDetails(data);
-            } catch (error) {
-                console.error('Error fetching trainer details:', error);
+        // Add a small delay to ensure authentication state is properly set
+        const checkAuth = async () => {
+            // Wait a bit for the context to update
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            if (!isAuthenticated) {
                 Toast.show({
                     type: 'error',
-                    text1: 'Error',
-                    text2: 'Failed to fetch trainer details.',
+                    text1: 'Session Expired',
+                    text2: 'Please log in to continue.',
                 });
-            } finally {
-                setIsLoading(false);
+                navigation.navigate('Login');
+                return;
             }
+
+            const fetchTrainerDetails = async () => {
+                const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+                try {
+                    const response = await fetch(`${backendUrl}/getTrainerDetails`, {
+                        headers: {
+                            Authorization: `${await AsyncStorage.getItem('token')}`,
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch trainer details');
+                    }
+
+                    const data = await response.json();
+                    setTrainerDetails(data);
+                } catch (error) {
+                    console.error('Error fetching trainer details:', error);
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Error',
+                        text2: 'Failed to fetch trainer details.',
+                    });
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            fetchTrainerDetails();
         };
 
-        fetchTrainerDetails();
-    }, [isAuthenticated]);
+        checkAuth();
+    }, [isAuthenticated]); // Add isAuthenticated as dependency
 
     const handleLogout = () => {
         logout();
