@@ -35,6 +35,7 @@ export default function LoginScreen() {
         setIsLoading(true);
         try {
             const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+            console.log("bu is:", backendUrl);
             const response = await fetch(`${backendUrl}/login`, {
                 method: 'POST',
                 headers: {
