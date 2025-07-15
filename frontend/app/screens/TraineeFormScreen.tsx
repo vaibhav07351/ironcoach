@@ -144,7 +144,13 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
     const handlePickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Toast.show({ type: 'error', text1: 'Permission required', text2: 'Enable image library access' });
+            Toast.show({ 
+                type: 'error', 
+                text1: 'Permission required', 
+                text2: 'Enable image library access',
+                position: 'top',
+                topOffset: 60
+            });
             return;
         }
 
@@ -157,7 +163,13 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             const selectedImage = result.assets[0];
 
             if (selectedImage.fileSize && selectedImage.fileSize > 2 * 1024 * 1024) {
-                Toast.show({ type: 'error', text1: 'Image too large', text2: 'Image must be under 2 MB' });
+                Toast.show({ 
+                    type: 'error', 
+                    text1: 'Image too large', 
+                    text2: 'Image must be under 2 MB',
+                    position: 'top',
+                    topOffset: 60
+                });
                 return;
             }
             setImage({ uri: selectedImage.uri });
@@ -215,7 +227,13 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             return data.image_url;
         } catch (error) {
             console.error('Error uploading image:', error);
-            Toast.show({ type: 'error', text1: 'Upload Error', text2: 'Failed to upload image' });
+            Toast.show({ 
+                type: 'error', 
+                text1: 'Upload Error', 
+                text2: 'Failed to upload image',
+                position: 'top',
+                topOffset: 60
+            });
             return null;
         }
     };
@@ -264,7 +282,13 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             }
         } catch (error) {
             console.error('Error fetching trainee:', error);
-            Toast.show({ type: 'error', text1: 'Loading Error', text2: 'Failed to load trainee details.' });
+            Toast.show({ 
+                type: 'error', 
+                text1: 'Loading Error', 
+                text2: 'Failed to load trainee details.',
+                position: 'top',
+                topOffset: 60
+            });
         } finally {
             setIsLoading(false);
         }
@@ -278,6 +302,8 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 type: 'error',
                 text1: 'Validation Error',
                 text2: `${fieldName} must be in DD-MM-YYYY format.`,
+                position: 'top',
+                topOffset: 60
             });
             return false;
         }
@@ -293,6 +319,8 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 type: 'error',
                 text1: `${fieldName} Validation Error`,
                 text2: 'Invalid date. Please check the day, month, and year.',
+                position: 'top',
+                topOffset: 60
             });
             return false;
         }
@@ -303,6 +331,8 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 type: 'error',
                 text1: `${fieldName} Validation Error`,
                 text2: `Year must be between 1900 and ${currentYear}.`,
+                position: 'top',
+                topOffset: 60
             });
             return false;
         }
@@ -316,6 +346,8 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 type: 'error',
                 text1: 'Validation Error',
                 text2: 'All fields marked with * are mandatory.',
+                position: 'top',
+                topOffset: 60
             });
             return false;
         }
@@ -326,6 +358,8 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 type: 'error',
                 text1: 'Validation Error',
                 text2: 'Please enter a valid 10-digit phone number.',
+                position: 'top',
+                topOffset: 60
             });
             return false;
         }
@@ -343,6 +377,8 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 type: 'error',
                 text1: 'Validation Error',
                 text2: 'Height must be a positive number.',
+                position: 'top',
+                topOffset: 60
             });
             return false;
         }
@@ -411,6 +447,8 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 type: 'success',
                 text1: 'Success!',
                 text2: traineeId ? 'Trainee updated successfully.' : 'Trainee added successfully.',
+                position: 'top',
+                topOffset: 60
             });
 
             navigation.goBack();
@@ -420,6 +458,8 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                 type: 'error',
                 text1: 'Submission Error',
                 text2: traineeId ? 'Failed to update trainee.' : 'Failed to add trainee.',
+                position: 'top',
+                topOffset: 60
             });
         } finally {
             setIsSubmitting(false);
@@ -431,6 +471,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             visible={isSubmitting}
             transparent={true}
             animationType="fade"
+            pointerEvents="box-none"
         >
             <View style={styles.loadingOverlay}>
                 <View style={styles.loadingContainer}>
@@ -468,241 +509,246 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
     );
 
     return (
-        <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <LinearGradient
-                colors={['#f8fafc', '#e2e8f0']}
-                style={styles.background}
-            >
-                <ScrollView 
-                    contentContainerStyle={styles.scrollContainer}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
+        <View style={styles.container}>
+            <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                <LinearGradient
+                    colors={['#f8fafc', '#e2e8f0']}
+                    style={styles.background}
                 >
-                    {isLoading ? (
-                        <View style={styles.loadingScreen}>
-                            <ActivityIndicator size="large" color="#6366f1" />
-                            <Text style={styles.loadingScreenText}>Loading trainee details...</Text>
-                        </View>
-                    ) : (
-                        <Animated.View
-                            style={[
-                                styles.formContainer,
-                                {
-                                    opacity: fadeAnim,
-                                    transform: [{ translateY: slideAnim }],
-                                }
-                            ]}
-                        >
-                            <View style={styles.header}>
-                                <Text style={styles.title}>
-                                    {traineeId || trainee ? 'Edit Trainee' : 'Add New Trainee'}
-                                </Text>
-                                <Text style={styles.subtitle}>
-                                    {traineeId || trainee ? 'Update trainee information' : 'Fill in the details below'}
-                                </Text>
+                    <ScrollView 
+                        contentContainerStyle={styles.scrollContainer}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {isLoading ? (
+                            <View style={styles.loadingScreen}>
+                                <ActivityIndicator size="large" color="#6366f1" />
+                                <Text style={styles.loadingScreenText}>Loading trainee details...</Text>
                             </View>
-
-                            <View style={styles.imageSection}>
-                                <View style={styles.imageContainer}>
-                                    {image ? (
-                                        <Image source={{ uri: image.uri }} style={styles.profileImage} />
-                                    ) : (
-                                        <LinearGradient
-                                            colors={['#6366f1', '#8b5cf6']}
-                                            style={styles.imagePlaceholder}
-                                        >
-                                            <Ionicons name="person" size={60} color="#fff" />
-                                        </LinearGradient>
-                                    )}
+                        ) : (
+                            <Animated.View
+                                style={[
+                                    styles.formContainer,
+                                    {
+                                        opacity: fadeAnim,
+                                        transform: [{ translateY: slideAnim }],
+                                    }
+                                ]}
+                            >
+                                <View style={styles.header}>
+                                    <Text style={styles.title}>
+                                        {traineeId || trainee ? 'Edit Trainee' : 'Add New Trainee'}
+                                    </Text>
+                                    <Text style={styles.subtitle}>
+                                        {traineeId || trainee ? 'Update trainee information' : 'Fill in the details below'}
+                                    </Text>
                                 </View>
 
-                                <View style={styles.imageButtons}>
-                                    <TouchableOpacity style={styles.uploadButton} onPress={handlePickImage}>
-                                        <Ionicons name="camera" size={20} color="#fff" />
-                                        <Text style={styles.uploadButtonText}>
-                                            {image ? 'Change Photo' : 'Upload Photo'}
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    {image && (
-                                        <TouchableOpacity style={styles.removeButton} onPress={handleRemoveImage}>
-                                            <Ionicons name="trash" size={20} color="#fff" />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </View>
-
-                            <View style={styles.formSection}>
-                                <Text style={styles.sectionTitle}>Personal Information</Text>
-                                <InputField 
-                                    label="Full Name *" 
-                                    value={name} 
-                                    onChangeText={handleNameChange}
-                                    icon="person"
-                                    placeholder="Enter full name"
-                                />
-                                <InputField 
-                                    label="Phone Number *" 
-                                    value={phoneNumber} 
-                                    onChangeText={handlePhoneChange}
-                                    icon="call"
-                                    keyboardType="phone-pad"
-                                    placeholder="Enter phone number"
-                                />
-                                <InputField 
-                                    label="Date of Birth (DD-MM-YYYY) *" 
-                                    value={dob} 
-                                    onChangeText={handleDobChange}
-                                    icon="calendar"
-                                    placeholder="DD-MM-YYYY"
-                                />
-                                <InputField 
-                                    label="Gender *" 
-                                    value={gender} 
-                                    onChangeText={handleGenderChange}
-                                    icon="male-female"
-                                    placeholder="Enter gender"
-                                />
-                                <InputField 
-                                    label="Profession" 
-                                    value={profession} 
-                                    onChangeText={handleProfessionChange}
-                                    icon="briefcase"
-                                    placeholder="Enter profession"
-                                />
-                            </View>
-
-                            <View style={styles.formSection}>
-                                <Text style={styles.sectionTitle}>Physical Information</Text>
-                                <InputField 
-                                    label="Height (cm) *" 
-                                    value={height} 
-                                    onChangeText={handleHeightChange}
-                                    icon="resize"
-                                    keyboardType="numeric"
-                                    placeholder="Enter height in cm"
-                                />
-                                <InputField 
-                                    label="Weight (kg)" 
-                                    value={weight} 
-                                    onChangeText={handleWeightChange}
-                                    icon="fitness"
-                                    keyboardType="numeric"
-                                    placeholder="Enter weight in kg"
-                                />
-                                <InputField 
-                                    label="BMI" 
-                                    value={bmi} 
-                                    onChangeText={handleBmiChange}
-                                    icon="analytics"
-                                    keyboardType="numeric"
-                                    placeholder="BMI (optional)"
-                                />
-                            </View>
-
-                            <View style={styles.formSection}>
-                                <Text style={styles.sectionTitle}>Membership Details</Text>
-                                <InputField 
-                                    label="Start Date (DD-MM-YYYY)" 
-                                    value={startDate} 
-                                    onChangeText={handleStartDateChange}
-                                    icon="calendar"
-                                    placeholder="DD-MM-YYYY"
-                                />
-                                <InputField 
-                                    label="Membership Type" 
-                                    value={membershipType} 
-                                    onChangeText={handleMembershipTypeChange}
-                                    icon="card"
-                                    placeholder="Enter membership type"
-                                />
-                                
-                                <View style={styles.switchContainer}>
-                                    <View style={styles.switchLabelContainer}>
-                                        <Ionicons name="power" size={18} color="#6366f1" />
-                                        <Text style={styles.switchLabel}>Active Status</Text>
+                                <View style={styles.imageSection}>
+                                    <View style={styles.imageContainer}>
+                                        {image ? (
+                                            <Image source={{ uri: image.uri }} style={styles.profileImage} />
+                                        ) : (
+                                            <LinearGradient
+                                                colors={['#6366f1', '#8b5cf6']}
+                                                style={styles.imagePlaceholder}
+                                            >
+                                                <Ionicons name="person" size={60} color="#fff" />
+                                            </LinearGradient>
+                                        )}
                                     </View>
-                                    <Switch 
-                                        value={activeStatus} 
-                                        onValueChange={setActiveStatus}
-                                        trackColor={{ false: '#e5e7eb', true: '#a7f3d0' }}
-                                        thumbColor={activeStatus ? '#10b981' : '#6b7280'}
+
+                                    <View style={styles.imageButtons}>
+                                        <TouchableOpacity style={styles.uploadButton} onPress={handlePickImage}>
+                                            <Ionicons name="camera" size={20} color="#fff" />
+                                            <Text style={styles.uploadButtonText}>
+                                                {image ? 'Change Photo' : 'Upload Photo'}
+                                            </Text>
+                                        </TouchableOpacity>
+
+                                        {image && (
+                                            <TouchableOpacity style={styles.removeButton} onPress={handleRemoveImage}>
+                                                <Ionicons name="trash" size={20} color="#fff" />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                </View>
+
+                                <View style={styles.formSection}>
+                                    <Text style={styles.sectionTitle}>Personal Information</Text>
+                                    <InputField 
+                                        label="Full Name *" 
+                                        value={name} 
+                                        onChangeText={handleNameChange}
+                                        icon="person"
+                                        placeholder="Enter full name"
+                                    />
+                                    <InputField 
+                                        label="Phone Number *" 
+                                        value={phoneNumber} 
+                                        onChangeText={handlePhoneChange}
+                                        icon="call"
+                                        keyboardType="phone-pad"
+                                        placeholder="Enter phone number"
+                                    />
+                                    <InputField 
+                                        label="Date of Birth (DD-MM-YYYY) *" 
+                                        value={dob} 
+                                        onChangeText={handleDobChange}
+                                        icon="calendar"
+                                        placeholder="DD-MM-YYYY"
+                                    />
+                                    <InputField 
+                                        label="Gender *" 
+                                        value={gender} 
+                                        onChangeText={handleGenderChange}
+                                        icon="male-female"
+                                        placeholder="Enter gender"
+                                    />
+                                    <InputField 
+                                        label="Profession" 
+                                        value={profession} 
+                                        onChangeText={handleProfessionChange}
+                                        icon="briefcase"
+                                        placeholder="Enter profession"
                                     />
                                 </View>
-                            </View>
 
-                            <View style={styles.formSection}>
-                                <Text style={styles.sectionTitle}>Additional Information</Text>
-                                <InputField 
-                                    label="Emergency Contact" 
-                                    value={emergencyContact} 
-                                    onChangeText={handleEmergencyContactChange}
-                                    icon="call"
-                                    keyboardType="phone-pad"
-                                    placeholder="Emergency contact number"
-                                />
-                                <InputField 
-                                    label="Social Handle" 
-                                    value={socialHandle} 
-                                    onChangeText={handleSocialHandleChange}
-                                    icon="logo-instagram"
-                                    placeholder="@username"
-                                />
-                                <InputField 
-                                    label="Goals" 
-                                    value={goals} 
-                                    onChangeText={handleGoalsChange}
-                                    icon="trophy"
-                                    placeholder="Fitness goals"
-                                    multiline={true}
-                                />
-                                <InputField 
-                                    label="Active Supplements" 
-                                    value={activeSupplements} 
-                                    onChangeText={handleActiveSupplementsChange}
-                                    icon="nutrition"
-                                    placeholder="Current supplements"
-                                    multiline={true}
-                                />
-                                <InputField 
-                                    label="Medical History" 
-                                    value={medicalHistory} 
-                                    onChangeText={handleMedicalHistoryChange}
-                                    icon="medical"
-                                    placeholder="Any medical conditions"
-                                    multiline={true}
-                                />
-                                <InputField 
-                                    label="Notes" 
-                                    value={notes} 
-                                    onChangeText={handleNotesChange}
-                                    icon="document-text"
-                                    placeholder="Additional notes"
-                                    multiline={true}
-                                />
-                            </View>
+                                <View style={styles.formSection}>
+                                    <Text style={styles.sectionTitle}>Physical Information</Text>
+                                    <InputField 
+                                        label="Height (cm) *" 
+                                        value={height} 
+                                        onChangeText={handleHeightChange}
+                                        icon="resize"
+                                        keyboardType="numeric"
+                                        placeholder="Enter height in cm"
+                                    />
+                                    <InputField 
+                                        label="Weight (kg)" 
+                                        value={weight} 
+                                        onChangeText={handleWeightChange}
+                                        icon="fitness"
+                                        keyboardType="numeric"
+                                        placeholder="Enter weight in kg"
+                                    />
+                                    <InputField 
+                                        label="BMI" 
+                                        value={bmi} 
+                                        onChangeText={handleBmiChange}
+                                        icon="analytics"
+                                        keyboardType="numeric"
+                                        placeholder="BMI (optional)"
+                                    />
+                                </View>
 
-                            <TouchableOpacity 
-                                style={styles.submitButton} 
-                                onPress={handleSubmit}
-                                disabled={isSubmitting}
-                            >
-                                <LinearGradient
-                                    colors={['#6366f1', '#8b5cf6']}
-                                    style={styles.submitButtonGradient}
+                                <View style={styles.formSection}>
+                                    <Text style={styles.sectionTitle}>Membership Details</Text>
+                                    <InputField 
+                                        label="Start Date (DD-MM-YYYY)" 
+                                        value={startDate} 
+                                        onChangeText={handleStartDateChange}
+                                        icon="calendar"
+                                        placeholder="DD-MM-YYYY"
+                                    />
+                                    <InputField 
+                                        label="Membership Type" 
+                                        value={membershipType} 
+                                        onChangeText={handleMembershipTypeChange}
+                                        icon="card"
+                                        placeholder="Enter membership type"
+                                    />
+                                    
+                                    <View style={styles.switchContainer}>
+                                        <View style={styles.switchLabelContainer}>
+                                            <Ionicons name="power" size={18} color="#6366f1" />
+                                            <Text style={styles.switchLabel}>Active Status</Text>
+                                        </View>
+                                        <Switch 
+                                            value={activeStatus} 
+                                            onValueChange={setActiveStatus}
+                                            trackColor={{ false: '#e5e7eb', true: '#a7f3d0' }}
+                                            thumbColor={activeStatus ? '#10b981' : '#6b7280'}
+                                        />
+                                    </View>
+                                </View>
+
+                                <View style={styles.formSection}>
+                                    <Text style={styles.sectionTitle}>Additional Information</Text>
+                                    <InputField 
+                                        label="Emergency Contact" 
+                                        value={emergencyContact} 
+                                        onChangeText={handleEmergencyContactChange}
+                                        icon="call"
+                                        keyboardType="phone-pad"
+                                        placeholder="Emergency contact number"
+                                    />
+                                    <InputField 
+                                        label="Social Handle" 
+                                        value={socialHandle} 
+                                        onChangeText={handleSocialHandleChange}
+                                        icon="logo-instagram"
+                                        placeholder="@username"
+                                    />
+                                    <InputField 
+                                        label="Goals" 
+                                        value={goals} 
+                                        onChangeText={handleGoalsChange}
+                                        icon="trophy"
+                                        placeholder="Fitness goals"
+                                        multiline={true}
+                                    />
+                                    <InputField 
+                                        label="Active Supplements" 
+                                        value={activeSupplements} 
+                                        onChangeText={handleActiveSupplementsChange}
+                                        icon="nutrition"
+                                        placeholder="Current supplements"
+                                        multiline={true}
+                                    />
+                                    <InputField 
+                                        label="Medical History" 
+                                        value={medicalHistory} 
+                                        onChangeText={handleMedicalHistoryChange}
+                                        icon="medical"
+                                        placeholder="Any medical conditions"
+                                        multiline={true}
+                                    />
+                                    <InputField 
+                                        label="Notes" 
+                                        value={notes} 
+                                        onChangeText={handleNotesChange}
+                                        icon="document-text"
+                                        placeholder="Additional notes"
+                                        multiline={true}
+                                    />
+                                </View>
+
+                                <TouchableOpacity 
+                                    style={styles.submitButton} 
+                                    onPress={handleSubmit}
+                                    disabled={isSubmitting}
                                 >
-                                    <Ionicons name="checkmark-circle" size={24} color="#fff" />
-                                    <Text style={styles.submitButtonText}>
-                                        {traineeId || trainee ? 'Update Trainee' : 'Add Trainee'}
-                                    </Text>
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        </Animated.View>
-                    )}
-                </ScrollView>
-            </LinearGradient>
-            <LoadingModal />
-        </KeyboardAvoidingView>
+                                    <LinearGradient
+                                        colors={['#6366f1', '#8b5cf6']}
+                                        style={styles.submitButtonGradient}
+                                    >
+                                        <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                                        <Text style={styles.submitButtonText}>
+                                            {traineeId || trainee ? 'Update Trainee' : 'Add Trainee'}
+                                        </Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        )}
+                    </ScrollView>
+                </LinearGradient>
+                <LoadingModal />
+            </KeyboardAvoidingView>
+            
+            {/* Toast component should be rendered at the root level */}
+            <Toast />
+        </View>
     );
 }
 
