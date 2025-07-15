@@ -8,8 +8,16 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "description": "Your comprehensive fitness coaching app",
+    "primaryColor": "#000000", 
+    "splash": {
+      "image": "./assets/images/ironcoach.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vaibhav.ironcoach"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +25,16 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.vaibhav.ironcoach",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+        
+      ],
+      "compileSdkVersion": 34, 
+      "targetSdkVersion": 34,   
+      "buildToolsVersion": "34.0.0"
     },
     "web": {
       "bundler": "metro",
@@ -54,6 +71,7 @@
     "updates": {
       "url": "https://u.expo.dev/7067ae90-2994-477c-9616-cc290d9c2d06"
     },
-    "owner": "vaibhav07351"
+    "owner": "vaibhav07351",
+    "privacy": "public" 
   }
 }
