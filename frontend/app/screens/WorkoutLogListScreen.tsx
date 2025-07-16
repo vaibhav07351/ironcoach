@@ -361,6 +361,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
             }
         });
     }, []);
+
     
     // Function to format date from YYYY-MM-DD to DD-MM-YYYY
     const formatDate = useCallback((dateString: string) => {
@@ -695,6 +696,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                     </LinearGradient>
                 </TouchableOpacity>
             </LinearGradient>
+             <Toast topOffset={70} />
         </KeyboardAvoidingView>
     );
 }
