@@ -90,3 +90,31 @@ node_modules/
 # Cache files
 go.sum
 go-build/
+
+# Android build / IDE junk
+frontend/.idea/
+frontend/*.iml
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/app/build/
+*.iml
+*.log
+*.tmp
+gradle-wrapper.jar
+
+# OSX
+#
+.DS_Store
+
+# Android/IntelliJ
+#
+build/
+.idea
+.gradle
+local.properties
+*.iml
+*.hprof
+.cxx/
+
+# Bundle artifacts
+*.jsbundle

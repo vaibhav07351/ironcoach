@@ -66,7 +66,7 @@
       "backendUrl": "https://ironcoach.duckdns.org"
     },
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "1.0.0"
     },
     "updates": {
       "url": "https://u.expo.dev/7067ae90-2994-477c-9616-cc290d9c2d06"
