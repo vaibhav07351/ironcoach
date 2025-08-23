@@ -17,14 +17,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.vaibhav.ironcoach"
+      "bundleIdentifier": "com.vaibhavbhardwaj.ironcoach"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/ironcoach.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.vaibhav.ironcoach",
+      "package": "com.vaibhavbhardwaj.ironcoach",
       "versionCode": 1,
       "permissions": [
         "INTERNET",
