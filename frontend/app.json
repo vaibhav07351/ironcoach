@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "description": "Your comprehensive fitness coaching app",
-    "primaryColor": "#000000", 
+    "primaryColor": "#000000",
     "splash": {
       "image": "./assets/images/ironcoach.png",
       "resizeMode": "contain",
@@ -32,8 +32,8 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
       ],
-      "compileSdkVersion": 34, 
-      "targetSdkVersion": 34,   
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34,
       "buildToolsVersion": "34.0.0"
     },
     "web": {
@@ -66,12 +66,12 @@
       "backendUrl": "https://ironcoach.duckdns.org"
     },
     "runtimeVersion": {
-      "policy": "1.0.0"
+      "policy": "appVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/7067ae90-2994-477c-9616-cc290d9c2d06"
     },
     "owner": "vaibhav07351",
-    "privacy": "public" 
+    "privacy": "public"
   }
 }
