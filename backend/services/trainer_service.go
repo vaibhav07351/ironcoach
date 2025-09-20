@@ -43,44 +43,46 @@ func (s *TrainerService) RegisterTrainer(trainer models.Trainer) error {
 	trainer.CreatedAt = time.Now()
 
 	//save trainer to database
-	// Save trainer
 	if err := s.repository.CreateTrainer(trainer); err != nil {
 		return err
 	}
 
-	// Add default categories and exercises
-	defaultCategories := []string{
-		"Abs", "Back", "Biceps", "Chest", "Forearms", "Legs", "Shoulders", "Triceps",
+	// Define default categories with their exercises
+	defaultData := []struct {
+		CategoryName string
+		Exercises    []string
+	}{
+		{"Abs", []string{"Crunches", "Plank", "Leg Raises", "Russian Twists", "Mountain Climbers", "Bicycle Crunches", "Dead Bug", "Hanging Knee Raises"}},
+		{"Back", []string{"Pull-Ups", "Deadlift", "Bent Over Rows", "Lat Pulldowns", "T-Bar Rows", "Cable Rows", "Face Pulls", "Reverse Flyes"}},
+		{"Biceps", []string{"Barbell Curl", "Hammer Curl", "Dumbbell Curls", "Cable Curls", "Chin-Ups", "Preacher Curls", "21s", "Concentration Curls"}},
+		{"Chest", []string{"Bench Press", "Push-Ups", "Incline Bench Press", "Decline Bench Press", "Dumbbell Flyes", "Dips", "Cable Crossovers", "Incline Dumbbell Press"}},
+		{"Forearms", []string{"Wrist Curls", "Reverse Wrist Curls", "Farmer's Walk", "Plate Pinches", "Hammer Curls", "Reverse Curls", "Grip Squeeze", "Wrist Rollers"}},
+		{"Legs", []string{"Squats", "Lunges", "Deadlifts", "Leg Press", "Bulgarian Split Squats", "Calf Raises", "Romanian Deadlifts", "Walking Lunges", "Goblet Squats", "Hip Thrusts"}},
+		{"Shoulders", []string{"Shoulder Press", "Lateral Raise", "Front Raise", "Rear Delt Flyes", "Arnold Press", "Upright Rows", "Pike Push-Ups", "Handstand Push-Ups"}},
+		{"Triceps", []string{"Tricep Dips", "Overhead Extension", "Close-Grip Bench Press", "Tricep Pushdowns", "Diamond Push-Ups", "Skull Crushers", "Kickbacks", "Overhead Cable Extension"}},
 	}
 
-	defaultExercises := map[string][]string{
-		"Abs":       {"Crunches", "Plank", "Leg Raises"},
-		"Back":      {"Pull-Ups", "Deadlift"},
-		"Biceps":    {"Barbell Curl", "Hammer Curl"},
-		"Chest":     {"Bench Press", "Push-Ups"},
-		"Forearms":  {"Wrist Curls"},
-		"Legs":      {"Squats", "Lunges"},
-		"Shoulders": {"Shoulder Press", "Lateral Raise"},
-		"Triceps":   {"Tricep Dips", "Overhead Extension"},
-	}
-
-	for _, cat := range defaultCategories {
+	// Create categories and exercises in one loop
+	for _, data := range defaultData {
+		// Create category
 		category := models.Category{
 			ID:        primitive.NewObjectID(),
-			Name:      cat,
-			TrainerID: trainer.Email, // You can switch to ObjectID if stored
+			Name:      data.CategoryName,
+			TrainerID: trainer.Email,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
 
 		if err := s.categoryRepo.AddCategory(category); err != nil {
-			continue // skip but do not break registration
+			continue // skip this category if creation fails
 		}
 
-		for _, ex := range defaultExercises[cat] {
+		// Create all exercises for this category
+		for _, exerciseName := range data.Exercises {
 			exercise := models.Exercise{
-				Name:       ex,
-				Category:   cat,
+				ID:         primitive.NewObjectID(),
+				Name:       exerciseName,
+				Category:   data.CategoryName,
 				CategoryID: category.ID,
 				CreatedAt:  time.Now(),
 				UpdatedAt:  time.Now(),
@@ -90,7 +92,6 @@ func (s *TrainerService) RegisterTrainer(trainer models.Trainer) error {
 	}
 
 	return nil
-
 }
 
 func (s *TrainerService) LoginTrainer(email, password string) (token string, err error) {
