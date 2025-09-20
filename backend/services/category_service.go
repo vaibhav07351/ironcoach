@@ -36,7 +36,16 @@ func (s *CategoryService) GetCategories(trainerID string) ([]models.Category, er
 	return s.repository.GetCategories(trainerID)
 }
 
-func (s *CategoryService) UpdateCategory(id string, updatedName string) error {
+func (s *CategoryService) UpdateCategory(id string, updatedName string, trainerID string) error {
+	// Check if category name already exists for this trainer
+	exists, err := s.repository.IsCategoryExists(updatedName, trainerID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return errors.New("category already exists for this trainer")
+	}
+
 	// Cascade update in exercises
 	if err := s.repository.UpdateCategory(id, updatedName); err != nil {
 		return err

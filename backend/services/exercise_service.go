@@ -70,6 +70,21 @@ func (s *ExerciseService) GetCategoryIDByName(categoryName string, trainerEmail 
 }
 
 func (s *ExerciseService) UpdateExercise(id string, updatedName string) error {
+	// Get the current exercise to find its category
+	currentExercise, err := s.repository.GetExerciseByID(id)
+	if err != nil {
+		return err
+	}
+
+	// Check if the new name already exists in the same category (excluding current exercise)
+	exists, err := s.repository.IsExerciseExistsInCategory(updatedName, currentExercise.Category, id)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return errors.New("exercise already exists in this category")
+	}
+
 	if err := s.repository.UpdateExercise(id, updatedName); err != nil {
 		return err
 	}

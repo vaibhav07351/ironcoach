@@ -176,6 +176,37 @@ func (r *ExerciseRepository) IsExerciseExists(name string, category string) (boo
 	return count > 0, err
 }
 
+func (r *ExerciseRepository) GetExerciseByID(id string) (models.Exercise, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return models.Exercise{}, err
+	}
+
+	var exercise models.Exercise
+	err = r.collection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&exercise)
+	return exercise, err
+}
+
+func (r *ExerciseRepository) IsExerciseExistsInCategory(name string, category string, excludeID string) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	excludeObjectID, err := primitive.ObjectIDFromHex(excludeID)
+	if err != nil {
+		return false, err
+	}
+
+	count, err := r.collection.CountDocuments(ctx, bson.M{
+		"name":     name,
+		"category": category,
+		"_id":      bson.M{"$ne": excludeObjectID},
+	})
+	return count > 0, err
+}
+
 func (r *ExerciseRepository) MigrateWorkoutLogs() {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()

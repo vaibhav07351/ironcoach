@@ -72,6 +72,10 @@ func (c *ExerciseController) UpdateExercise(ctx *gin.Context) {
 	}
 
 	if err := c.service.UpdateExercise(id, body.Name); err != nil {
+		if err.Error() == "exercise already exists in this category" {
+			ctx.JSON(http.StatusConflict, gin.H{"error": "Exercise name already exists in this category"})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update exercise"})
 		return
 	}
