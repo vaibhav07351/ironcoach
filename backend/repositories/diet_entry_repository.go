@@ -62,9 +62,8 @@ func (r *DietEntryRepository) GetDietEntriesByTrainee(traineeID string, date str
 	return dietEntries, nil
 }
 
-
 // Get Diet Entry By ID
-func (r *DietEntryRepository) GetDietEntryByID(entryID string) (models.DietEntry,error) {
+func (r *DietEntryRepository) GetDietEntryByID(entryID string) (models.DietEntry, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -72,42 +71,40 @@ func (r *DietEntryRepository) GetDietEntryByID(entryID string) (models.DietEntry
 
 	objectId, err := primitive.ObjectIDFromHex(entryID)
 	if err != nil {
-		return entry,err
+		return entry, err
 	}
 	err = r.collection.FindOne(ctx, bson.M{"_id": objectId}).Decode(&entry)
-	return entry,err
+	return entry, err
 }
-
 
 // Update a diet entry with date filter
 func (r *DietEntryRepository) UpdateDietEntry(entryID string, updateData models.DietEntry) error {
-    ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-    defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
 
-    objectID, err := primitive.ObjectIDFromHex(entryID)
-    if err != nil {
-        return errors.New("invalid ID format")
-    }
+	objectID, err := primitive.ObjectIDFromHex(entryID)
+	if err != nil {
+		return errors.New("invalid ID format")
+	}
 
-    // Add date filter to the query
-    filter := bson.M{
-        "_id":  objectID,
-    }
+	// Add date filter to the query
+	filter := bson.M{
+		"_id": objectID,
+	}
 
-    update := bson.M{"$set": updateData}
+	update := bson.M{"$set": updateData}
 
-    result, err := r.collection.UpdateOne(ctx, filter, update)
-    if err != nil {
-        return err
-    }
+	result, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
 
-    if result.MatchedCount == 0 {
-        return errors.New("not found or date mismatch")
-    }
+	if result.MatchedCount == 0 {
+		return errors.New("not found or date mismatch")
+	}
 
-    return nil
+	return nil
 }
-
 
 // Delete a diet entry
 func (r *DietEntryRepository) DeleteDietEntry(entryID string) error {
@@ -116,5 +113,19 @@ func (r *DietEntryRepository) DeleteDietEntry(entryID string) error {
 
 	objectID, _ := primitive.ObjectIDFromHex(entryID)
 	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": objectID})
+	return err
+}
+
+// Delete all diet entries by trainee IDs
+func (r *DietEntryRepository) DeleteDietEntriesByTrainees(traineeIDs []string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if len(traineeIDs) == 0 {
+		return nil // No trainees to delete entries for
+	}
+
+	// TraineeID is stored as string in diet entries, so use string array directly
+	_, err := r.collection.DeleteMany(ctx, bson.M{"trainee_id": bson.M{"$in": traineeIDs}})
 	return err
 }

@@ -115,13 +115,19 @@ func (r *ExerciseRepository) CascadeDeleteExerciseFromWorkoutLogs(exerciseID str
 	return err
 }
 
-
-func (r *ExerciseRepository) DeleteExercisesByCategory(category string) error {
+// DeleteExercisesByCategoryID deletes all exercises in a category by category ID
+func (r *ExerciseRepository) DeleteExercisesByCategoryID(categoryID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// Convert category ID to ObjectID
+	objectID, err := primitive.ObjectIDFromHex(categoryID)
+	if err != nil {
+		return err
+	}
+
 	// Step 1: Find all exercises in the specified category
-	cursor, err := r.collection.Find(ctx, bson.M{"category": category})
+	cursor, err := r.collection.Find(ctx, bson.M{"category_id": objectID})
 	if err != nil {
 		return err
 	}
@@ -152,10 +158,9 @@ func (r *ExerciseRepository) DeleteExercisesByCategory(category string) error {
 	}
 
 	// Step 4: Delete exercises in the specified category
-	_, err = r.collection.DeleteMany(ctx, bson.M{"category": category})
+	_, err = r.collection.DeleteMany(ctx, bson.M{"category_id": objectID})
 	return err
 }
-
 
 func (r *ExerciseRepository) IsExerciseExists(name string, category string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -165,8 +170,7 @@ func (r *ExerciseRepository) IsExerciseExists(name string, category string) (boo
 	return count > 0, err
 }
 
-
-func(r *ExerciseRepository) MigrateWorkoutLogs() {
+func (r *ExerciseRepository) MigrateWorkoutLogs() {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()
 

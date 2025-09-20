@@ -63,5 +63,5 @@ func (s *CategoryService) DeleteCategory(id string) error {
     }
 
     // Cascade delete exercises
-    return s.exerciseRepo.DeleteExercisesByCategory(category.Name)
+    return s.exerciseRepo.DeleteExercisesByCategoryID(category.ID.Hex())
 }

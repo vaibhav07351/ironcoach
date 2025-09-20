@@ -36,7 +36,6 @@ func (ctrl *TrainerController) RegisterTrainer(c *gin.Context) {
 		return
 	}
 
-		
 	c.JSON(http.StatusOK, gin.H{"message": "Trainer registered Successfully!"})
 }
 
@@ -63,23 +62,47 @@ func (ctrl *TrainerController) LoginTrainer(c *gin.Context) {
 
 }
 
-//Get Trainers
+// Get Trainers
 func (c *TrainerController) GetTrainers(ctx *gin.Context) {
-    trainers, err := c.service.GetTrainers()
-    if err != nil {
-        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve categories"})
-        return
-    }
+	trainers, err := c.service.GetTrainers()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve categories"})
+		return
+	}
 
-    ctx.JSON(http.StatusOK, trainers)
+	ctx.JSON(http.StatusOK, trainers)
 }
 
 func (c *TrainerController) GetTrainerDetails(ctx *gin.Context) {
 	trainerID := ctx.MustGet("email").(string)
-    trainer, err := c.service.GetTrainerByID(trainerID)
-    if err != nil {
-        ctx.JSON(http.StatusNotFound, gin.H{"error": "Trainer not found"})
-        return
-    }
-    ctx.JSON(http.StatusOK, trainer)
+	trainer, err := c.service.GetTrainerByID(trainerID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Trainer not found"})
+		return
+	}
+	ctx.JSON(http.StatusOK, trainer)
+}
+
+// DeleteTrainer performs cascading delete of trainer and all associated data
+func (c *TrainerController) DeleteTrainer(ctx *gin.Context) {
+	trainerEmail := ctx.Param("email")
+	if trainerEmail == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Trainer email is required"})
+		return
+	}
+
+	// Check if trainer exists
+	_, err := c.service.GetTrainerByID(trainerEmail)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Trainer not found"})
+		return
+	}
+
+	// Perform cascading delete
+	if err := c.service.DeleteTrainerCascade(trainerEmail); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete trainer: " + err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Trainer and all associated data deleted successfully"})
 }

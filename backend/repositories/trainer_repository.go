@@ -41,7 +41,6 @@ func (r *TrainerRepository) FindByEmail(email string) (models.Trainer, error) {
 	return trainer, err
 }
 
-
 func (r *TrainerRepository) GetTrainers() ([]models.Trainer, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -62,13 +61,21 @@ func (r *TrainerRepository) GetTrainers() ([]models.Trainer, error) {
 	return trainers, nil
 }
 
-
 // In `trainer_repository.go`
 func (r *TrainerRepository) GetTrainerByID(id string) (models.Trainer, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
-    var trainer models.Trainer
-    err := r.collection.FindOne(ctx, bson.M{"email": id}).Decode(&trainer)
-    return trainer, err
+
+	var trainer models.Trainer
+	err := r.collection.FindOne(ctx, bson.M{"email": id}).Decode(&trainer)
+	return trainer, err
+}
+
+// Delete trainer by email
+func (r *TrainerRepository) DeleteTrainer(email string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := r.collection.DeleteOne(ctx, bson.M{"email": email})
+	return err
 }

@@ -110,3 +110,17 @@ func (r *WorkoutLogRepository) DeleteWorkoutLog(id string) error {
 
 	return nil
 }
+
+// Delete all workout logs by trainee IDs
+func (r *WorkoutLogRepository) DeleteWorkoutLogsByTrainees(traineeIDs []string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if len(traineeIDs) == 0 {
+		return nil // No trainees to delete logs for
+	}
+
+	// TraineeID is stored as string in workout logs, so use string array directly
+	_, err := r.collection.DeleteMany(ctx, bson.M{"trainee_id": bson.M{"$in": traineeIDs}})
+	return err
+}
