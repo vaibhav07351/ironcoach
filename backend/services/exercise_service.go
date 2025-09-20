@@ -50,8 +50,23 @@ func (s *ExerciseService) AddExercise(exercise models.Exercise) error {
 
 }
 
-func (s *ExerciseService) GetExercisesByCategory(category string) ([]models.Exercise, error) {
-	return s.repository.GetExercisesByCategory(category)
+func (s *ExerciseService) GetExercisesByCategoryID(categoryID string) ([]models.Exercise, error) {
+	return s.repository.GetExercisesByCategoryID(categoryID)
+}
+
+func (s *ExerciseService) GetCategoryIDByName(categoryName string, trainerEmail string) (string, error) {
+	categories, err := s.categoryRepo.GetCategories(trainerEmail)
+	if err != nil {
+		return "", err
+	}
+
+	for _, category := range categories {
+		if category.Name == categoryName {
+			return category.ID.Hex(), nil
+		}
+	}
+
+	return "", errors.New("category not found")
 }
 
 func (s *ExerciseService) UpdateExercise(id string, updatedName string) error {

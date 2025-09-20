@@ -44,7 +44,15 @@ func (c *ExerciseController) AddExercise(ctx *gin.Context) {
 
 func (c *ExerciseController) GetExercisesByCategory(ctx *gin.Context) {
 	category := ctx.Param("category")
-	exercises, err := c.service.GetExercisesByCategory(category)
+	trainerEmail := ctx.MustGet("email").(string)
+
+	categoryID, err := c.service.GetCategoryIDByName(category, trainerEmail)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve category ID"})
+		return
+	}
+
+	exercises, err := c.service.GetExercisesByCategoryID(categoryID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve exercises"})
 		return

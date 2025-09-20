@@ -33,10 +33,16 @@ func (r *ExerciseRepository) AddExercise(exercise models.Exercise) error {
 	return err
 }
 
-func (r *ExerciseRepository) GetExercisesByCategory(category string) ([]models.Exercise, error) {
+func (r *ExerciseRepository) GetExercisesByCategoryID(categoryID string) ([]models.Exercise, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cursor, err := r.collection.Find(ctx, bson.M{"category": category})
+
+	objectID, err := primitive.ObjectIDFromHex(categoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	cursor, err := r.collection.Find(ctx, bson.M{"category_id": objectID})
 	if err != nil {
 		return nil, err
 	}
