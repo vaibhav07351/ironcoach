@@ -95,8 +95,7 @@ func (r *CategoryRepository) DeleteCategory(id string) error {
 	return err
 }
 
-func (r *CategoryRepository) IsCategoryExists(name string) (bool, error) {
-	fmt.Println(r)
+func (r *CategoryRepository) IsCategoryExists(name string, trainerID string) (bool, error) {
 	if r.collection == nil {
 		return false, fmt.Errorf("MongoDB collection is not initialized")
 	}
@@ -104,7 +103,7 @@ func (r *CategoryRepository) IsCategoryExists(name string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	result := r.collection.FindOne(ctx, bson.M{"name": name})
+	result := r.collection.FindOne(ctx, bson.M{"name": name, "trainer_id": trainerID})
 	if result.Err() != nil {
 		if result.Err() == mongo.ErrNoDocuments {
 			return false, nil // Document does not exist

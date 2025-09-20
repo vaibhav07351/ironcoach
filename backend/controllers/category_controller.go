@@ -32,8 +32,8 @@ func (c *CategoryController) AddCategory(ctx *gin.Context) {
     category.TrainerID = trainerID
 
     if err := c.service.AddCategory(category); err != nil {
-        if err.Error() == "category already exists" {
-            ctx.JSON(http.StatusConflict, gin.H{"error": "Category already exists"})
+        if err.Error() == "category already exists for this trainer" {
+            ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
             return
         }
         ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add category"})
