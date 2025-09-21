@@ -36,7 +36,7 @@ func (s *ExerciseService) AddExercise(exercise models.Exercise) error {
 	}
 
 	// Check if the exercise already exists
-	duplicate, err := s.repository.IsExerciseExists(exercise.Name, exercise.Category)
+	duplicate, err := s.repository.IsExerciseExists(exercise.Name, exercise.CategoryID.Hex())
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (s *ExerciseService) UpdateExercise(id string, updatedName string) error {
 	}
 
 	// Check if the new name already exists in the same category (excluding current exercise)
-	exists, err := s.repository.IsExerciseExistsInCategory(updatedName, currentExercise.Category, id)
+	exists, err := s.repository.IsExerciseExistsInCategory(updatedName, currentExercise.CategoryID.Hex(), id)
 	if err != nil {
 		return err
 	}

@@ -168,11 +168,16 @@ func (r *ExerciseRepository) DeleteExercisesByCategoryID(categoryID string) erro
 	return err
 }
 
-func (r *ExerciseRepository) IsExerciseExists(name string, category string) (bool, error) {
+func (r *ExerciseRepository) IsExerciseExists(name string, categoryID string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	count, err := r.collection.CountDocuments(ctx, bson.M{"name": name, "category": category})
+	categoryObjectID, err := primitive.ObjectIDFromHex(categoryID)
+	if err != nil {
+		return false, err
+	}
+
+	count, err := r.collection.CountDocuments(ctx, bson.M{"name": name, "category_id": categoryObjectID})
 	return count > 0, err
 }
 
@@ -190,7 +195,7 @@ func (r *ExerciseRepository) GetExerciseByID(id string) (models.Exercise, error)
 	return exercise, err
 }
 
-func (r *ExerciseRepository) IsExerciseExistsInCategory(name string, category string, excludeID string) (bool, error) {
+func (r *ExerciseRepository) IsExerciseExistsInCategory(name string, categoryID string, excludeID string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -199,10 +204,15 @@ func (r *ExerciseRepository) IsExerciseExistsInCategory(name string, category st
 		return false, err
 	}
 
+	categoryObjectID, err := primitive.ObjectIDFromHex(categoryID)
+	if err != nil {
+		return false, err
+	}
+
 	count, err := r.collection.CountDocuments(ctx, bson.M{
-		"name":     name,
-		"category": category,
-		"_id":      bson.M{"$ne": excludeObjectID},
+		"name":        name,
+		"category_id": categoryObjectID,
+		"_id":         bson.M{"$ne": excludeObjectID},
 	})
 	return count > 0, err
 }
