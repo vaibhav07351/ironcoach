@@ -141,9 +141,9 @@ export default function DashboardScreen({ navigation }: Props) {
             {/* Footer */}
             <View style={styles.footer}>
                 <Text style={styles.footerText}>Developed by Vaibhav Bhardwaj</Text>
-                <TouchableOpacity onPress={() => Linking.openURL('mailto:vaibhav07351@gmail.com')}>
+                <TouchableOpacity onPress={() => Linking.openURL('mailto:vaibhavandsparks@gmail.com')}>
                     <Text style={[styles.footerText, styles.footerLink]}>
-                        vaibhav07351@gmail.com
+                        vaibhavandsparks@gmail.com
                     </Text>
                 </TouchableOpacity>
             </View>

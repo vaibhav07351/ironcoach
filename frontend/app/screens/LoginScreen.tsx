@@ -160,10 +160,10 @@ export default function LoginScreen() {
                     <Text style={styles.footerText}>Crafted with ❤️ by Vaibhav Bhardwaj</Text>
                     <Text style={styles.footerText}>Questions? Let's connect!</Text>
                     <TouchableOpacity 
-                        onPress={() => Linking.openURL('mailto:vaibhav07351@gmail.com')}
+                        onPress={() => Linking.openURL('mailto:vaibhavandsparks@gmail.com')}
                         style={styles.emailContainer}
                     >
-                        <Text style={styles.footerLink}>vaibhav07351@gmail.com</Text>
+                        <Text style={styles.footerLink}>vaibhavandsparks@gmail.com</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
