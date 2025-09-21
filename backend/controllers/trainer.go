@@ -85,6 +85,15 @@ func (c *TrainerController) GetTrainerDetails(ctx *gin.Context) {
 
 // DeleteTrainer performs cascading delete of trainer and all associated data
 func (c *TrainerController) DeleteTrainer(ctx *gin.Context) {
+	// Get the email of the logged-in trainer from the JWT token
+	loggedInTrainerEmail := ctx.MustGet("email").(string)
+
+	// Check if the logged-in trainer is admin
+	if loggedInTrainerEmail != "admin@gmail.com" {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "Only admin can delete trainers"})
+		return
+	}
+
 	trainerEmail := ctx.Param("email")
 	if trainerEmail == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Trainer email is required"})
