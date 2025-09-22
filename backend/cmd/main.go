@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"ironcoach/middlewares"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -31,11 +33,14 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	// Global rate limiting: e.g., 120 requests per minute per IP, burst 60
+	router.Use(middlewares.RateLimitMiddleware(150, time.Minute, 25))
+
 	//  This line handles all OPTIONS preflight requests
 	router.OPTIONS("/*path", func(c *gin.Context) {
 		c.Status(204)
 	})
-	
+
 	// Register routes
 	routes.RegisterTrainerRoutes(router)
 	routes.RegisterTraineeRoutes(router)
