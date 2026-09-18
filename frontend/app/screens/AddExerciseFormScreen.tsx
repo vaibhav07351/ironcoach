@@ -7,7 +7,6 @@ import {
     Alert,
     FlatList,
     TextInput,
-    KeyboardAvoidingView,
     Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,6 +16,7 @@ import { ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
+import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 
 
 // Define Props for the Screen
@@ -167,11 +167,9 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
     
     
     return isLoading ? (
-        <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />
+        <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 280 }} />
     ) : (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.container}>
             <Text style={styles.title}>{exercise}</Text>
     
             {/* Weight Section */}
@@ -257,16 +255,16 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
                         <TouchableOpacity onPress={() => handleDeleteSet(index)}>
                             <Icon
                                 name="trash-can-outline"
-                                size={24}
-                                color="#ff0000"
+                                size={22}
+                                color={Colors.error}
                                 style={styles.icon}
                             />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => handleSetEdit(index)}>
                             <Icon
                                 name="pencil-outline"
-                                size={24}
-                                color="#007bff"
+                                size={22}
+                                color={Colors.primary}
                                 style={styles.icon}
                             />
                         </TouchableOpacity>
@@ -280,7 +278,7 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
             <Text style={styles.addButtonText}>Add Workout</Text>
             </TouchableOpacity>
            
-        </KeyboardAvoidingView>
+        </View>
 
         
     );
@@ -288,107 +286,122 @@ export default function AddExerciseFormScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
+    container: { flex: 1, padding: Spacing.medium, backgroundColor: Colors.background },
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 16,
+        fontFamily: Fonts.display,
+        fontSize: 26,
+        fontWeight: '700',
+        marginBottom: Spacing.large,
         textAlign: 'center',
-        color: '#333',
+        color: Colors.primary,
     },
     inputSection: {
-        marginBottom: 24,
+        marginBottom: Spacing.large,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.md,
+        padding: Spacing.medium,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     label: {
-        fontSize: 18,
-        fontWeight: '500',
-        color: '#555',
-        textAlign: 'left',
+        fontSize: 14,
+        fontWeight: '700',
+        color: Colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     labelUnderline: {
-        height: 2,
-        backgroundColor: '#007bff',
-        marginVertical: 8,
+        height: 3,
+        width: 36,
+        backgroundColor: Colors.accent,
+        marginVertical: Spacing.small,
+        borderRadius: 2,
     },
     inputRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 8,
     },
     input: {
-        padding: 8,
+        padding: Spacing.small,
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
+        borderColor: Colors.border,
+        borderRadius: Radii.sm,
         width: 100,
         textAlign: 'center',
-        backgroundColor: '#fff',
-        marginHorizontal: 8,
-        fontSize: 16,
+        backgroundColor: Colors.background,
+        marginHorizontal: Spacing.small,
+        fontSize: 18,
+        fontWeight: '700',
+        color: Colors.textPrimary,
     },
     button: {
-        backgroundColor: '#007bff',
-        borderRadius: 50,
-        width: 50,
-        height: 50,
+        backgroundColor: Colors.primary,
+        borderRadius: 25,
+        width: 48,
+        height: 48,
         alignItems: 'center',
         justifyContent: 'center',
     },
     buttonText: {
-        color: '#fff',
-        fontSize: 24,
-        fontWeight: 'bold',
+        color: Colors.textOnPrimary,
+        fontSize: 22,
+        fontWeight: '700',
     },
     controlButtons: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginVertical: 10,
+        marginVertical: Spacing.small,
+        gap: Spacing.small,
     },
     saveButton: {
-        backgroundColor: '#28a745',
-        padding: 12,
-        borderRadius: 8,
-        flex: 0.48,
+        backgroundColor: Colors.primary,
+        padding: 14,
+        borderRadius: Radii.md,
+        flex: 1,
         alignItems: 'center',
     },
-    saveButtonText: { color: '#fff', fontWeight: 'bold' },
+    saveButtonText: { color: Colors.textOnPrimary, fontWeight: '800' },
     clearButton: {
-        backgroundColor: '#ffc107',
-        padding: 12,
-        borderRadius: 8,
-        flex: 0.48,
+        backgroundColor: Colors.surface,
+        padding: 14,
+        borderRadius: Radii.md,
+        flex: 1,
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
-    clearButtonText: { color: '#000', fontWeight: 'bold' },
-    recordHeader: { marginBottom: 8 },
+    clearButtonText: { color: Colors.textPrimary, fontWeight: '700' },
+    recordHeader: { marginBottom: Spacing.small, marginTop: Spacing.medium },
     recordTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 5,
-        color: '#555',
+        fontFamily: Fonts.display,
+        fontSize: 18,
+        fontWeight: '700',
+        marginBottom: Spacing.small,
+        color: Colors.primary,
     },
     recordRow: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 12,
-        borderBottomWidth: 1,
-        borderColor: '#ccc',
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        marginBottom: 8,
+        padding: Spacing.medium,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.sm,
+        marginBottom: Spacing.small,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
-    recordText: { fontSize: 16, color: '#333' },
+    recordText: { fontSize: 16, color: Colors.textPrimary, fontWeight: '600' },
     recordSno: { flex: 1, textAlign: 'left' },
     recordWeight: { flex: 2, textAlign: 'center' },
     recordReps: { flex: 1, textAlign: 'right' },
     addButton: {
-        marginTop: 20,
-        backgroundColor: '#6200ee',
-        paddingVertical: 12,
-        borderRadius: 8,
+        marginTop: Spacing.medium,
+        backgroundColor: Colors.accent,
+        paddingVertical: 14,
+        borderRadius: Radii.md,
         alignItems: 'center',
     },
-    addButtonText: { color: '#fff', fontSize: 16 },
-    icon: { marginLeft: 8 }, // Ensures spacing for icons
+    addButtonText: { color: Colors.textPrimary, fontSize: 16, fontWeight: '800' },
+    icon: { marginLeft: Spacing.small },
 });

@@ -5,7 +5,6 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    Alert,
     ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +12,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
+import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddCustomCategory'>;
 
@@ -58,7 +58,10 @@ export default function AddCustomCategoryScreen({ route, navigation }: Props) {
                     'Content-Type': 'application/json',
                     Authorization: `${token}`,
                 },
-                body: JSON.stringify({ name: categoryName }),
+                body: JSON.stringify({
+                    name: categoryName,
+                    trainee_id: traineeId,
+                }),
             });
 
             if (!response.ok) {
@@ -90,58 +93,96 @@ export default function AddCustomCategoryScreen({ route, navigation }: Props) {
         }
     }, [currentName, isUpdateMode]);
 
-    return isLoading ? (
-        <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />
-    ) : (
+    if (isLoading) {
+        return (
+            <View style={styles.centered}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+        );
+    }
+
+    return (
         <View style={styles.container}>
+            <Text style={styles.eyebrow}>IronCoach</Text>
             <Text style={styles.title}>
-                {isUpdateMode ? 'Update Category' : 'Add Custom Category'}
+                {isUpdateMode ? 'Update category' : 'New category'}
             </Text>
+            <Text style={styles.sub}>Name the muscle group or focus for this block.</Text>
             <TextInput
                 style={styles.input}
-                placeholder="Category Name"
+                placeholder="e.g. Push, Legs, Core"
+                placeholderTextColor={Colors.textSecondary}
                 value={categoryName}
                 onChangeText={setCategoryName}
             />
-            <TouchableOpacity style={styles.saveButton} onPress={handleSaveCategory}>
+            <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveCategory}
+                activeOpacity={0.88}
+            >
                 <Text style={styles.saveButtonText}>
-                    {isUpdateMode ? 'Update Category' : 'Add Category'}
+                    {isUpdateMode ? 'Save changes' : 'Add category'}
                 </Text>
             </TouchableOpacity>
-
         </View>
     );
 }
 
 const styles = StyleSheet.create({
+    centered: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: Colors.background,
+    },
     container: {
         flex: 1,
-        padding: 16,
+        padding: Spacing.large,
         justifyContent: 'center',
+        backgroundColor: Colors.background,
     },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 16,
+    eyebrow: {
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        color: Colors.accent,
+        marginBottom: Spacing.small,
         textAlign: 'center',
     },
+    title: {
+        fontFamily: Fonts.display,
+        fontSize: 28,
+        fontWeight: '700',
+        marginBottom: Spacing.small,
+        textAlign: 'center',
+        color: Colors.primary,
+    },
+    sub: {
+        textAlign: 'center',
+        color: Colors.textSecondary,
+        marginBottom: Spacing.large,
+        lineHeight: 22,
+    },
     input: {
-        padding: 12,
+        padding: Spacing.medium,
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        marginBottom: 16,
+        borderColor: Colors.border,
+        borderRadius: Radii.md,
+        marginBottom: Spacing.medium,
         fontSize: 16,
+        backgroundColor: Colors.surface,
+        color: Colors.textPrimary,
     },
     saveButton: {
-        backgroundColor: '#6200ee',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 8,
+        backgroundColor: Colors.accent,
+        paddingVertical: 14,
+        borderRadius: Radii.md,
         alignItems: 'center',
     },
     saveButtonText: {
-        color: '#fff',
+        color: Colors.textPrimary,
         fontSize: 16,
+        fontWeight: '800',
     },
 });

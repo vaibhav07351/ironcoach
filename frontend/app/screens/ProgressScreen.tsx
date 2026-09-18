@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Trainee } from '../types/trainee';
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
+import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -172,16 +173,28 @@ export default function ProgressScreen({ route, navigation, trainee }: Props) {
     );
 
     const chartConfig = {
-        backgroundColor: '#e3f2fd',
-        backgroundGradientFrom: '#e3f2fd',
-        backgroundGradientTo: '#e3f2fd',
+        backgroundColor: Colors.surface,
+        backgroundGradientFrom: Colors.backgroundAlt,
+        backgroundGradientTo: Colors.surface,
         decimalPlaces: 1,
-        color: (opacity = 1) => `rgba(66, 133, 244, ${opacity})`,
-        labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+        color: (opacity = 1) => {
+            const hex = Colors.primary.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        },
+        labelColor: (opacity = 1) => {
+            const hex = Colors.textSecondary.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        },
         propsForDots: {
             r: '6',
             strokeWidth: '2',
-            stroke: '#6200ee',
+            stroke: Colors.accent,
         },
     };
 
@@ -320,7 +333,7 @@ export default function ProgressScreen({ route, navigation, trainee }: Props) {
     };
 
     if (isLoading) {
-        return <ActivityIndicator size="large" style={styles.loader} />;
+        return <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />;
     }
 
     return (
@@ -355,66 +368,85 @@ export default function ProgressScreen({ route, navigation, trainee }: Props) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
-    sectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
-    chart: { borderRadius: 8, marginVertical: 16 },
-    summaryCard: { padding: 12, backgroundColor: '#e3f2fd', borderRadius: 8, marginBottom: 16 },
-    summaryText: { fontSize: 16, marginBottom: 4 },
-    exerciseCard: { padding: 12, backgroundColor: '#f9f9f9', borderRadius: 8, marginBottom: 16 },
-    exerciseTitle: { fontSize: 18, fontWeight: 'bold' },
-    exerciseStats: { fontSize: 16, color: '#555', marginBottom: 8 },
+    container: { flex: 1, padding: Spacing.medium, backgroundColor: Colors.background },
+    sectionTitle: {
+        fontSize: 20,
+        fontFamily: Fonts.display,
+        fontWeight: '600',
+        marginBottom: Spacing.small,
+        color: Colors.textPrimary,
+    },
+    chart: { borderRadius: Radii.sm, marginVertical: Spacing.medium },
+    summaryCard: {
+        padding: Spacing.medium,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.sm,
+        marginBottom: Spacing.medium,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    summaryText: { fontSize: 16, marginBottom: 4, color: Colors.textPrimary },
+    exerciseCard: {
+        padding: Spacing.medium,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.sm,
+        marginBottom: Spacing.medium,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    exerciseTitle: { fontSize: 18, fontWeight: '600', color: Colors.textPrimary },
+    exerciseStats: { fontSize: 16, color: Colors.textSecondary, marginBottom: Spacing.small },
     recordItem: { marginBottom: 4 },
-    recordText: { fontSize: 14, color: '#555' },
-    categoryTabs: { flexDirection: 'row', marginBottom: 16 },
-    tab: { flex: 1, padding: 12, alignItems: 'center', borderBottomWidth: 1, borderColor: '#ccc' },
-    activeTab: { borderBottomWidth: 3, borderColor: '#6200ee' },
-    tabText: { fontSize: 16, color: '#555' },
-    activeTabText: { fontWeight: 'bold', color: '#6200ee' },
-    emptyText: { fontSize: 16, color: '#999', textAlign: 'center', marginTop: 16 },
-    loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    inputSection: { marginBottom: 16 },
-    weightInput: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+    recordText: { fontSize: 14, color: Colors.textSecondary },
+    categoryTabs: {
+        flexDirection: 'row',
+        marginBottom: Spacing.medium,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.sm,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        overflow: 'hidden',
+    },
+    tab: {
+        flex: 1,
+        padding: Spacing.medium,
+        alignItems: 'center',
+        borderBottomWidth: 2,
+        borderColor: 'transparent',
+    },
+    activeTab: { borderBottomWidth: 2, borderColor: Colors.primary },
+    tabText: { fontSize: 14, color: Colors.textSecondary },
+    activeTabText: { fontWeight: '600', color: Colors.primary },
+    emptyText: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center', marginTop: Spacing.medium },
+    loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
+    inputSection: { marginBottom: Spacing.medium },
+    weightInput: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.medium },
     input: {
         flex: 1,
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        padding: 8,
-        marginRight: 8,
+        borderColor: Colors.border,
+        borderRadius: Radii.sm,
+        padding: Spacing.small,
+        marginRight: Spacing.small,
+        backgroundColor: Colors.surface,
+        color: Colors.textPrimary,
     },
     saveButton: {
-        backgroundColor: '#6200ee',
-        borderRadius: 8,
-        padding: 8,
+        backgroundColor: Colors.primary,
+        borderRadius: Radii.sm,
+        padding: Spacing.small,
+        paddingHorizontal: Spacing.medium,
     },
-    saveButtonText: { color: '#fff', fontWeight: 'bold' },
+    saveButtonText: { color: Colors.textOnPrimary, fontWeight: '600' },
     tooltip: {
-        // position: 'absolute',
-        backgroundColor: '#6200ee',
-        color: '#fff',
-        padding: 4,
-        borderRadius: 8,
-        fontSize: 12,
-        textAlign: 'center',
-        marginTop:10,
-        width:170,
-        // top: -30,
-        // left: -15,
+        backgroundColor: Colors.primary,
+        padding: Spacing.small / 2,
+        borderRadius: Radii.sm,
+        marginTop: Spacing.small,
+        width: 170,
     },
-
-    // tooltip: {
-    //     position: 'absolute',
-    //     backgroundColor: '#6200ee',
-    //     color: '#fff',
-    //     padding: 8,
-    //     borderRadius: 8,
-    //     fontSize: 12,
-    //     textAlign: 'center',
-    //     width: 170,
-    //     zIndex: 10,
-    // },
     tooltipText: {
-        color: '#fff',
+        color: Colors.textOnPrimary,
         fontSize: 12,
         textAlign: 'center',
     },

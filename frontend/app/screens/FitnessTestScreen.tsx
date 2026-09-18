@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FitnessTestWithUI, LabTestWithUI, TestRecord, CategoryGroup, LabCategoryGroup, fitnessTestTemplates, labTestTemplates } from '../types/trainee';
+import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 
 type Props = {
     trainee: Trainee;
@@ -59,7 +60,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
             }
         } catch (error) {
             console.error('Error fetching trainee data:', error);
-            Alert.alert('Error', 'Failed to fetch trainee data');
+            Alert.alert('Error', 'Failed to fetch client data');
         } finally {
             setLoading(false);
         }
@@ -463,7 +464,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
             <View style={styles.dateSection}>
                 <View style={styles.dateCard}>
                     <View style={styles.dateHeader}>
-                        <MaterialIcons name="event" size={24} color="#3B82F6" />
+                        <MaterialIcons name="event" size={24} color={Colors.primary} />
                         <Text style={styles.dateTitle}>Assessment Date</Text>
                     </View>
                     <View style={styles.dateControls}>
@@ -483,7 +484,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                             onPress={() => setShowHistoryModal(true)}
                             style={styles.historyButton}
                         >
-                            <MaterialIcons name="history" size={18} color="#3B82F6" />
+                            <MaterialIcons name="history" size={18} color={Colors.primary} />
                             <Text style={styles.historyButtonText}>History</Text>
                         </TouchableOpacity>
                     </View>
@@ -500,7 +501,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                     <MaterialIcons 
                         name={isEditing ? "save" : "edit"} 
                         size={20} 
-                        color="white" 
+                        color={Colors.textOnPrimary} 
                     />
                     <Text style={styles.mainActionButtonText}>
                         {loading ? 'Saving...' : (isEditing ? 'Save Assessment' : 'Edit Assessment')}
@@ -512,7 +513,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
             <View style={styles.majorSection}>
                 <View style={styles.majorSectionHeader}>
                     <View style={styles.sectionTitleContainer}>
-                        <MaterialIcons name="fitness-center" size={24} color="#3B82F6" />
+                        <MaterialIcons name="fitness-center" size={24} color={Colors.primary} />
                         <Text style={styles.majorSectionTitle}>Physical Fitness Tests</Text>
                     </View>
                 </View>
@@ -529,7 +530,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                                         <MaterialIcons 
                                             name={firstItem.icon as any} 
                                             size={18} 
-                                            color="white" 
+                                            color={Colors.textOnPrimary} 
                                         />
                                         <Text style={styles.categoryTitle}>{category}</Text>
                                     </View>
@@ -597,7 +598,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
             <View style={styles.majorSection}>
                 <View style={styles.majorSectionHeader}>
                     <View style={styles.sectionTitleContainer}>
-                        <MaterialIcons name="science" size={24} color="#10B981" />
+                        <MaterialIcons name="science" size={24} color={Colors.success} />
                         <Text style={styles.majorSectionTitle}>Laboratory Tests</Text>
                     </View>
                 </View>
@@ -614,7 +615,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                                         <MaterialIcons 
                                             name={firstItem.icon as any} 
                                             size={18} 
-                                            color="white" 
+                                            color={Colors.textOnPrimary} 
                                         />
                                         <Text style={styles.categoryTitle}>{category}</Text>
                                     </View>
@@ -671,7 +672,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                             onPress={() => setShowHistoryModal(false)}
                             style={styles.closeButton}
                         >
-                            <MaterialIcons name="close" size={24} color="#6B7280" />
+                            <MaterialIcons name="close" size={24} color={Colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
                     
@@ -681,8 +682,8 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                             style={styles.historyItem}
                         >
                             <View style={styles.historyItemContent}>
-                                <MaterialIcons name="add" size={20} color="#10B981" />
-                                <Text style={[styles.historyDate, { color: '#10B981' }]}>Create New Assessment</Text>
+                                <MaterialIcons name="add" size={20} color={Colors.success} />
+                                <Text style={[styles.historyDate, { color: Colors.success }]}>Create New Assessment</Text>
                             </View>
                         </TouchableOpacity>
                         
@@ -699,7 +700,7 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                                 ]}
                             >
                                 <View style={styles.historyItemContent}>
-                                    <MaterialIcons name="event" size={20} color="#6B7280" />
+                                    <MaterialIcons name="event" size={20} color={Colors.textSecondary} />
                                     <View style={styles.historyItemText}>
                                         <Text style={styles.historyDate}>{formatDate(record.date)}</Text>
                                         <Text style={styles.historySubtext}>
@@ -709,14 +710,14 @@ export default function FitnessTestScreen({ trainee, navigation }: Props) {
                                     </View>
                                 </View>
                                 {currentTestDate === record.date && (
-                                    <MaterialIcons name="check-circle" size={20} color="#10B981" />
+                                    <MaterialIcons name="check-circle" size={20} color={Colors.success} />
                                 )}
                             </TouchableOpacity>
                         ))}
                         
                         {testHistory.length === 0 && (
                             <View style={styles.emptyState}>
-                                <MaterialIcons name="history" size={48} color="#D1D5DB" />
+                                <MaterialIcons name="history" size={48} color={Colors.border} />
                                 <Text style={styles.emptyStateText}>No previous assessments found</Text>
                                 <Text style={styles.emptyStateSubtext}>Create your first assessment above</Text>
                             </View>
@@ -733,13 +734,13 @@ const styles = StyleSheet.create({
   
   container: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: Colors.background,
   },
 // Action Button Container - NEW
   actionButtonContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#FAFBFC',
+    paddingHorizontal: Spacing.medium,
+    paddingVertical: Spacing.small,
+    backgroundColor: Colors.background,
   },
 
   // Main Action Button - NEW
@@ -747,9 +748,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.medium,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: Radii.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -759,19 +760,19 @@ const styles = StyleSheet.create({
 
   // Main Action Button Text - NEW
   mainActionButtonText: {
-    color: 'white',
+    color: Colors.textOnPrimary,
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 6,
   },
   // Header Styles - Compact
   header: {
-    backgroundColor: 'white',
+    backgroundColor: Colors.surface,
     paddingTop: Platform.OS === 'ios' ? 45 : 15,
     paddingBottom: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.medium,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: Colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -786,25 +787,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
+    fontFamily: Fonts.display,
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: Colors.textPrimary,
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.textSecondary,
     fontWeight: '500',
   },
 
   // Date Section Styles - Compact
   dateSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: Spacing.medium,
+    paddingVertical: Spacing.small,
   },
   dateCard: {
-    backgroundColor: 'white',
-    borderRadius: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.sm,
     padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -815,12 +817,12 @@ const styles = StyleSheet.create({
   dateHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.small,
   },
   dateTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: Colors.textPrimary,
     marginLeft: 6,
   },
   dateControls: {
@@ -833,30 +835,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     padding: 8,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: Colors.border,
     borderRadius: 6,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundAlt,
     marginRight: 8,
   },
   dateDisplay: {
     flex: 1,
     fontSize: 13,
-    color: '#374151',
+    color: Colors.textPrimary,
     fontWeight: '500',
-    paddingVertical: 8,
+    paddingVertical: Spacing.small,
   },
   historyButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#EBF4FF',
+    backgroundColor: Colors.activeCard,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: Colors.primaryMuted,
   },
   historyButtonText: {
-    color: '#3B82F6',
+    color: Colors.primary,
     fontWeight: '600',
     marginLeft: 4,
     fontSize: 12,
@@ -870,11 +872,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.medium,
     paddingVertical: 10,
-    backgroundColor: 'white',
+    backgroundColor: Colors.surface,
     borderTopWidth: 2,
-    borderTopColor: '#3B82F6',
+    borderTopColor: Colors.primary,
   },
   sectionTitleContainer: {
     flexDirection: 'row',
@@ -884,21 +886,21 @@ const styles = StyleSheet.create({
   majorSectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1F2937',
-    marginLeft: 8,
+    color: Colors.textPrimary,
+    marginLeft: Spacing.small,
   },
   sectionContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.medium,
     paddingTop: 2,
     // Physical Fitness Tests - Light Blue Background
-    backgroundColor: '#F0F8FF',
+    backgroundColor: Colors.backgroundAlt,
   },
   
   // Lab Section Content - Light Green Background
   labSectionContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.medium,
     paddingTop: 2,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: Colors.activeCard,
   },
 
   // Action Button Styles - Compact
@@ -912,13 +914,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   editButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: Colors.primary,
   },
   saveButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.success,
   },
   actionButtonText: {
-    color: 'white',
+    color: Colors.textOnPrimary,
     fontWeight: '600',
     marginLeft: 4,
     fontSize: 12,
@@ -926,9 +928,9 @@ const styles = StyleSheet.create({
 
   // Category Card Styles - Compact
   categoryCard: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    marginBottom: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.sm,
+    marginBottom: Spacing.small,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -938,7 +940,7 @@ const styles = StyleSheet.create({
   },
   categoryHeader: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: Spacing.small,
   },
   categoryHeaderContent: {
     flexDirection: 'row',
@@ -947,7 +949,7 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: 'white',
+    color: Colors.textOnPrimary,
     marginLeft: 6,
   },
 
@@ -958,7 +960,7 @@ const styles = StyleSheet.create({
   },
   testItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.border,
   },
   testContent: {
     flexDirection: 'row',
@@ -970,7 +972,7 @@ const styles = StyleSheet.create({
   testName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1F2937',
+    color: Colors.textPrimary,
     marginBottom: 6,
   },
 
@@ -978,7 +980,7 @@ const styles = StyleSheet.create({
   resultsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: Spacing.small,
   },
   resultItem: {
     flex: 1,
@@ -986,7 +988,7 @@ const styles = StyleSheet.create({
   resultLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.textSecondary,
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
@@ -995,29 +997,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     padding: 6,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: Colors.border,
     borderRadius: 4,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundAlt,
     textAlign: 'center',
     minHeight: 28,
   },
   resultDisplay: {
     padding: 6,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundAlt,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.border,
     minHeight: 28,
     justifyContent: 'center',
   },
   resultText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#374151',
+    color: Colors.textPrimary,
     textAlign: 'center',
   },
   resultTextEmpty: {
-    color: '#9CA3AF',
+    color: Colors.textSecondary,
     fontStyle: 'italic',
   },
 
@@ -1035,12 +1037,12 @@ const styles = StyleSheet.create({
   labTestName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1F2937',
+    color: Colors.textPrimary,
     marginBottom: 2,
   },
   normalRange: {
     fontSize: 10,
-    color: '#6B7280',
+    color: Colors.textSecondary,
     fontWeight: '500',
   },
   labResultsContainer: {
@@ -1054,41 +1056,42 @@ const styles = StyleSheet.create({
   // Modal Styles - Compact
   modalContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.background,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.medium,
     paddingVertical: 12,
-    backgroundColor: 'white',
+    backgroundColor: Colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: Colors.border,
     paddingTop: Platform.OS === 'ios' ? 45 : 15,
   },
   modalTitle: {
+    fontFamily: Fonts.display,
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: Colors.textPrimary,
   },
   closeButton: {
     padding: 6,
     borderRadius: 6,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.backgroundAlt,
   },
   modalContent: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: Spacing.medium,
+    paddingTop: Spacing.small,
   },
 
   // History Item Styles - Compact
   historyItem: {
-    backgroundColor: 'white',
-    borderRadius: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.sm,
     padding: 12,
-    marginBottom: 8,
+    marginBottom: Spacing.small,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -1100,8 +1103,8 @@ const styles = StyleSheet.create({
   },
   selectedHistoryItem: {
     borderWidth: 2,
-    borderColor: '#10B981',
-    backgroundColor: '#ECFDF5',
+    borderColor: Colors.success,
+    backgroundColor: Colors.activeCard,
   },
   historyItemContent: {
     flexDirection: 'row',
@@ -1109,18 +1112,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   historyItemText: {
-    marginLeft: 8,
+    marginLeft: Spacing.small,
     flex: 1,
   },
   historyDate: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1F2937',
+    color: Colors.textPrimary,
     marginBottom: 1,
   },
   historySubtext: {
     fontSize: 10,
-    color: '#6B7280',
+    color: Colors.textSecondary,
   },
 
   // Empty State Styles - Compact
@@ -1132,14 +1135,14 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.textSecondary,
     marginTop: 12,
     marginBottom: 4,
     textAlign: 'center',
   },
   emptyStateSubtext: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 16,
   },
@@ -1151,7 +1154,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 3,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.border,
     borderRadius: 1.5,
     overflow: 'hidden',
   },
@@ -1161,7 +1164,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 10,
-    color: '#6B7280',
+    color: Colors.textSecondary,
     marginTop: 2,
     textAlign: 'right',
   },
@@ -1169,11 +1172,11 @@ const styles = StyleSheet.create({
   // Additional Utility Styles - Compact
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 8,
+    backgroundColor: Colors.border,
+    marginVertical: Spacing.small,
   },
   spacer: {
-    height: 8,
+    height: Spacing.small,
   },
   row: {
     flexDirection: 'row',
@@ -1195,7 +1198,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   marginBottom8: {
-    marginBottom: 8,
+    marginBottom: Spacing.small,
   },
   paddingHorizontal12: {
     paddingHorizontal: 12,
@@ -1215,13 +1218,13 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   statusNormal: {
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.success,
   },
   statusHigh: {
-    backgroundColor: '#EF4444',
+    backgroundColor: Colors.error,
   },
   statusLow: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: Colors.warning,
   },
   
 

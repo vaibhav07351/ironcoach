@@ -7,6 +7,7 @@ import { Trainee, HealthQuestionnaireResponses, questionMapping } from '../types
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import Constants from 'expo-constants';
+import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 
 type Props = {
     trainee: Trainee;
@@ -132,17 +133,19 @@ export default function HealthQuestionnaireScreen({ trainee, navigation }: Props
         <SafeAreaView style={styles.safeArea}>
             <View style={styles.container}>
                 <View style={styles.header}>
-                    <Text style={styles.title}>Health Questionnaire</Text>
-                    <Text style={styles.subtitle}>Answer honestly</Text>
+                    <Text style={styles.eyebrow}>IronCoach</Text>
+                    <Text style={styles.title}>Health questionnaire</Text>
+                    <Text style={styles.subtitle}>Answer honestly — your coach uses this for safety.</Text>
                 </View>
 
                 <TouchableOpacity 
                     style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
                     onPress={handleSave}
                     disabled={isSaving}
+                    activeOpacity={0.88}
                 >
                     <Text style={styles.saveButtonText}>
-                        {isSaving ? "Saving..." : "✓ Save"}
+                        {isSaving ? 'Saving…' : 'Save answers'}
                     </Text>
                 </TouchableOpacity>
 
@@ -190,69 +193,70 @@ export default function HealthQuestionnaireScreen({ trainee, navigation }: Props
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#f8fafc',
+        backgroundColor: Colors.background,
     },
     container: {
         flex: 1,
-        paddingHorizontal: 12,
-        paddingTop: 8,
+        paddingHorizontal: Spacing.medium,
+        paddingTop: Spacing.small,
     },
     header: {
-        marginBottom: 12,
-        paddingBottom: 8,
+        marginBottom: Spacing.medium,
+        paddingBottom: Spacing.medium,
         borderBottomWidth: 1,
-        borderBottomColor: '#e2e8f0',
+        borderBottomColor: Colors.border,
+    },
+    eyebrow: {
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        color: Colors.accent,
+        marginBottom: 4,
     },
     title: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1e293b',
-        marginBottom: 2,
+        fontFamily: Fonts.display,
+        fontSize: 26,
+        fontWeight: '700',
+        color: Colors.primary,
+        marginBottom: 4,
     },
     subtitle: {
-        fontSize: 12,
-        color: '#64748b',
+        fontSize: 14,
+        color: Colors.textSecondary,
+        lineHeight: 20,
     },
     saveButton: {
-        backgroundColor: '#10b981',
-        borderRadius: 6,
-        paddingVertical: 10,
-        paddingHorizontal: 20,
+        backgroundColor: Colors.accent,
+        borderRadius: Radii.md,
+        paddingVertical: 12,
+        paddingHorizontal: Spacing.medium,
         alignItems: 'center',
-        marginBottom: 12,
-        alignSelf: 'flex-end',
-        minWidth: 80,
+        marginBottom: Spacing.medium,
     },
     saveButtonDisabled: {
-        backgroundColor: '#9ca3af',
-        opacity: 0.7,
+        opacity: 0.6,
     },
     saveButtonText: {
-        color: '#ffffff',
-        fontSize: 13,
-        fontWeight: '600',
+        color: Colors.textPrimary,
+        fontSize: 15,
+        fontWeight: '800',
     },
     scrollContent: {
-        paddingBottom: 20,
+        paddingBottom: Spacing.xl,
     },
     questionsContainer: {
-        backgroundColor: '#ffffff',
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 1,
-        },
-        shadowOpacity: 0.03,
-        shadowRadius: 1,
-        elevation: 1,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.md,
+        padding: Spacing.medium,
+        marginBottom: Spacing.medium,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     item: {
-        paddingVertical: 8,
-        borderBottomWidth: 0.5,
-        borderBottomColor: '#f1f5f9',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border,
     },
     questionContent: {
         flexDirection: 'row',
@@ -260,43 +264,37 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     label: {
-        fontSize: 13,
-        color: '#334155',
+        fontSize: 14,
+        color: Colors.textPrimary,
         flex: 1,
-        marginRight: 8,
-        lineHeight: 16,
+        marginRight: Spacing.small,
+        lineHeight: 20,
     },
     switch: {
-        transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
+        transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }],
     },
     commentsSection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 8,
-        padding: 12,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 1,
-        },
-        shadowOpacity: 0.03,
-        shadowRadius: 1,
-        elevation: 1,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.md,
+        padding: Spacing.medium,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     commentLabel: {
         fontSize: 14,
-        fontWeight: '600',
-        marginBottom: 8,
-        color: '#1e293b',
+        fontWeight: '700',
+        marginBottom: Spacing.small,
+        color: Colors.primary,
     },
     textArea: {
         borderWidth: 1,
-        borderColor: '#d1d5db',
-        borderRadius: 6,
-        padding: 10,
+        borderColor: Colors.border,
+        borderRadius: Radii.sm,
+        padding: 12,
         textAlignVertical: 'top',
-        backgroundColor: '#ffffff',
-        fontSize: 13,
-        minHeight: 70,
-        color: '#374151',
+        backgroundColor: Colors.background,
+        fontSize: 14,
+        minHeight: 80,
+        color: Colors.textPrimary,
     },
 });

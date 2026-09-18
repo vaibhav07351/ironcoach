@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import AboutDetailsScreen from './AboutDetailsScreen'; // Split AboutTrainee main details
 import FitnessTestScreen from './FitnessTestScreen';
 import HealthQuestionnaireScreen from './HealthQuestionnaireScreen';
+import { Colors } from '@/constants/theme';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -11,10 +12,11 @@ export default function AboutTraineeScreen({ trainee }: { trainee: any }) {
     return (
         <Tab.Navigator
             screenOptions={{
-                tabBarActiveTintColor: '#6200ee',
-                tabBarIndicatorStyle: { backgroundColor: '#6200ee' },
+                tabBarActiveTintColor: Colors.primary,
+                tabBarInactiveTintColor: Colors.textSecondary,
+                tabBarIndicatorStyle: { backgroundColor: Colors.primary },
                 tabBarLabelStyle: { fontSize: 14, fontWeight: '600' },
-                tabBarStyle: { backgroundColor: '#f7f9fc' },
+                tabBarStyle: { backgroundColor: Colors.surface },
             }}
         >
             <Tab.Screen

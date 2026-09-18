@@ -79,3 +79,43 @@ func (r *TrainerRepository) DeleteTrainer(email string) error {
 	_, err := r.collection.DeleteOne(ctx, bson.M{"email": email})
 	return err
 }
+
+// UpdateTrainer patches trainer fields by email.
+func (r *TrainerRepository) UpdateTrainer(email string, update map[string]interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	update["updated_at"] = time.Now()
+	_, err := r.collection.UpdateOne(ctx, bson.M{"email": email}, bson.M{"$set": update})
+	return err
+}
+
+// FindDiscoveryVisible returns trainers opted into client discovery with a location.
+func (r *TrainerRepository) FindDiscoveryVisible() ([]models.Trainer, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{
+		"discovery_visible": true,
+		"$or": []bson.M{
+			{"latitude": bson.M{"$exists": true, "$ne": 0}},
+			{"longitude": bson.M{"$exists": true, "$ne": 0}},
+			{"city": bson.M{"$exists": true, "$nin": []interface{}{"", nil}}},
+			{"pincode": bson.M{"$exists": true, "$nin": []interface{}{"", nil}}},
+		},
+	}
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var trainers []models.Trainer
+	if err := cursor.All(ctx, &trainers); err != nil {
+		return nil, err
+	}
+	if trainers == nil {
+		trainers = []models.Trainer{}
+	}
+	return trainers, nil
+}

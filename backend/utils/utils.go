@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"errors"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -20,40 +22,66 @@ func CheckPassword(hashedPassword, plainPassword string) bool {
 	return err == nil
 }
 
-var jwtKey = []byte(os.Getenv("JWT_SECRET"))
+var (
+	jwtKeyOnce sync.Once
+	jwtKey     []byte
+)
 
-//JWT= header.payload.signature
-// Claims(Payload) structure for JWT
+func getJWTKey() []byte {
+	jwtKeyOnce.Do(func() {
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			panic("JWT_SECRET is not set")
+		}
+		jwtKey = []byte(secret)
+	})
+	return jwtKey
+}
+
+// Claims is the JWT payload for authenticated users.
 type Claims struct {
-	Email string `json:"email"`
+	Email     string `json:"email"`
+	UserID    string `json:"user_id,omitempty"`
+	Role      string `json:"role,omitempty"` // trainer | client
+	TrainerID string `json:"trainer_id,omitempty"`
+	TraineeID string `json:"trainee_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
-// GenerateJWT creates a signed token for a given email
+// GenerateJWT creates a signed token for a given email (legacy trainer login).
 func GenerateJWT(email string) (string, error) {
-	expirationTime := time.Now().Add(7 *24 * time.Hour)
-	claims := &Claims{
+	return GenerateAuthJWT(Claims{
 		Email: email,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtKey)
+		Role:  "trainer",
+	})
 }
 
-// VerifyJWT validates a token and extracts the claims
+// GenerateAuthJWT creates a signed token with full auth claims.
+func GenerateAuthJWT(claims Claims) (string, error) {
+	expirationTime := time.Now().Add(7 * 24 * time.Hour)
+	claims.RegisteredClaims = jwt.RegisteredClaims{
+		ExpiresAt: jwt.NewNumericDate(expirationTime),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &claims)
+	return token.SignedString(getJWTKey())
+}
+
+// VerifyJWT validates a token and extracts the claims.
 func VerifyJWT(tokenString string) (*Claims, error) {
-    claims := &Claims{}
+	claims := &Claims{}
 
-    token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-        return jwtKey, nil
-    })
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return getJWTKey(), nil
+	})
 
-    if err != nil || !token.Valid {
-        return nil, err
-    }
+	if err != nil || !token.Valid {
+		return nil, err
+	}
 
-    return claims, nil
+	return claims, nil
 }

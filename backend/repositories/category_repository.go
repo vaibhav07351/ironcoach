@@ -17,7 +17,6 @@ type CategoryRepository struct {
 	collection *mongo.Collection
 }
 
-// Constructor for CategoryRepository
 func NewCategoryRepository() *CategoryRepository {
 	db := database.DB.Database("ironcoach")
 	return &CategoryRepository{
@@ -32,26 +31,25 @@ func (r *CategoryRepository) AddCategory(category models.Category) error {
 	return err
 }
 
-func (r *CategoryRepository) GetCategories(trainerID string) ([]models.Category, error) {
+func (r *CategoryRepository) GetCategoriesByTrainee(traineeID string) ([]models.Category, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Filter categories based on trainerID
-	filter := bson.M{"trainer_id": trainerID}
+	filter := bson.M{"trainee_id": traineeID}
+	opts := options.Find().SetSort(bson.D{{Key: "name", Value: 1}}).SetLimit(200)
 
-	cursor, err := r.collection.Find(ctx, filter)
+	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
 	var categories []models.Category
-	for cursor.Next(ctx) {
-		var category models.Category
-		if err := cursor.Decode(&category); err != nil {
-			return nil, err
-		}
-		categories = append(categories, category)
+	if err := cursor.All(ctx, &categories); err != nil {
+		return nil, err
+	}
+	if categories == nil {
+		categories = []models.Category{}
 	}
 	return categories, nil
 }
@@ -63,7 +61,9 @@ func (r *CategoryRepository) UpdateCategory(id string, updatedName string) error
 	if err != nil {
 		return err
 	}
-	_, err = r.collection.UpdateOne(ctx, bson.M{"_id": objectId}, bson.M{"$set": bson.M{"name": updatedName}})
+	_, err = r.collection.UpdateOne(ctx, bson.M{"_id": objectId}, bson.M{
+		"$set": bson.M{"name": updatedName, "updated_at": time.Now()},
+	})
 	return err
 }
 
@@ -79,7 +79,7 @@ func (r *CategoryRepository) CascadeUpdateCategoryInExercises(categoryID string,
 	_, err = r.collection.Database().Collection("exercises").UpdateMany(
 		ctx,
 		bson.M{"category_id": objectId},
-		bson.M{"$set": bson.M{"category": updatedCategoryName}},
+		bson.M{"$set": bson.M{"category": updatedCategoryName, "updated_at": time.Now()}},
 	)
 	return err
 }
@@ -95,7 +95,7 @@ func (r *CategoryRepository) DeleteCategory(id string) error {
 	return err
 }
 
-func (r *CategoryRepository) IsCategoryExists(name string, trainerID string) (bool, error) {
+func (r *CategoryRepository) IsCategoryExists(name string, traineeID string, excludeID string) (bool, error) {
 	if r.collection == nil {
 		return false, fmt.Errorf("MongoDB collection is not initialized")
 	}
@@ -103,15 +103,23 @@ func (r *CategoryRepository) IsCategoryExists(name string, trainerID string) (bo
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	result := r.collection.FindOne(ctx, bson.M{"name": name, "trainer_id": trainerID})
-	if result.Err() != nil {
-		if result.Err() == mongo.ErrNoDocuments {
-			return false, nil // Document does not exist
+	filter := bson.M{"name": name, "trainee_id": traineeID}
+	if excludeID != "" {
+		oid, err := primitive.ObjectIDFromHex(excludeID)
+		if err != nil {
+			return false, err
 		}
-		return false, result.Err() // Other errors
+		filter["_id"] = bson.M{"$ne": oid}
 	}
 
-	return true, nil // Document exists
+	result := r.collection.FindOne(ctx, filter)
+	if result.Err() != nil {
+		if result.Err() == mongo.ErrNoDocuments {
+			return false, nil
+		}
+		return false, result.Err()
+	}
+	return true, nil
 }
 
 func (r *CategoryRepository) GetCategoryByID(id string) (models.Category, error) {
@@ -128,35 +136,19 @@ func (r *CategoryRepository) GetCategoryByID(id string) (models.Category, error)
 	return category, err
 }
 
-// Delete all categories by trainer ID
+func (r *CategoryRepository) DeleteCategoriesByTrainee(traineeID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := r.collection.DeleteMany(ctx, bson.M{"trainee_id": traineeID})
+	return err
+}
+
+// DeleteCategoriesByTrainer removes legacy trainer-scoped categories (pre-client-catalog).
 func (r *CategoryRepository) DeleteCategoriesByTrainer(trainerID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	_, err := r.collection.DeleteMany(ctx, bson.M{"trainer_id": trainerID})
 	return err
-}
-
-// Get all category IDs by trainer ID (for cascading deletes)
-func (r *CategoryRepository) GetCategoryIDsByTrainer(trainerID string) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	cursor, err := r.collection.Find(ctx, bson.M{"trainer_id": trainerID}, options.Find().SetProjection(bson.M{"_id": 1}))
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var categoryIDs []string
-	for cursor.Next(ctx) {
-		var result struct {
-			ID primitive.ObjectID `bson:"_id"`
-		}
-		if err := cursor.Decode(&result); err != nil {
-			return nil, err
-		}
-		categoryIDs = append(categoryIDs, result.ID.Hex())
-	}
-	return categoryIDs, nil
 }

@@ -8,7 +8,6 @@ import {
     TextInput,
     Alert,
     ScrollView,
-    KeyboardAvoidingView,
     Platform,
     Animated,
     Modal,
@@ -23,7 +22,7 @@ import { Trainee } from '../types/trainee';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -65,8 +64,8 @@ const CrossPlatformDatePicker = ({
                 onRequestClose={onClose}
             >
                 <View style={styles.webDatePickerOverlay}>
-                    <View style={[styles.webDatePickerContainer, { backgroundColor: isDarkMode ? '#333' : '#fff' }]}>
-                        <Text style={[styles.webDatePickerTitle, { color: isDarkMode ? '#fff' : '#000' }]}>
+                    <View style={[styles.webDatePickerContainer, { backgroundColor: isDarkMode ? '#1A2E28' : Colors.surface }]}>
+                        <Text style={[styles.webDatePickerTitle, { color: isDarkMode ? Colors.textOnPrimary : Colors.textPrimary }]}>
                             Select Date
                         </Text>
                         <input
@@ -76,9 +75,9 @@ const CrossPlatformDatePicker = ({
                             style={{
                                 padding: 12,
                                 borderRadius: 8,
-                                border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
-                                backgroundColor: isDarkMode ? '#444' : '#fff',
-                                color: isDarkMode ? '#fff' : '#000',
+                                border: `1px solid ${isDarkMode ? Colors.primaryMuted : Colors.border}`,
+                                backgroundColor: isDarkMode ? Colors.primary : Colors.surface,
+                                color: isDarkMode ? Colors.textOnPrimary : Colors.textPrimary,
                                 fontSize: 16,
                                 width: '100%',
                                 marginBottom: 20,
@@ -89,7 +88,7 @@ const CrossPlatformDatePicker = ({
                                 style={[styles.webDatePickerButton, styles.cancelButton]}
                                 onPress={onClose}
                             >
-                                <Text style={styles.webDatePickerButtonText}>Cancel</Text>
+                                <Text style={[styles.webDatePickerButtonText, styles.cancelButtonText]}>Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.webDatePickerButton, styles.confirmButton]}
@@ -380,13 +379,10 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                 onPress={() => navigation.navigate('WorkoutLogForm', { workoutLog: item, trainee })}
                 activeOpacity={0.8}
             >
-                <LinearGradient
-                    colors={isDarkMode ? ['#2a2a2a', '#1a1a1a'] : ['#ffffff', '#f8f9fa']}
-                    style={styles.logCardGradient}
-                >
+                <View style={styles.logCardGradient}>
                     {/* <View style={styles.logCardHeader}>
                         <View style={styles.dateContainer}>
-                            <Icon name="calendar" size={20} color="#6200ee" />
+                            <Icon name="calendar" size={20} color={Colors.primary} />
                             <Text style={styles.logDate}>{formatDate(item.date)}</Text>
                         </View>
                         <TouchableOpacity
@@ -402,7 +398,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                         {item.workouts.map((workout, index) => (
                             <View key={index} style={styles.workoutDetails}>
                                 <View style={styles.exerciseHeader}>
-                                    <Icon name="dumbbell" size={16} color="#6200ee" />
+                                    <Icon name="dumbbell" size={16} color={Colors.primary} />
                                     <Text style={styles.exerciseName}>{workout.exercise}</Text>
                                 </View>
                                 <View style={styles.setsContainer}>
@@ -420,7 +416,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                                             onPress={() => handleDelete(item.id)}
                                             activeOpacity={0.7}
                                         >
-                                            <Icon name="trash-can-outline" size={24} color="#ff3b30" />
+                                            <Icon name="trash-can-outline" size={24} color={Colors.error} />
                                         </TouchableOpacity>
                                     </View>
                                 </View>
@@ -428,7 +424,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                             
                         ))}
                     </View>
-                </LinearGradient>
+                </View>
             </TouchableOpacity>
         );
     }, [styles, navigation, trainee, formatDate, handleDelete, isDarkMode]);
@@ -478,7 +474,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
     if (!trainee || !traineeId) {
         return (
             <View style={styles.container}>
-                <Text style={styles.emptyMessage}>No trainee data available</Text>
+                <Text style={styles.emptyMessage}>No client data available</Text>
             </View>
         );
     }
@@ -486,27 +482,21 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
     if (isLoading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#6200ee" />
+                <ActivityIndicator size="large" color={Colors.primary} />
                 <Text style={styles.loadingText}>Loading workout logs...</Text>
             </View>
         );
     }
 
     return (
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <LinearGradient
-                colors={isDarkMode ? ['#1a1a1a', '#000000'] : ['#f8f9fa', '#ffffff']}
-                style={styles.container}
-            >
+        <View style={{ flex: 1 }}>
+            <View style={styles.container}>
                 {/* Header */}
                 <View style={styles.headerContainer}>
-                    <LinearGradient
-                        colors={['#6200ee', '#8e24aa']}
-                        style={styles.titleGradient}
-                    >
+                    <View style={styles.titleGradient}>
                         <Text style={styles.titleText}>Workout Logs</Text>
                         <Text style={styles.traineeNameText}>{traineeName}</Text>
-                    </LinearGradient>
+                    </View>
                 </View>
                 
                 {/* Date Navigation Header */}
@@ -516,7 +506,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                         onPress={() => navigateDate('previous')}
                         activeOpacity={0.7}
                     >
-                        <Icon name="chevron-left" size={28} color="#6200ee" />
+                        <Icon name="chevron-left" size={28} color={Colors.primary} />
                     </TouchableOpacity>
 
                     <TouchableOpacity 
@@ -526,7 +516,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                     >
                      <View style={styles.inlineRow}>
                      
-                        <Icon name="calendar" size={24} color="#6200ee" style={styles.calendarIcon} />
+                        <Icon name="calendar" size={24} color={Colors.primary} style={styles.calendarIcon} />
                         <Text style={styles.dateDisplayText}>
                             {formatDisplayDate(selectedDate)}
                         </Text>
@@ -541,7 +531,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                         onPress={() => navigateDate('next')}
                         activeOpacity={0.7}
                     >
-                        <Icon name="chevron-right" size={28} color="#6200ee" />
+                        <Icon name="chevron-right" size={28} color={Colors.primary} />
                     </TouchableOpacity>
                 </View>
 
@@ -560,21 +550,15 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                     onPress={toggleSidebar}
                     activeOpacity={0.7}
                 >
-                    <LinearGradient
-                        colors={['#6200ee', '#8e24aa']}
-                        style={styles.sidebarToggleGradient}
-                    >
-                        <Icon name="filter-variant" size={24} color="#fff" />
-                    </LinearGradient>
+                    <View style={styles.sidebarToggleGradient}>
+                        <Icon name="filter-variant" size={24} color={Colors.textOnPrimary} />
+                    </View>
                 </TouchableOpacity>
 
                 {/* Enhanced Sidebar */}
                 <Animated.View
                     style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}>
-                    <LinearGradient
-                        colors={isDarkMode ? ['#2a2a2a', '#1a1a1a'] : ['#ffffff', '#f8f9fa']}
-                        style={styles.sidebarGradient}
-                    >
+                    <View style={styles.sidebarGradient}>
                         <View style={styles.sidebarHeader}>
                             <Text style={styles.sidebarTitle}>Filters & Sort</Text>
                             <TouchableOpacity onPress={toggleSidebar}>
@@ -585,7 +569,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                         <ScrollView contentContainerStyle={styles.sidebarContent}>
                             <View style={styles.filterSection}>
                                 <Text style={styles.filterLabel}>
-                                    <Icon name="magnify" size={16} color="#6200ee" /> Exercise Filter
+                                    <Icon name="magnify" size={16} color={Colors.primary} /> Exercise Filter
                                 </Text>
                                 <TextInput
                                     style={styles.input}
@@ -598,13 +582,13 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
 
                             <View style={styles.filterSection}>
                                 <Text style={styles.filterLabel}>
-                                    <Icon name="calendar-range" size={16} color="#6200ee" /> Date Range
+                                    <Icon name="calendar-range" size={16} color={Colors.primary} /> Date Range
                                 </Text>
                                 <TouchableOpacity 
                                     style={styles.datePickerButton}
                                     onPress={() => setShowStartDatePicker(true)}
                                 >
-                                    <Icon name="calendar-start" size={20} color="#6200ee" />
+                                    <Icon name="calendar-start" size={20} color={Colors.primary} />
                                     <Text style={styles.datePickerText}>
                                         {startDate ? startDate.toLocaleDateString() : 'Start Date'}
                                     </Text>
@@ -614,7 +598,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                                     style={styles.datePickerButton}
                                     onPress={() => setShowEndDatePicker(true)}
                                 >
-                                    <Icon name="calendar-end" size={20} color="#6200ee" />
+                                    <Icon name="calendar-end" size={20} color={Colors.primary} />
                                     <Text style={styles.datePickerText}>
                                         {endDate ? endDate.toLocaleDateString() : 'End Date'}
                                     </Text>
@@ -623,7 +607,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
 
                             <View style={styles.filterSection}>
                                 <Text style={styles.filterLabel}>
-                                    <Icon name="sort" size={16} color="#6200ee" /> Sort By
+                                    <Icon name="sort" size={16} color={Colors.primary} /> Sort By
                                 </Text>
                                 <View style={styles.sortButtons}>
                                     <TouchableOpacity
@@ -634,8 +618,8 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                                         onPress={() => setSortOption('date')}
                                         activeOpacity={0.8}
                                     >
-                                        <Icon name="calendar-clock" size={16} color="#fff" />
-                                        <Text style={styles.sortButtonText}>Date</Text>
+                                        <Icon name="calendar-clock" size={16} color={sortOption === 'date' ? Colors.textOnPrimary : Colors.primary} />
+                                        <Text style={[styles.sortButtonText, sortOption !== 'date' && styles.sortButtonTextInactive]}>Date</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                         style={[
@@ -645,8 +629,8 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                                         onPress={() => setSortOption('weight')}
                                         activeOpacity={0.8}
                                     >
-                                        <Icon name="weight-kilogram" size={16} color="#fff" />
-                                        <Text style={styles.sortButtonText}>Weight</Text>
+                                        <Icon name="weight-kilogram" size={16} color={sortOption === 'weight' ? Colors.textOnPrimary : Colors.primary} />
+                                        <Text style={[styles.sortButtonText, sortOption !== 'weight' && styles.sortButtonTextInactive]}>Weight</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -656,11 +640,11 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                                 onPress={resetFilters}
                                 activeOpacity={0.8}
                             >
-                                <Icon name="refresh" size={18} color="#fff" />
+                                <Icon name="refresh" size={18} color={Colors.textOnPrimary} />
                                 <Text style={styles.resetButtonText}>Reset Filters</Text>
                             </TouchableOpacity>
                         </ScrollView>
-                    </LinearGradient>
+                    </View>
                 </Animated.View>
 
                 {/* Workout Logs List */}
@@ -672,7 +656,7 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                     showsVerticalScrollIndicator={false}
                     ListEmptyComponent={
                         <View style={styles.emptyStateContainer}>
-                            <Icon name="clipboard-text-outline" size={64} color="#ccc" />
+                            <Icon name="clipboard-text-outline" size={64} color={Colors.border} />
                             <Text style={styles.emptyMessage}>No workout logs found</Text>
                             <Text style={styles.emptySubMessage}>
                                 Start by adding your first workout log!
@@ -687,17 +671,14 @@ export default function WorkoutLogListScreen({ route, navigation, trainee: propT
                     onPress={() => navigation.navigate('WorkoutCategories', { traineeId: traineeId, selectedDate })}
                     activeOpacity={0.8}
                 >
-                    <LinearGradient
-                        colors={['#6200ee', '#8e24aa']}
-                        style={styles.addButtonGradient}
-                    >
-                        <Icon name="plus" size={24} color="#fff" />
+                    <View style={styles.addButtonGradient}>
+                        <Icon name="plus" size={24} color={Colors.textOnPrimary} />
                         <Text style={styles.addButtonText}>Add Workout Log</Text>
-                    </LinearGradient>
+                    </View>
                 </TouchableOpacity>
-            </LinearGradient>
+            </View>
              <Toast topOffset={70} />
-        </KeyboardAvoidingView>
+        </View>
     );
 }
 
@@ -706,59 +687,57 @@ const createStyles = (isDarkMode: boolean) =>
         container: {
             flex: 1,
             paddingTop: Platform.OS === 'ios' ? 30 : 10,
+            backgroundColor: isDarkMode ? Colors.textPrimary : Colors.background,
         },
         headerContainer: {
-            marginBottom: 20,
-            paddingHorizontal: 5,
+            marginBottom: Spacing.medium,
+            paddingHorizontal: Spacing.small,
         },
         titleGradient: {
-            borderRadius: 15,
-            padding: 10,
+            borderRadius: Radii.md,
+            padding: Spacing.medium,
             alignItems: 'center',
+            backgroundColor: Colors.primary,
+            marginHorizontal: Spacing.medium,
         },
         titleText: {
             fontSize: 22,
+            fontFamily: Fonts.display,
             fontWeight: 'bold',
-            color: '#fff',
+            color: Colors.textOnPrimary,
             textAlign: 'center',
         },
         traineeNameText: {
             fontSize: 16,
-            color: '#fff',
+            color: Colors.textOnPrimary,
             opacity: 0.9,
-            marginTop: 5,
+            marginTop: Spacing.small / 2,
         },
         dateNavigationContainer: {
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginHorizontal: 20,
-            marginBottom: 10,
-            paddingHorizontal: 10,
+            marginHorizontal: Spacing.large,
+            marginBottom: Spacing.small,
+            paddingHorizontal: Spacing.small,
         },
         dateNavButton: {
-            padding: 10,
-            borderRadius: 25,
-            backgroundColor: isDarkMode ? '#333' : '#fff',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 3,
+            padding: Spacing.small,
+            borderRadius: Radii.lg,
+            backgroundColor: isDarkMode ? Colors.primaryMuted : Colors.surface,
+            borderWidth: 1,
+            borderColor: Colors.border,
         },
         dateDisplayContainer: {
             flex: 1,
             alignItems: 'center',
-            backgroundColor: isDarkMode ? '#333' : '#fff',
-            marginHorizontal: 15,
-            paddingVertical: 10,
-            paddingHorizontal: 20,
-            borderRadius: 15,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 3,
+            backgroundColor: isDarkMode ? Colors.primaryMuted : Colors.surface,
+            marginHorizontal: Spacing.medium,
+            paddingVertical: Spacing.small,
+            paddingHorizontal: Spacing.medium,
+            borderRadius: Radii.md,
+            borderWidth: 1,
+            borderColor: Colors.border,
         },
         inlineRow: {
             flexDirection: 'row',
@@ -770,24 +749,24 @@ const createStyles = (isDarkMode: boolean) =>
         },
         dateDisplayText: {
             fontSize: 18,
-            fontWeight: 'bold',
-            color: isDarkMode ? '#fff' : '#000',
+            fontWeight: '600',
+            color: isDarkMode ? Colors.textOnPrimary : Colors.textPrimary,
             marginBottom: 1,
         },
         dateDisplaySubText: {
             fontSize: 14,
-            color: isDarkMode ? '#aaa' : '#666',
+            color: isDarkMode ? Colors.border : Colors.textSecondary,
         },
         loadingContainer: {
             flex: 1,
             justifyContent: 'center',
             alignItems: 'center',
-            backgroundColor: isDarkMode ? '#000' : '#fff',
+            backgroundColor: isDarkMode ? Colors.textPrimary : Colors.background,
         },
         loadingText: {
-            marginTop: 10,
+            marginTop: Spacing.small,
             fontSize: 16,
-            color: isDarkMode ? '#fff' : '#000',
+            color: isDarkMode ? Colors.textOnPrimary : Colors.textSecondary,
         },
         sidebar: {
             position: 'absolute',
@@ -801,22 +780,23 @@ const createStyles = (isDarkMode: boolean) =>
         },
         sidebarGradient: {
             flex: 1,
-            padding: 20,
-             borderRadius: 15,
+            padding: Spacing.large,
+            borderRadius: Radii.md,
+            backgroundColor: isDarkMode ? Colors.primary : Colors.surface,
         },
         sidebarHeader: {
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: 20,
-            paddingBottom: 15,
+            marginBottom: Spacing.large,
+            paddingBottom: Spacing.medium,
             borderBottomWidth: 1,
-            borderBottomColor: isDarkMode ? '#444' : '#eee',
+            borderBottomColor: Colors.border,
         },
         sidebarTitle: {
             fontSize: 20,
-            fontWeight: 'bold',
-            color: isDarkMode ? '#fff' : '#000',
+            fontWeight: '600',
+            color: isDarkMode ? Colors.textOnPrimary : Colors.textPrimary,
         },
         sidebarContent: {
             paddingBottom: 20,
@@ -827,9 +807,9 @@ const createStyles = (isDarkMode: boolean) =>
         sidebarToggle: {
             position: 'absolute',
             top: Platform.OS === 'ios' ? 50 : 20,
-            left: 20,
+            left: Spacing.large,
             zIndex: 1001,
-            borderRadius: 25,
+            borderRadius: Radii.lg,
             overflow: 'hidden',
         },
         sidebarToggleGradient: {
@@ -837,38 +817,39 @@ const createStyles = (isDarkMode: boolean) =>
             height: 50,
             justifyContent: 'center',
             alignItems: 'center',
+            backgroundColor: Colors.primary,
         },
         filterLabel: {
             fontSize: 16,
             fontWeight: '600',
-            color: isDarkMode ? '#fff' : '#000',
-            marginBottom: 10,
+            color: isDarkMode ? Colors.textOnPrimary : Colors.textPrimary,
+            marginBottom: Spacing.small,
             flexDirection: 'row',
             alignItems: 'center',
         },
         input: {
-            padding: 15,
+            padding: Spacing.medium,
             borderWidth: 1,
-            borderColor: isDarkMode ? '#555' : '#ddd',
-            borderRadius: 12,
-            color: isDarkMode ? '#fff' : '#000',
-            backgroundColor: isDarkMode ? '#444' : '#f8f9fa',
+            borderColor: Colors.border,
+            borderRadius: Radii.sm,
+            color: isDarkMode ? Colors.textOnPrimary : Colors.textPrimary,
+            backgroundColor: isDarkMode ? Colors.primaryMuted : Colors.backgroundAlt,
             fontSize: 16,
         },
         datePickerButton: {
             flexDirection: 'row',
             alignItems: 'center',
-            padding: 15,
+            padding: Spacing.medium,
             borderWidth: 1,
-            borderColor: isDarkMode ? '#555' : '#ddd',
-            borderRadius: 12,
-            marginBottom: 10,
-            backgroundColor: isDarkMode ? '#444' : '#f8f9fa',
+            borderColor: Colors.border,
+            borderRadius: Radii.sm,
+            marginBottom: Spacing.small,
+            backgroundColor: isDarkMode ? Colors.primaryMuted : Colors.backgroundAlt,
         },
         datePickerText: {
             fontSize: 16,
-            color: isDarkMode ? '#fff' : '#000',
-            marginLeft: 10,
+            color: isDarkMode ? Colors.textOnPrimary : Colors.textPrimary,
+            marginLeft: Spacing.small,
         },
         sortButtons: {
             flexDirection: 'row',
@@ -880,52 +861,56 @@ const createStyles = (isDarkMode: boolean) =>
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#6200ee',
-            paddingVertical: 12,
-            paddingHorizontal: 16,
-            borderRadius: 12,
+            backgroundColor: Colors.backgroundAlt,
+            paddingVertical: Spacing.small + 4,
+            paddingHorizontal: Spacing.medium,
+            borderRadius: Radii.sm,
             gap: 5,
+            borderWidth: 1,
+            borderColor: Colors.border,
         },
         selectedSortButton: {
-            backgroundColor: '#8e24aa',
+            backgroundColor: Colors.primary,
+            borderColor: Colors.primary,
         },
         sortButtonText: {
-            color: '#fff',
+            color: Colors.textOnPrimary,
             fontSize: 14,
             fontWeight: '600',
+        },
+        sortButtonTextInactive: {
+            color: Colors.textPrimary,
         },
         resetButton: {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#ff6347',
-            paddingVertical: 15,
-            paddingHorizontal: 20,
-            borderRadius: 12,
-            marginTop: 10,
-            gap: 8,
+            backgroundColor: Colors.accent,
+            paddingVertical: Spacing.medium,
+            paddingHorizontal: Spacing.large,
+            borderRadius: Radii.sm,
+            marginTop: Spacing.small,
+            gap: Spacing.small,
         },
         resetButtonText: {
-            color: '#fff',
+            color: Colors.textPrimary,
             fontSize: 16,
             fontWeight: '600',
         },
         listContainer: {
-            paddingHorizontal: 20,
+            paddingHorizontal: Spacing.large,
             paddingBottom: 0,
         },
         logCard: {
-            marginBottom: 10,
-            borderRadius: 15,
+            marginBottom: Spacing.small,
+            borderRadius: Radii.md,
             overflow: 'hidden',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 6,
-            elevation: 5,
+            backgroundColor: isDarkMode ? Colors.primaryMuted : Colors.surface,
+            borderWidth: 1,
+            borderColor: Colors.border,
         },
         logCardGradient: {
-            padding: 4,
+            padding: Spacing.small / 2,
         },
         logCardHeader: {
             flexDirection: 'row',
@@ -941,23 +926,23 @@ const createStyles = (isDarkMode: boolean) =>
         logDate: {
             fontSize: 16,
             fontWeight: '600',
-            color: isDarkMode ? '#fff' : '#000',
+            color: isDarkMode ? Colors.textOnPrimary : Colors.textPrimary,
         },
         deleteButton: {
-            padding: 8,
-            borderRadius: 20,
-            backgroundColor: isDarkMode ? '#333' : '#f0f0f0',
-            marginLeft:10,
+            padding: Spacing.small,
+            borderRadius: Radii.lg,
+            backgroundColor: isDarkMode ? Colors.primary : Colors.backgroundAlt,
+            marginLeft: Spacing.small,
         },
         workoutContainer: {
             gap: 1,
         },
         workoutDetails: {
-            backgroundColor: isDarkMode ? '#333' : '#f8f9fa',
-            padding: 8,
-            borderRadius: 12,
+            backgroundColor: isDarkMode ? Colors.primary : Colors.backgroundAlt,
+            padding: Spacing.small,
+            borderRadius: Radii.sm,
             borderLeftWidth: 4,
-            borderLeftColor: '#6200ee',
+            borderLeftColor: Colors.primary,
         },
         exerciseHeader: {
             flexDirection: 'row',
@@ -967,8 +952,8 @@ const createStyles = (isDarkMode: boolean) =>
         },
         exerciseName: {
             fontSize: 18,
-            fontWeight: 'bold',
-            color: isDarkMode ? '#fff' : '#000',
+            fontWeight: '600',
+            color: isDarkMode ? Colors.textOnPrimary : Colors.textPrimary,
         },
         setsContainer: {
             flexDirection: 'row',
@@ -982,12 +967,12 @@ const createStyles = (isDarkMode: boolean) =>
         },
         setsLabel: {
             fontSize: 14,
-            color: isDarkMode ? '#aaa' : '#666',
+            color: Colors.textSecondary,
         },
         setsValue: {
             fontSize: 16,
             fontWeight: '600',
-            color: '#6200ee',
+            color: Colors.primary,
         },
         totalWeightContainer: {
             flexDirection: 'row',
@@ -996,12 +981,12 @@ const createStyles = (isDarkMode: boolean) =>
         },
         totalWeightLabel: {
             fontSize: 14,
-            color: isDarkMode ? '#aaa' : '#666',
+            color: Colors.textSecondary,
         },
         totalWeightValue: {
             fontSize: 16,
             fontWeight: '600',
-            color: '#8e24aa',
+            color: Colors.primaryMuted,
         },
         emptyStateContainer: {
             flex: 1,
@@ -1012,37 +997,33 @@ const createStyles = (isDarkMode: boolean) =>
         emptyMessage: {
             fontSize: 20,
             fontWeight: '600',
-            color: isDarkMode ? '#aaa' : '#666',
+            color: Colors.textSecondary,
             textAlign: 'center',
-            marginTop: 20,
+            marginTop: Spacing.large,
         },
         emptySubMessage: {
             fontSize: 16,
-            color: isDarkMode ? '#777' : '#888',
+            color: Colors.textSecondary,
             textAlign: 'center',
-            marginTop: 10,
+            marginTop: Spacing.small,
         },
         addButton: {
             position: 'absolute',
             bottom: 30,
-            right: 20,
-            borderRadius: 25,
+            right: Spacing.large,
+            borderRadius: Radii.lg,
             overflow: 'hidden',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
         },
         addButtonGradient: {
             flexDirection: 'row',
             alignItems: 'center',
-            paddingVertical: 15,
-            paddingHorizontal: 20,
-            gap: 8,
+            paddingVertical: Spacing.medium,
+            paddingHorizontal: Spacing.large,
+            gap: Spacing.small,
+            backgroundColor: Colors.primary,
         },
         addButtonText: {
-            color: '#fff',
+            color: Colors.textOnPrimary,
             fontSize: 16,
             fontWeight: '600',
         },
@@ -1056,20 +1037,17 @@ const createStyles = (isDarkMode: boolean) =>
         webDatePickerContainer: {
             width: screenWidth * 0.8,
             maxWidth: 400,
-            padding: 20,
-            paddingRight:30,
-            borderRadius: 15,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 10,
+            padding: Spacing.large,
+            paddingRight: 30,
+            borderRadius: Radii.md,
+            borderWidth: 1,
+            borderColor: Colors.border,
         },
         webDatePickerTitle: {
             fontSize: 18,
-            fontWeight: 'bold',
+            fontWeight: '600',
             textAlign: 'center',
-            marginBottom: 20,
+            marginBottom: Spacing.large,
         },
         webDatePickerButtons: {
             flexDirection: 'row',
@@ -1085,13 +1063,16 @@ const createStyles = (isDarkMode: boolean) =>
             
         },
         cancelButton: {
-            backgroundColor: '#ff6347',
+            backgroundColor: Colors.backgroundAlt,
+        },
+        cancelButtonText: {
+            color: Colors.textSecondary,
         },
         confirmButton: {
-            backgroundColor: '#6200ee',
+            backgroundColor: Colors.primary,
         },
         webDatePickerButtonText: {
-            color: '#fff',
+            color: Colors.textOnPrimary,
             fontSize: 16,
             fontWeight: '600',
         },

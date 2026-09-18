@@ -5,7 +5,6 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Modal,
@@ -18,6 +17,7 @@ import { Trainee } from '../types/trainee';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
+import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -100,7 +100,7 @@ const CustomDatePicker = ({
           <View style={styles.webDatePickerContainer}>
             {/* Header */}
             <View style={styles.datePickerHeader}>
-              <Icon name="calendar" size={24} color="#6200ee" />
+              <Icon name="calendar" size={24} color={Colors.primary} />
               <Text style={styles.datePickerTitle}>Select Date</Text>
             </View>
             
@@ -117,21 +117,21 @@ const CustomDatePicker = ({
                   width: '100%',
                   padding: 16,
                   fontSize: 16,
-                  border: '2px solid #e9ecef',
-                  borderRadius: 12,
+                  border: `2px solid ${Colors.border}`,
+                  borderRadius: Radii.sm,
                   outline: 'none',
                   fontFamily: 'system-ui, -apple-system, sans-serif',
-                  backgroundColor: '#f8f9fa',
-                  color: '#2c3e50',
+                  backgroundColor: Colors.backgroundAlt,
+                  color: Colors.textPrimary,
                   transition: 'border-color 0.2s ease',
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#6200ee';
-                  e.target.style.backgroundColor = '#fff';
+                  e.target.style.borderColor = Colors.primary;
+                  e.target.style.backgroundColor = Colors.surface;
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = '#e9ecef';
-                  e.target.style.backgroundColor = '#f8f9fa';
+                  e.target.style.borderColor = Colors.border;
+                  e.target.style.backgroundColor = Colors.backgroundAlt;
                 }}
               />
             </View>
@@ -155,7 +155,7 @@ const CustomDatePicker = ({
                 style={[styles.actionButton, styles.cancelButton]} 
                 onPress={handleCancel}
               >
-                <Icon name="close" size={16} color="#6c757d" />
+                <Icon name="close" size={16} color={Colors.textSecondary} />
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               
@@ -163,7 +163,7 @@ const CustomDatePicker = ({
                 style={[styles.actionButton, styles.confirmButton]} 
                 onPress={handleConfirm}
               >
-                <Icon name="check" size={16} color="#fff" />
+                <Icon name="check" size={16} color={Colors.textOnPrimary} />
                 <Text style={styles.confirmButtonText}>Confirm</Text>
               </TouchableOpacity>
             </View>
@@ -361,7 +361,7 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
           style={styles.addButton}
           onPress={() => navigateToAddFood(item.name)}
         >
-          <Icon name="plus" size={20} color="#fff" />
+          <Icon name="plus" size={20} color={Colors.textOnPrimary} />
         </TouchableOpacity>
       </View>
       {item.foods.length > 0 ? (
@@ -399,17 +399,14 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6200ee" />
+        <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Loading diet data...</Text>
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.headerContainer}>
         <Text style={styles.titleText}>Diet Logs - {trainee.name}</Text>
@@ -420,7 +417,7 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
             style={styles.navButton}
             onPress={() => navigateDate('previous')}
           >
-            <Icon name="chevron-left" size={24} color="#6200ee" />
+            <Icon name="chevron-left" size={24} color={Colors.primary} />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -431,14 +428,14 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
               <Text style={styles.dateText}>{formatDisplayDate(selectedDate)}</Text>
               <Text style={styles.fullDateText}>{formatFullDate(selectedDate)}</Text>
             </View>
-            <Icon name="calendar" size={18} color="#6200ee" />
+            <Icon name="calendar" size={18} color={Colors.primary} />
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.navButton}
             onPress={() => navigateDate('next')}
           >
-            <Icon name="chevron-right" size={24} color="#6200ee" />
+            <Icon name="chevron-right" size={24} color={Colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -471,34 +468,30 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
         selectedDate={selectedDate}
         onDateChange={handleDateChange}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: Colors.background,
   },
   headerContainer: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: Spacing.large,
+    paddingTop: Spacing.medium,
+    paddingBottom: Spacing.medium,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    borderBottomColor: Colors.border,
   },
   titleText: {
     fontSize: 18,
+    fontFamily: Fonts.display,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: Colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.medium,
   },
   dateNavigation: {
     flexDirection: 'row',
@@ -506,20 +499,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   navButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#f8f9fa',
+    padding: Spacing.small,
+    borderRadius: Radii.lg,
+    backgroundColor: Colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   dateButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 20,
-    gap: 8,
+    paddingHorizontal: Spacing.medium,
+    paddingVertical: Spacing.small,
+    backgroundColor: Colors.backgroundAlt,
+    borderRadius: Radii.lg,
+    gap: Spacing.small,
     flex: 1,
-    marginHorizontal: 12,
+    marginHorizontal: Spacing.medium,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   dateContainer: {
     alignItems: 'center',
@@ -528,64 +525,58 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: Colors.textPrimary,
   },
   fullDateText: {
     fontSize: 12,
-    color: '#6c757d',
+    color: Colors.textSecondary,
     fontWeight: '500',
     marginTop: 2,
   },
   summaryContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    gap: 12,
+    paddingHorizontal: Spacing.large,
+    paddingVertical: Spacing.medium,
+    gap: Spacing.medium,
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    paddingVertical: Spacing.medium,
+    paddingHorizontal: Spacing.medium,
+    borderRadius: Radii.sm,
     alignItems: 'center',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#6c757d',
+    color: Colors.textSecondary,
     fontWeight: '500',
     marginBottom: 4,
   },
   summaryValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#6200ee',
+    color: Colors.primary,
   },
   listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: Spacing.large,
+    paddingBottom: Spacing.large,
   },
   mealCard: {
-    backgroundColor: '#fff',
-    marginBottom: 12,
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 5,
+    backgroundColor: Colors.surface,
+    marginBottom: Spacing.medium,
+    borderRadius: Radii.md,
+    padding: Spacing.medium,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   mealHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.medium,
   },
   mealTitleContainer: {
     flex: 1,
@@ -593,16 +584,16 @@ const styles = StyleSheet.create({
   mealTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: Colors.textPrimary,
     marginBottom: 2,
   },
   mealStats: {
     fontSize: 12,
-    color: '#6c757d',
+    color: Colors.textSecondary,
     fontWeight: '500',
   },
   addButton: {
-    backgroundColor: '#6200ee',
+    backgroundColor: Colors.primary,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -610,7 +601,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   foodList: {
-    gap: 8,
+    gap: Spacing.small,
   },
   foodItem: {
     flexDirection: 'row',
@@ -620,85 +611,82 @@ const styles = StyleSheet.create({
   },
   foodName: {
     fontSize: 14,
-    color: '#2c3e50',
+    color: Colors.textPrimary,
     fontWeight: '500',
     flex: 1,
-    marginRight: 8,
+    marginRight: Spacing.small,
   },
   foodStats: {
     fontSize: 12,
-    color: '#6c757d',
+    color: Colors.textSecondary,
     fontWeight: '500',
   },
   emptyText: {
     fontSize: 14,
-    color: '#adb5bd',
+    color: Colors.textSecondary,
     fontStyle: 'italic',
     textAlign: 'center',
-    paddingVertical: 8,
+    paddingVertical: Spacing.small,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: Colors.background,
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: Spacing.medium,
     fontSize: 16,
-    color: '#6c757d',
+    color: Colors.textSecondary,
   },
-  // Enhanced Web Date Picker Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Spacing.large,
   },
   webDatePickerContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.lg,
     padding: 0,
     minWidth: 320,
     maxWidth: 400,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   datePickerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 24,
-    backgroundColor: '#f8f9fa',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    paddingVertical: Spacing.large,
+    paddingHorizontal: Spacing.large,
+    backgroundColor: Colors.backgroundAlt,
+    borderTopLeftRadius: Radii.lg,
+    borderTopRightRadius: Radii.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-    gap: 8,
+    borderBottomColor: Colors.border,
+    gap: Spacing.small,
   },
   datePickerTitle: {
     fontSize: 20,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#2c3e50',
+    color: Colors.textPrimary,
   },
   dateInputContainer: {
-    padding: 20,
-    paddingRight:50,
-    paddingBottom: 16,
+    padding: Spacing.large,
+    paddingRight: 50,
+    paddingBottom: Spacing.medium,
   },
   datePreview: {
-    paddingHorizontal: 24,
-    paddingBottom: 20,
+    paddingHorizontal: Spacing.large,
+    paddingBottom: Spacing.large,
     alignItems: 'center',
   },
   datePreviewLabel: {
     fontSize: 12,
-    color: '#6c757d',
+    color: Colors.textSecondary,
     fontWeight: '500',
     marginBottom: 4,
     textTransform: 'uppercase',
@@ -707,43 +695,43 @@ const styles = StyleSheet.create({
   datePreviewValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: Colors.textPrimary,
     textAlign: 'center',
   },
   buttonContainer: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-    backgroundColor: '#f8f9fa',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.backgroundAlt,
+    borderBottomLeftRadius: Radii.lg,
+    borderBottomRightRadius: Radii.lg,
   },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: Spacing.medium,
+    paddingHorizontal: Spacing.large,
     gap: 6,
   },
   cancelButton: {
     borderRightWidth: 1,
-    borderRightColor: '#e9ecef',
-    borderBottomLeftRadius: 20,
+    borderRightColor: Colors.border,
+    borderBottomLeftRadius: Radii.lg,
   },
   confirmButton: {
-    backgroundColor: '#6200ee',
-    borderBottomRightRadius: 20,
+    backgroundColor: Colors.primary,
+    borderBottomRightRadius: Radii.lg,
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6c757d',
+    color: Colors.textSecondary,
   },
   confirmButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: Colors.textOnPrimary,
   },
 });

@@ -36,5 +36,7 @@ func RegisterTrainerRoutes(router *gin.Engine) {
 	})
 
 	protected.GET("/getTrainerDetails", trainerController.GetTrainerDetails)
+	protected.PUT("/trainers/me/discovery", trainerController.UpdateDiscoveryProfile)
+	protected.GET("/trainers/discover", trainerController.DiscoverTrainers)
 	protected.DELETE("/deleteTrainer/:email", trainerController.DeleteTrainer)
 }

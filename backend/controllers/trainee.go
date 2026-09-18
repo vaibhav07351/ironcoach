@@ -1,11 +1,12 @@
 package controllers
 
 import (
-    "net/http"
-    "ironcoach/models"
-    "ironcoach/services"
+	"net/http"
 
-    "github.com/gin-gonic/gin"
+	"ironcoach/models"
+	"ironcoach/services"
+
+	"github.com/gin-gonic/gin"
 )
 
 type TraineeController struct {
@@ -73,20 +74,31 @@ func (ctrl *TraineeController) GetTraineeByID(c *gin.Context) {
 
 // Update a trainee
 func (ctrl *TraineeController) UpdateTrainee(c *gin.Context) {
-    id := c.Param("id")
-    var update map[string]interface{}
+	id := c.Param("id")
+	var update map[string]interface{}
 
-    if err := c.ShouldBindJSON(&update); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-        return
-    }
+	if err := c.ShouldBindJSON(&update); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-    if err := ctrl.service.UpdateTrainee(id, update); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update trainee"})
-        return
-    }
+	// Clients may edit their own profile fields, not coach-owned linkage/status.
+	if role, _ := c.Get("role"); role == models.RoleClient {
+		delete(update, "trainer_id")
+		delete(update, "user_id")
+		delete(update, "active_status")
+		delete(update, "membership_type")
+		delete(update, "start_date")
+		delete(update, "rating")
+		delete(update, "rating_count")
+	}
 
-    c.JSON(http.StatusOK, gin.H{"message": "Trainee updated successfully"})
+	if err := ctrl.service.UpdateTrainee(id, update); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update trainee"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Trainee updated successfully"})
 }
 
 // Delete a trainee

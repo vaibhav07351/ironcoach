@@ -27,42 +27,65 @@ export type Progress = {
 };
 
 export type RootStackParamList = {
-    Dashboard: undefined; // Dashboard screen
-    Login: undefined; // Login screen
-    Signup: undefined; // Signup screen
-    Trainees: { status: true | false }; // List of trainees based on status
-    TraineeDetail: { trainee: Trainee }; // Trainee detail with tabs
+    Dashboard: undefined;
+    Login: undefined;
+    Signup: undefined;
+    ClientHome: undefined;
+    InviteRedeem: undefined;
+    FindCoachHub: undefined;
+    TrainerDiscover: undefined;
+    CoachRequests: undefined;
+    InviteClient: { traineeId: string; traineeName: string };
+    Trainees: { status: true | false };
+    TraineeDetail: { trainee: Trainee };
     AboutTrainee: { trainee: Trainee };
-    TraineeForm: { trainee?: any; traineeId?: string }; // Include optional traineeId
-    WorkoutLogs: { trainee: Trainee }; // List of workout logs for a trainee
-    WorkoutLogForm: { workoutLog?: any; trainee: any }; // Edit/Add workout log (new design)
+    TraineeForm: { trainee?: Trainee; traineeId?: string };
+    WorkoutLogs: { trainee: Trainee };
+    WorkoutLogForm: {
+        workoutLog?: {
+            id?: string;
+            date?: string;
+            workouts?: unknown[];
+            notes?: string;
+        };
+        trainee: Trainee;
+    };
     Progress: { trainee: Trainee };
 
-    // Flow for Adding Workout Logs
-    WorkoutCategories: { traineeId: string; selectedDate:Date }; // Categories screen
+    WorkoutCategories: { traineeId: string; selectedDate: Date };
     AddCustomCategory: {
         traineeId: string;
-        categoryId?: string; // Optional categoryId for editing
-        currentName?: string; // Optional currentName for pre-filling during editing
-        selectedDate?:Date;
+        categoryId?: string;
+        currentName?: string;
+        selectedDate?: Date;
     };
-    WorkoutExercises: { category: string; category_id:string; traineeId: string; selectedDate: Date}; // Exercises under a category
-    AddCustomExercise: { category: string; category_id:string; traineeId: string; exerciseId?: string; currentName?: string; };
-    AddExerciseForm: { exercise: string; exercise_id:string; traineeId: string; selectedDate:Date }; // Add exercise details
+    WorkoutExercises: {
+        category: string;
+        category_id: string;
+        traineeId: string;
+        selectedDate: Date;
+    };
+    AddCustomExercise: {
+        category: string;
+        category_id: string;
+        traineeId: string;
+        exerciseId?: string;
+        currentName?: string;
+    };
+    AddExerciseForm: {
+        exercise: string;
+        exercise_id: string;
+        traineeId: string;
+        selectedDate: Date;
+    };
 
-    // Trainer Profile
-    TrainerProfile: { trainerId: string }; // Trainer profile screen
+    TrainerProfile: { trainerId?: string };
 
-    // LogDiet: { trainee: Trainee; date: string }; // Add this line
     AddFood: {
-        dietEntryId?: string; // Optional ID of the existing diet entry
-        trainee: any;
+        dietEntryId?: string;
+        trainee: Trainee;
         date: string;
         mealName: string;
         existingFoods: Food[];
     };
-
-
-
-
 };

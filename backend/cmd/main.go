@@ -42,6 +42,7 @@ func main() {
 	})
 
 	// Register routes
+	routes.RegisterAuthRoutes(router)
 	routes.RegisterTrainerRoutes(router)
 	routes.RegisterTraineeRoutes(router)
 	routes.RegisterWorkoutLogRoutes(router)
@@ -50,6 +51,8 @@ func main() {
 	routes.RegisterDietEntryRoutes(router)
 	routes.RegisterProgressRoutes(router)
 	routes.RegisterImageRoutes(router)
+	routes.RegisterCoachRequestRoutes(router)
+	routes.RegisterRatingRoutes(router)
 
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{

@@ -42,7 +42,8 @@ func (r *ExerciseRepository) GetExercisesByCategoryID(categoryID string) ([]mode
 		return nil, err
 	}
 
-	cursor, err := r.collection.Find(ctx, bson.M{"category_id": objectID})
+	opts := options.Find().SetSort(bson.D{{Key: "name", Value: 1}}).SetLimit(500)
+	cursor, err := r.collection.Find(ctx, bson.M{"category_id": objectID}, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -107,17 +108,24 @@ func (r *ExerciseRepository) CascadeDeleteExerciseFromWorkoutLogs(exerciseID str
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Convert exerciseID to ObjectID
 	objectId, err := primitive.ObjectIDFromHex(exerciseID)
 	if err != nil {
 		return err
 	}
 
-	// Delete records from "workout_logs" where "workouts.exercise_id" matches
-	_, err = r.collection.Database().Collection("workout_logs").DeleteMany(
+	logs := r.collection.Database().Collection("workout_logs")
+
+	// Pull matching workout entries only — do not wipe entire logs.
+	if _, err = logs.UpdateMany(
 		ctx,
 		bson.M{"workouts.exercise_id": objectId},
-	)
+		bson.M{"$pull": bson.M{"workouts": bson.M{"exercise_id": objectId}}},
+	); err != nil {
+		return err
+	}
+
+	// Clean up logs that no longer have any workouts.
+	_, err = logs.DeleteMany(ctx, bson.M{"workouts": bson.M{"$size": 0}})
 	return err
 }
 
@@ -126,44 +134,42 @@ func (r *ExerciseRepository) DeleteExercisesByCategoryID(categoryID string) erro
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Convert category ID to ObjectID
 	objectID, err := primitive.ObjectIDFromHex(categoryID)
 	if err != nil {
 		return err
 	}
 
-	// Step 1: Find all exercises in the specified category
-	cursor, err := r.collection.Find(ctx, bson.M{"category_id": objectID})
+	cursor, err := r.collection.Find(ctx, bson.M{"category_id": objectID}, options.Find().SetProjection(bson.M{"_id": 1}))
 	if err != nil {
 		return err
 	}
 	defer cursor.Close(ctx)
 
-	var exercises []bson.M
-	if err := cursor.All(ctx, &exercises); err != nil {
-		return err
-	}
-
-	// Step 2: Extract exercise IDs
 	var exerciseIDs []primitive.ObjectID
-	for _, exercise := range exercises {
-		if id, ok := exercise["_id"].(primitive.ObjectID); ok {
-			exerciseIDs = append(exerciseIDs, id)
+	for cursor.Next(ctx) {
+		var result struct {
+			ID primitive.ObjectID `bson:"_id"`
 		}
+		if err := cursor.Decode(&result); err != nil {
+			return err
+		}
+		exerciseIDs = append(exerciseIDs, result.ID)
 	}
 
-	// Step 3: Delete logs in "workout_logs" for these exercises
+	logs := r.collection.Database().Collection("workout_logs")
 	if len(exerciseIDs) > 0 {
-		_, err = r.collection.Database().Collection("workout_logs").DeleteMany(
+		if _, err = logs.UpdateMany(
 			ctx,
 			bson.M{"workouts.exercise_id": bson.M{"$in": exerciseIDs}},
-		)
-		if err != nil {
+			bson.M{"$pull": bson.M{"workouts": bson.M{"exercise_id": bson.M{"$in": exerciseIDs}}}},
+		); err != nil {
+			return err
+		}
+		if _, err = logs.DeleteMany(ctx, bson.M{"workouts": bson.M{"$size": 0}}); err != nil {
 			return err
 		}
 	}
 
-	// Step 4: Delete exercises in the specified category
 	_, err = r.collection.DeleteMany(ctx, bson.M{"category_id": objectID})
 	return err
 }

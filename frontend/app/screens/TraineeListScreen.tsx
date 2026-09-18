@@ -1,865 +1,733 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    FlatList,
-    TouchableOpacity,
-    ActivityIndicator,
-    Button,
-    Alert,
-    Image,
-    TextInput,
-    ScrollView,
-    PanResponder,
-    Platform,
-    Modal,
-    Dimensions,
-    Animated,
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Image,
+  TextInput,
+  ScrollView,
+  PanResponder,
+  Modal,
+  Animated,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { Trainee } from '../types/trainee';
-import { Colors, Spacing } from '../../constants/theme';
+import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 import { useIsFocused } from '@react-navigation/native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StarRating } from '@/components/StarRating';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trainees'>;
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-// Enhanced Delete Confirmation Modal
-function DeleteConfirmationModal({ 
-    visible, 
-    onConfirm, 
-    onCancel, 
-    traineeName,
-    isLoading 
+function DeleteConfirmationModal({
+  visible,
+  onConfirm,
+  onCancel,
+  traineeName,
+  isLoading,
 }: {
-    visible: boolean;
-    onConfirm: () => void;
-    onCancel: () => void;
-    traineeName: string;
-    isLoading: boolean;
-}) {
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  visible: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  traineeName: string;
+  isLoading: boolean;
+}): React.JSX.Element {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
-    useEffect(() => {
-        if (visible) {
-            Animated.parallel([
-                Animated.timing(fadeAnim, {
-                    toValue: 1,
-                    duration: 200,
-                    useNativeDriver: true,
-                }),
-                Animated.spring(scaleAnim, {
-                    toValue: 1,
-                    tension: 100,
-                    friction: 8,
-                    useNativeDriver: true,
-                }),
-            ]).start();
-        } else {
-            Animated.parallel([
-                Animated.timing(fadeAnim, {
-                    toValue: 0,
-                    duration: 150,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(scaleAnim, {
-                    toValue: 0.8,
-                    duration: 150,
-                    useNativeDriver: true,
-                }),
-            ]).start();
-        }
-    }, [visible]);
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible, fadeAnim, scaleAnim]);
 
-    return (
-        <Modal
-            transparent
-            visible={visible}
-            animationType="none"
-            onRequestClose={onCancel}
+  return (
+    <Modal transparent visible={visible} animationType="none" onRequestClose={onCancel}>
+      <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+        <Animated.View
+          style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}
         >
-            <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
-                <Animated.View style={[
-                    styles.modalContainer,
-                    { transform: [{ scale: scaleAnim }] }
-                ]}>
-                    <View style={styles.modalHeader}>
-                        <Ionicons name="warning" size={48} color="#FF6B6B" />
-                        <Text style={styles.modalTitle}>Delete Trainee</Text>
-                    </View>
-                    
-                    <Text style={styles.modalMessage}>
-                        Are you sure you want to permanently delete{'\n'}
-                        <Text style={styles.modalTraineeName}>{traineeName}</Text>?
-                    </Text>
-                    
-                    <View style={styles.modalButtonContainer}>
-                        <TouchableOpacity
-                            style={[styles.modalButton, styles.cancelButton]}
-                            onPress={onCancel}
-                            disabled={isLoading}
-                        >
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity
-                            style={[styles.modalButton, styles.deleteButton]}
-                            onPress={onConfirm}
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <ActivityIndicator size="small" color="#fff" />
-                            ) : (
-                                <>
-                                    <Ionicons name="trash-outline" size={16} color="#fff" />
-                                    <Text style={styles.deleteButtonText}>Delete</Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                </Animated.View>
-            </Animated.View>
-        </Modal>
-    );
+          <Text style={styles.modalTitle}>Delete client</Text>
+          <Text style={styles.modalMessage}>
+            Permanently remove{' '}
+            <Text style={styles.modalName}>{traineeName}</Text>? This cannot be
+            undone.
+          </Text>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalBtn, styles.cancelBtn]}
+              onPress={onCancel}
+              disabled={isLoading}
+            >
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalBtn, styles.deleteBtn]}
+              onPress={onConfirm}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.deleteBtnText}>Delete</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  );
 }
 
 export default function TraineeListScreen({ route, navigation }: Props) {
-    const { status } = route.params;
-    const [trainees, setTrainees] = useState<Trainee[]>([]);
-    const [filteredTrainees, setFilteredTrainees] = useState<Trainee[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const isFocused = useIsFocused();
-    const [selectedChar, setSelectedChar] = useState<string | null>(null);
-    const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-    const [traineeToDelete, setTraineeToDelete] = useState<Trainee | null>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [hoveredChar, setHoveredChar] = useState<string | null>(null);
-    const [alphabetHeight, setAlphabetHeight] = useState(0);
-    const alphabetScrollY = useRef(new Animated.Value(0)).current;
-    const [scrollY] = useState(new Animated.Value(0));
-    
-    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-    
-    const fetchTrainees = async () => {
-        setIsLoading(true);
-        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-        try {
-            const token = await AsyncStorage.getItem('token');
-            if (!token) {
-                console.error('No token found. Redirecting to login.');
-                navigation.navigate('Login');
-                return;
-            }
+  const { status } = route.params;
+  const [trainees, setTrainees] = useState<Trainee[]>([]);
+  const [filteredTrainees, setFilteredTrainees] = useState<Trainee[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const isFocused = useIsFocused();
+  const [selectedChar, setSelectedChar] = useState<string | null>(null);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [traineeToDelete, setTraineeToDelete] = useState<Trainee | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [hoveredChar, setHoveredChar] = useState<string | null>(null);
+  const [alphabetHeight, setAlphabetHeight] = useState(0);
 
-            const response = await fetch(`${backendUrl}/trainees?active_status=${status}`, {
-                headers: { Authorization: `${token}` },
-            });
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
-            if (!response.ok) {
-                throw new Error('Failed to fetch trainees');
-            }
+  useEffect(() => {
+    navigation.setOptions({
+      title: status ? 'Active clients' : 'Inactive clients',
+    });
+  }, [navigation, status]);
 
-            const data = await response.json();
+  const fetchTrainees = async (): Promise<void> => {
+    setIsLoading(true);
+    const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        navigation.navigate('Login');
+        return;
+      }
 
-            if (!Array.isArray(data)) {
-                setTrainees([]);
-                setFilteredTrainees([]);
-                return;
-            }
+      const response = await fetch(
+        `${backendUrl}/trainees?active_status=${status}`,
+        { headers: { Authorization: `${token}` } }
+      );
 
-            const sortedTrainees = data.sort((a: Trainee, b: Trainee) =>
-                a.name.localeCompare(b.name)
-            );
-            setTrainees(sortedTrainees);
-            setFilteredTrainees(sortedTrainees);
-        } catch (error) {
-            console.error('Error fetching trainees:', error);
-            setTrainees([]);
-            setFilteredTrainees([]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    const handleSearch = (query: string) => {
-        setSearchQuery(query);
-        setSelectedChar(null);
-        if (query.trim() === '') {
-            setFilteredTrainees(trainees);
-        } else {
-            setFilteredTrainees(
-                trainees.filter((trainee) =>
-                    trainee.name.toLowerCase().includes(query.toLowerCase())
-                )
-            );
-        }
-    };
+      if (!response.ok) {
+        throw new Error('Failed to fetch clients');
+      }
 
-    const handleAlphabeticalFilter = (character: string) => {
-        setSelectedChar(character);
-        setSearchQuery('');
-        setFilteredTrainees(
-            trainees.filter((trainee) =>
-                trainee.name.toLowerCase().startsWith(character.toLowerCase())
-            )
-        );
-    };
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        setTrainees([]);
+        setFilteredTrainees([]);
+        return;
+      }
 
-    const resetFilter = () => {
-        setSelectedChar(null);
-        setSearchQuery('');
-        setFilteredTrainees(trainees);
-    };
-
-    const deleteTrainee = async (id: string) => {
-        setIsDeleting(true);
-        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-        try {
-            const token = await AsyncStorage.getItem('token');
-            if (!token) {
-                console.error('No token found. Redirecting to login.');
-                navigation.navigate('Login');
-                return;
-            }
-
-            const response = await fetch(`${backendUrl}/trainees/${id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `${token}` },
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to delete trainee');
-            }
-
-            setTrainees((prevTrainees) =>
-                prevTrainees.filter((trainee) => trainee.id !== id)
-            );
-            setFilteredTrainees((prevTrainees) =>
-                prevTrainees.filter((trainee) => trainee.id !== id)
-            );
-            
-            setDeleteModalVisible(false);
-            setTraineeToDelete(null);
-        } catch (error) {
-            console.error('Error deleting trainee:', error);
-            Alert.alert('Error', 'Failed to delete trainee. Please try again.');
-        } finally {
-            setIsDeleting(false);
-        }
-    };
-
-    const handleDeletePress = (trainee: Trainee) => {
-        setTraineeToDelete(trainee);
-        setDeleteModalVisible(true);
-    };
-
-    const handleDeleteConfirm = () => {
-        if (traineeToDelete) {
-            deleteTrainee(traineeToDelete.id);
-        }
-    };
-
-    const handleDeleteCancel = () => {
-        setDeleteModalVisible(false);
-        setTraineeToDelete(null);
-    };
-
-    useEffect(() => {
-        if (isFocused) {
-            fetchTrainees();
-        }
-    }, [isFocused, status]);
-
-    const handleTraineeSelect = (trainee: Trainee) => {
-        navigation.navigate('TraineeDetail', { trainee });
-    };
-
-    // Enhanced PanResponder for better touch handling with visual feedback
-    const panResponder = useRef(
-        PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
-            onMoveShouldSetPanResponder: () => true,
-            onPanResponderGrant: (evt) => {
-                const { locationY } = evt.nativeEvent;
-                const itemHeight = Math.max(20, (alphabetHeight - 40) / 26); // Dynamic height calculation
-                const index = Math.floor((locationY - 20) / itemHeight);
-                if (index >= 0 && index < 26) {
-                    const char = alphabet[index];
-                    setHoveredChar(char);
-                    setSelectedChar(char);
-                    handleAlphabeticalFilter(char);
-                }
-            },
-            onPanResponderMove: (evt) => {
-                const { locationY } = evt.nativeEvent;
-                const itemHeight = Math.max(20, (alphabetHeight - 40) / 26); // Dynamic height calculation
-                const index = Math.floor((locationY - 20) / itemHeight);
-                if (index >= 0 && index < 26) {
-                    const char = alphabet[index];
-                    if (char !== hoveredChar) {
-                        setHoveredChar(char);
-                        setSelectedChar(char);
-                        handleAlphabeticalFilter(char);
-                    }
-                }
-            },
-            onPanResponderRelease: () => {
-                setHoveredChar(null);
-            },
-        })
-    ).current;
-
-    const renderTraineeItem = ({ item, index }: { item: Trainee; index: number }) => {
-        const animatedStyle = {
-            opacity: scrollY.interpolate({
-                inputRange: [0, 50],
-                outputRange: [1, 0.8],
-                extrapolate: 'clamp',
-            }),
-            transform: [
-                {
-                    translateY: scrollY.interpolate({
-                        inputRange: [0, 50],
-                        outputRange: [0, -10],
-                        extrapolate: 'clamp',
-                    }),
-                },
-            ],
-        };
-
-        return (
-            <Animated.View style={[styles.cardContainer, animatedStyle]}>
-                <TouchableOpacity
-                    style={styles.card}
-                    onPress={() => handleTraineeSelect(item)}
-                    activeOpacity={0.8}
-                >
-                    <View style={styles.profileImageContainer}>
-                        <Image
-                            source={{
-                                uri: item?.image_url?.trim() ||
-                                    'https://res.cloudinary.com/vaibhav07351/image/upload/v1735825573/tisqhtqxaydhprbwtsld.png',
-                            }}
-                            style={styles.profileImage}
-                        />
-                        <View style={styles.statusIndicator} />
-                    </View>
-                    <View style={styles.traineeInfo}>
-                        <Text style={styles.cardText}>{item.name}</Text>
-                        <Text style={styles.traineeId}>ID: {item.id.slice(-8)}</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color="#666" />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    onPress={() => handleDeletePress(item)}
-                    style={styles.deleteIconButton}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
-                </TouchableOpacity>
-            </Animated.View>
-        );
-    };
-
-    if (isLoading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#6366f1" />
-                <Text style={styles.loadingText}>Loading trainees...</Text>
-            </View>
-        );
+      const sorted = data.sort((a: Trainee, b: Trainee) =>
+        a.name.localeCompare(b.name)
+      );
+      setTrainees(sorted);
+      setFilteredTrainees(sorted);
+    } catch {
+      setTrainees([]);
+      setFilteredTrainees([]);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleSearch = (query: string): void => {
+    setSearchQuery(query);
+    setSelectedChar(null);
+    if (query.trim() === '') {
+      setFilteredTrainees(trainees);
+    } else {
+      setFilteredTrainees(
+        trainees.filter((t) =>
+          t.name.toLowerCase().includes(query.toLowerCase())
+        )
+      );
+    }
+  };
+
+  const handleAlphabeticalFilter = (character: string): void => {
+    setSelectedChar(character);
+    setSearchQuery('');
+    setFilteredTrainees(
+      trainees.filter((t) =>
+        t.name.toLowerCase().startsWith(character.toLowerCase())
+      )
+    );
+  };
+
+  const resetFilter = (): void => {
+    setSelectedChar(null);
+    setSearchQuery('');
+    setFilteredTrainees(trainees);
+  };
+
+  const deleteTrainee = async (id: string): Promise<void> => {
+    setIsDeleting(true);
+    const backendUrl = Constants.expoConfig?.extra?.backendUrl;
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${backendUrl}/trainees/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `${token}` },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete client');
+      }
+      setTrainees((prev) => prev.filter((t) => t.id !== id));
+      setFilteredTrainees((prev) => prev.filter((t) => t.id !== id));
+      setDeleteModalVisible(false);
+      setTraineeToDelete(null);
+    } catch {
+      Alert.alert('Error', 'Failed to delete client. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isFocused) {
+      void fetchTrainees();
+    }
+  }, [isFocused, status]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        const { locationY } = evt.nativeEvent;
+        const itemHeight = Math.max(20, (alphabetHeight - 40) / 26);
+        const index = Math.floor((locationY - 20) / itemHeight);
+        if (index >= 0 && index < 26) {
+          const char = alphabet[index];
+          setHoveredChar(char);
+          setSelectedChar(char);
+          handleAlphabeticalFilter(char);
+        }
+      },
+      onPanResponderMove: (evt) => {
+        const { locationY } = evt.nativeEvent;
+        const itemHeight = Math.max(20, (alphabetHeight - 40) / 26);
+        const index = Math.floor((locationY - 20) / itemHeight);
+        if (index >= 0 && index < 26) {
+          const char = alphabet[index];
+          if (char !== hoveredChar) {
+            setHoveredChar(char);
+            setSelectedChar(char);
+            handleAlphabeticalFilter(char);
+          }
+        }
+      },
+      onPanResponderRelease: () => setHoveredChar(null),
+    })
+  ).current;
+
+  const renderItem = ({ item }: { item: Trainee }): React.JSX.Element => {
+    const initial = (item.name || 'C').charAt(0).toUpperCase();
+    const hasPhoto = Boolean(item.image_url?.trim());
 
     return (
-        <View style={styles.container}>
-            {/* Enhanced Alphabet Sidebar */}
-            <View 
-                style={styles.alphabetSidebar}
-                onLayout={(event) => {
-                    const { height } = event.nativeEvent.layout;
-                    setAlphabetHeight(height);
-                }}
-            >
-                <ScrollView
-                    contentContainerStyle={styles.alphabetScrollContainer}
-                    showsVerticalScrollIndicator={false}
-                    scrollEnabled={false}
-                >
-                    <View style={styles.alphabetContainer} {...panResponder.panHandlers}>
-                        {alphabet.map((char, index) => {
-                            const isSelected = selectedChar === char;
-                            const isHovered = hoveredChar === char;
-                            const isActive = isSelected || isHovered;
-                            
-                            return (
-                                <TouchableOpacity
-                                    key={index}
-                                    style={[
-                                        styles.alphabetItem,
-                                        isActive && styles.selectedAlphabetItem,
-                                        isHovered && styles.hoveredAlphabetItem,
-                                    ]}
-                                    onPress={() => handleAlphabeticalFilter(char)}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={[
-                                        styles.alphabetText,
-                                        isActive && styles.selectedAlphabetText,
-                                    ]}>
-                                        {char}
-                                    </Text>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
-                </ScrollView>
-                
-                {selectedChar && (
-                    <TouchableOpacity
-                        style={styles.resetButton}
-                        onPress={resetFilter}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons name="close" size={14} color="#666" />
-                    </TouchableOpacity>
-                )}
-            </View>
-
-            <View style={styles.mainContent}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <Text style={styles.title}>
-                        {status === true ? 'Active Trainees' : 'Inactive Trainees'}
-                    </Text>
-                    <Text style={styles.subtitle}>
-                        {filteredTrainees.length} {filteredTrainees.length === 1 ? 'trainee' : 'trainees'}
-                    </Text>
-                </View>
-
-                {/* Search Bar */}
-                <View style={styles.searchContainer}>
-                    <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search trainees..."
-                        placeholderTextColor="#999"
-                        value={searchQuery}
-                        onChangeText={handleSearch}
-                        returnKeyType="search"
-                    />
-                    {searchQuery.length > 0 && (
-                        <TouchableOpacity
-                            onPress={() => handleSearch('')}
-                            style={styles.clearButton}
-                        >
-                            <Ionicons name="close-circle" size={20} color="#666" />
-                        </TouchableOpacity>
-                    )}
-                </View>
-
-                {/* Filter Indicator */}
-                {selectedChar && (
-                    <View style={styles.filterIndicator}>
-                        <Text style={styles.filterText}>Showing names starting with "{selectedChar}"</Text>
-                        <TouchableOpacity onPress={resetFilter} style={styles.filterClearButton}>
-                            <Text style={styles.filterClearText}>Clear</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-
-                {/* Trainee List */}
-                {(!filteredTrainees || filteredTrainees.length === 0) ? (
-                    <View style={styles.emptyContainer}>
-                        <Ionicons 
-                            name="people-outline" 
-                            size={64} 
-                            color="#ccc" 
-                            style={styles.emptyIcon}
-                        />
-                        <Text style={styles.emptyTitle}>No trainees found</Text>
-                        <Text style={styles.emptyText}>
-                            {searchQuery || selectedChar
-                                ? 'Try adjusting your search or filter'
-                                : status === true
-                                ? 'No active trainees available'
-                                : 'No inactive trainees available'}
-                        </Text>
-                    </View>
-                ) : (
-                    <Animated.FlatList
-                        data={filteredTrainees}
-                        keyExtractor={(item) => item.id}
-                        renderItem={renderTraineeItem}
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={styles.listContainer}
-                        onScroll={Animated.event(
-                            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                            { useNativeDriver: true }
-                        )}
-                        scrollEventThrottle={16}
-                    />
-                )}
-
-                {/* Add Trainee Button */}
-                <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() => navigation.navigate('TraineeForm', {})}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons name="add" size={24} color="#fff" />
-                    <Text style={styles.addButtonText}>Add Trainee</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Delete Confirmation Modal */}
-            <DeleteConfirmationModal
-                visible={deleteModalVisible}
-                onConfirm={handleDeleteConfirm}
-                onCancel={handleDeleteCancel}
-                traineeName={traineeToDelete?.name || ''}
-                isLoading={isDeleting}
+      <View style={styles.row}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate('TraineeDetail', { trainee: item })}
+          activeOpacity={0.85}
+        >
+          {hasPhoto ? (
+            <Image
+              source={{ uri: item.image_url }}
+              style={styles.avatar}
             />
-        </View>
+          ) : (
+            <View style={[styles.avatar, styles.avatarFallback]}>
+              <Text style={styles.avatarInitial}>{initial}</Text>
+            </View>
+          )}
+          <View style={styles.cardBody}>
+            <Text style={styles.cardName} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <View style={styles.metaRow}>
+              {item.user_id ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>On app</Text>
+                </View>
+              ) : (
+                <View style={[styles.badge, styles.badgeMuted]}>
+                  <Text style={styles.badgeMutedText}>Invite pending</Text>
+                </View>
+              )}
+              {(item.rating_count ?? 0) > 0 ? (
+                <StarRating value={item.rating ?? 0} readonly size={14} showValue />
+              ) : null}
+            </View>
+            {item.goals ? (
+              <Text style={styles.cardGoals} numberOfLines={1}>
+                {item.goals}
+              </Text>
+            ) : null}
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => {
+            setTraineeToDelete(item);
+            setDeleteModalVisible(true);
+          }}
+          style={styles.deleteIconBtn}
+          accessibilityLabel={`Delete ${item.name}`}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="trash-outline" size={20} color={Colors.error} />
+        </TouchableOpacity>
+      </View>
     );
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Loading clients…</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View
+        style={styles.alphabetSidebar}
+        onLayout={(e) => setAlphabetHeight(e.nativeEvent.layout.height)}
+      >
+        <ScrollView
+          contentContainerStyle={styles.alphabetScroll}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={false}
+        >
+          <View style={styles.alphabetInner} {...panResponder.panHandlers}>
+            {alphabet.map((char) => {
+              const isActive =
+                selectedChar === char || hoveredChar === char;
+              return (
+                <TouchableOpacity
+                  key={char}
+                  style={[styles.alphaItem, isActive && styles.alphaItemActive]}
+                  onPress={() => handleAlphabeticalFilter(char)}
+                >
+                  <Text
+                    style={[styles.alphaText, isActive && styles.alphaTextActive]}
+                  >
+                    {char}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
+        {selectedChar ? (
+          <TouchableOpacity style={styles.resetAlpha} onPress={resetFilter}>
+            <Ionicons name="close" size={14} color={Colors.primary} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
+      <View style={styles.main}>
+        <LinearGradient
+          colors={[Colors.primary, Colors.primaryMuted]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <Text style={styles.heroTitle}>
+            {status ? 'Active clients' : 'Inactive clients'}
+          </Text>
+          <Text style={styles.heroSub}>
+            {filteredTrainees.length}{' '}
+            {filteredTrainees.length === 1 ? 'client' : 'clients'}
+            {selectedChar ? ` · ${selectedChar}` : ''}
+          </Text>
+        </LinearGradient>
+
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={18} color={Colors.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name"
+            placeholderTextColor={Colors.textSecondary}
+            value={searchQuery}
+            onChangeText={handleSearch}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 ? (
+            <TouchableOpacity onPress={() => handleSearch('')}>
+              <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        {selectedChar ? (
+          <View style={styles.filterChip}>
+            <Text style={styles.filterChipText}>
+              Names starting with “{selectedChar}”
+            </Text>
+            <TouchableOpacity onPress={resetFilter}>
+              <Text style={styles.filterClear}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {filteredTrainees.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>No clients found</Text>
+            <Text style={styles.emptySub}>
+              {searchQuery || selectedChar
+                ? 'Try a different search or letter'
+                : status
+                  ? 'Add your first client to get started'
+                  : 'No inactive clients'}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredTrainees}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.list}
+          />
+        )}
+
+        {status === true ? (
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={() => navigation.navigate('TraineeForm', {})}
+            activeOpacity={0.9}
+          >
+            <Ionicons name="add" size={22} color={Colors.textPrimary} />
+            <Text style={styles.fabText}>Add client</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
+      <DeleteConfirmationModal
+        visible={deleteModalVisible}
+        onConfirm={() => {
+          if (traineeToDelete) {
+            void deleteTrainee(traineeToDelete.id);
+          }
+        }}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setTraineeToDelete(null);
+        }}
+        traineeName={traineeToDelete?.name || ''}
+        isLoading={isDeleting}
+      />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        flexDirection: 'row',
-        backgroundColor: '#f8fafc',
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f8fafc',
-    },
-    loadingText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#666',
-    },
-    alphabetSidebar: {
-        width: 45,
-        backgroundColor: '#ffffff',
-        borderRightWidth: 1,
-        borderRightColor: '#e2e8f0',
-        paddingVertical: 10,
-        alignItems: 'center',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-    },
-    alphabetScrollContainer: {
-        flexGrow: 1,
-        justifyContent: 'center',
-        paddingVertical: 10,
-    },
-    alphabetContainer: {
-        alignItems: 'center',
-        paddingVertical: 10,
-    },
-    alphabetItem: {
-        width: 28,
-        height: 22,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: 14,
-        marginVertical: 0.5,
-        backgroundColor: 'transparent',
-    },
-    selectedAlphabetItem: {
-        backgroundColor: '#6366f1',
-        transform: [{ scale: 1.3 }],
-        elevation: 3,
-        shadowColor: '#6366f1',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-    },
-    hoveredAlphabetItem: {
-        backgroundColor: '#e0e7ff',
-        transform: [{ scale: 1.15 }],
-    },
-    alphabetText: {
-        fontSize: 10,
-        fontWeight: '600',
-        color: '#64748b',
-    },
-    selectedAlphabetText: {
-        color: '#ffffff',
-        fontWeight: '700',
-        fontSize: 11,
-    },
-    resetButton: {
-        marginTop: 8,
-        padding: 6,
-        backgroundColor: '#f1f5f9',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-    },
-    mainContent: {
-        flex: 1,
-        padding: 20,
-    },
-    header: {
-        marginBottom: 20,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: '700',
-        color: '#1e293b',
-        marginBottom: 4,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#64748b',
-        fontWeight: '500',
-    },
-    searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#ffffff',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        marginBottom: 16,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-    },
-    searchIcon: {
-        marginRight: 12,
-    },
-    searchInput: {
-        flex: 1,
-        fontSize: 16,
-        color: '#1e293b',
-    },
-    clearButton: {
-        padding: 4,
-    },
-    filterIndicator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: '#e0e7ff',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        marginBottom: 16,
-    },
-    filterText: {
-        fontSize: 14,
-        color: '#3730a3',
-        fontWeight: '500',
-    },
-    filterClearButton: {
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-    },
-    filterClearText: {
-        fontSize: 14,
-        color: '#6366f1',
-        fontWeight: '600',
-    },
-    listContainer: {
-        paddingBottom: 100,
-    },
-    cardContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#ffffff',
-        borderRadius: 16,
-        marginBottom: 12,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-    },
-    card: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-    },
-    profileImageContainer: {
-        position: 'relative',
-        marginRight: 16,
-    },
-    profileImage: {
-        width: 52,
-        height: 52,
-        borderRadius: 26,
-        backgroundColor: '#f1f5f9',
-    },
-    statusIndicator: {
-        position: 'absolute',
-        bottom: 2,
-        right: 2,
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: '#10b981',
-        borderWidth: 2,
-        borderColor: '#ffffff',
-    },
-    traineeInfo: {
-        flex: 1,
-    },
-    cardText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#1e293b',
-        marginBottom: 4,
-    },
-    traineeId: {
-        fontSize: 12,
-        color: '#64748b',
-        fontWeight: '500',
-    },
-    deleteIconButton: {
-        padding: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 60,
-    },
-    emptyIcon: {
-        marginBottom: 16,
-    },
-    emptyTitle: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: '#64748b',
-        marginBottom: 8,
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#94a3b8',
-        textAlign: 'center',
-        paddingHorizontal: 32,
-    },
-    addButton: {
-        position: 'absolute',
-        bottom: 20,
-        right: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#6366f1',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        borderRadius: 28,
-        elevation: 4,
-        shadowColor: '#6366f1',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-    },
-    addButtonText: {
-        color: '#ffffff',
-        fontSize: 16,
-        fontWeight: '600',
-        marginLeft: 8,
-    },
-    // Modal styles
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalContainer: {
-        backgroundColor: '#ffffff',
-        borderRadius: 20,
-        padding: 24,
-        marginHorizontal: 20,
-        minWidth: 300,
-        elevation: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-    },
-    modalHeader: {
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#1e293b',
-        marginTop: 12,
-    },
-    modalMessage: {
-        fontSize: 16,
-        color: '#64748b',
-        textAlign: 'center',
-        marginBottom: 24,
-        lineHeight: 24,
-    },
-    modalTraineeName: {
-        fontWeight: '600',
-        color: '#1e293b',
-    },
-    modalButtonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 16,
-        marginTop: 8,
-    },
-    modalButton: {
-        flex: 1,
-        paddingVertical: 14,
-        paddingHorizontal: 20,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: 50,
-        flexDirection: 'row',
-    },
-    cancelButton: {
-        backgroundColor: '#f8fafc',
-        borderWidth: 2,
-        borderColor: '#e2e8f0',
-    },
-    cancelButtonText: {
-        color: '#475569',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    deleteButton: {
-        backgroundColor: '#dc2626',
-        gap: 8,
-        elevation: 2,
-        shadowColor: '#dc2626',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-    },
-    deleteButtonText: {
-        color: '#ffffff',
-        fontSize: 16,
-        fontWeight: '600',
-    },
+  container: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: Colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+  loadingText: {
+    marginTop: Spacing.medium,
+    color: Colors.textSecondary,
+  },
+  alphabetSidebar: {
+    width: 36,
+    backgroundColor: Colors.surface,
+    borderRightWidth: 1,
+    borderRightColor: Colors.border,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  alphabetScroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  alphabetInner: { alignItems: 'center' },
+  alphaItem: {
+    width: 26,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 13,
+  },
+  alphaItemActive: { backgroundColor: Colors.primary },
+  alphaText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  alphaTextActive: { color: Colors.textOnPrimary, fontWeight: '700' },
+  resetAlpha: {
+    marginTop: 6,
+    padding: 4,
+    backgroundColor: Colors.backgroundAlt,
+    borderRadius: 10,
+  },
+  main: { flex: 1 },
+  hero: {
+    paddingHorizontal: Spacing.medium,
+    paddingTop: Spacing.medium,
+    paddingBottom: Spacing.large,
+    borderBottomLeftRadius: Radii.lg,
+    borderBottomRightRadius: Radii.lg,
+  },
+  heroTitle: {
+    fontFamily: Fonts.display,
+    fontSize: 28,
+    color: Colors.textOnPrimary,
+  },
+  heroSub: {
+    color: Colors.accentSoft,
+    marginTop: 4,
+    fontSize: 14,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: Spacing.medium,
+    marginTop: -18,
+    marginBottom: Spacing.small,
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.textPrimary,
+    padding: 0,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: Spacing.medium,
+    marginBottom: Spacing.small,
+    backgroundColor: Colors.accentSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: Radii.sm,
+  },
+  filterChipText: { color: Colors.textPrimary, fontSize: 13, fontWeight: '500' },
+  filterClear: { color: Colors.primary, fontWeight: '700', fontSize: 13 },
+  list: {
+    paddingHorizontal: Spacing.medium,
+    paddingBottom: 100,
+    paddingTop: Spacing.small,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    marginBottom: 10,
+    gap: 8,
+  },
+  card: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.md,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 12,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.backgroundAlt,
+  },
+  avatarFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primaryMuted,
+  },
+  avatarInitial: {
+    color: Colors.textOnPrimary,
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  cardBody: { flex: 1 },
+  cardName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+  badge: {
+    backgroundColor: Colors.activeCard,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  badgeText: {
+    color: Colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  badgeMuted: { backgroundColor: Colors.backgroundAlt },
+  badgeMutedText: {
+    color: Colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  cardGoals: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  deleteIconBtn: {
+    width: 48,
+    minHeight: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.inactiveCard,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    borderColor: '#E8B4A8',
+  },
+  empty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 6,
+  },
+  emptySub: {
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  fab: {
+    position: 'absolute',
+    right: Spacing.medium,
+    bottom: Spacing.medium,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.accent,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 28,
+    shadowColor: '#14201B',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  fabText: {
+    color: Colors.textPrimary,
+    fontWeight: '800',
+    fontSize: 15,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(20, 32, 27, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.lg,
+    padding: Spacing.large,
+    marginHorizontal: Spacing.large,
+    minWidth: 280,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: Spacing.large,
+  },
+  modalName: { fontWeight: '700', color: Colors.textPrimary },
+  modalButtons: { flexDirection: 'row', gap: 10 },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: Radii.sm,
+    alignItems: 'center',
+  },
+  cancelBtn: {
+    backgroundColor: Colors.backgroundAlt,
+  },
+  cancelBtnText: { fontWeight: '600', color: Colors.textPrimary },
+  deleteBtn: { backgroundColor: Colors.error },
+  deleteBtnText: { fontWeight: '700', color: '#fff' },
 });

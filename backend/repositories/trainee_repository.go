@@ -27,12 +27,50 @@ func NewTraineeRepository() *TraineeRepository {
 }
 
 // Add a new trainee
-func (r *TraineeRepository) CreateTrainee(trainee models.Trainee) error {
+func (r *TraineeRepository) CreateTrainee(trainee models.Trainee) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := r.collection.InsertOne(ctx, trainee)
-	return err
+	var oid primitive.ObjectID
+	var err error
+	if trainee.ID == "" {
+		oid = primitive.NewObjectID()
+		trainee.ID = oid.Hex()
+	} else {
+		oid, err = primitive.ObjectIDFromHex(trainee.ID)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	doc := bson.M{
+		"_id":                oid,
+		"name":               trainee.Name,
+		"phone_number":       trainee.PhoneNumber,
+		"email":              trainee.Email,
+		"user_id":            trainee.UserID,
+		"dob":                trainee.DOB,
+		"gender":             trainee.Gender,
+		"profession":         trainee.Profession,
+		"height":             trainee.Height,
+		"trainer_id":         trainee.TrainerID,
+		"start_date":         trainee.StartDate,
+		"membership_type":    trainee.MembershipType,
+		"emergency_contact":  trainee.EmergencyContact,
+		"medical_history":    trainee.MedicalHistory,
+		"social_handle":      trainee.SocialHandle,
+		"goals":              trainee.Goals,
+		"notes":              trainee.Notes,
+		"active_status":      trainee.ActiveStatus,
+		"progress_metrics":   trainee.ProgressMetrics,
+		"created_at":         trainee.CreatedAt,
+		"updated_at":         trainee.UpdatedAt,
+		"image_url":          trainee.ImageURL,
+		"active_supplements": trainee.ActiveSupplements,
+	}
+
+	_, err = r.collection.InsertOne(ctx, doc)
+	return trainee.ID, err
 }
 
 func (r *TraineeRepository) GetTraineesByTrainer(trainerID string, status string) ([]models.Trainee, error) {
@@ -78,14 +116,25 @@ func (r *TraineeRepository) GetTraineeByID(id string) (models.Trainee, error) {
 	defer cancel()
 
 	var trainee models.Trainee
-	// Convert the id to MongoDB's ObjectID type
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return trainee, errors.New("invalid trainee ID format")
 	}
 
-	err = r.collection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&trainee)
-	return trainee, err
+	var raw bson.M
+	if err := r.collection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&raw); err != nil {
+		return trainee, err
+	}
+	raw["_id"] = objectID.Hex()
+	bytes, err := bson.Marshal(raw)
+	if err != nil {
+		return trainee, err
+	}
+	if err := bson.Unmarshal(bytes, &trainee); err != nil {
+		return trainee, err
+	}
+	trainee.ID = objectID.Hex()
+	return trainee, nil
 }
 
 // Update a trainee

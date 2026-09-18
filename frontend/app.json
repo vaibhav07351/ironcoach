@@ -5,16 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/ironcoach.png",
-    "scheme": "myapp",
+    "scheme": "ironcoach",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "description": "Your comprehensive fitness coaching app",
-    "primaryColor": "#000000",
-    "splash": {
-      "image": "./assets/images/ironcoach.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
+    "description": "Accountability-first fitness coaching for trainers and clients",
+    "primaryColor": "#0B3D2E",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.vaibhavbhardwaj.ironcoach"
@@ -29,47 +23,47 @@
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
-      ],
-      "compileSdkVersion": 35,
-      "targetSdkVersion": 35,
-      "buildToolsVersion": "35.0.0"
+      ]
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
       "favicon": "./assets/images/ironcoach.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/ironcoach.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#F3F0E8"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow IronCoach to use your location to find coaches near you."
         }
       ]
     ],
-    "experiments": {
-      "typedRoutes": true
-    },
     "extra": {
-      "router": {
-        "origin": false
-      },
       "eas": {
         "projectId": "7067ae90-2994-477c-9616-cc290d9c2d06"
       },
-      "backendUrl": "https://ironcoach.duckdns.org"
+      "backendUrl": "http://localhost:8080",
+      "googleWebClientId": "883815662037-7l4am1d65uoo5cetj09nurm2ednjg1lg.apps.googleusercontent.com",
+      "googleAndroidClientId": "883815662037-j43hk42ou4lf9eu88c07a8tpnbedk2pr.apps.googleusercontent.com",
+      "googleIosClientId": "",
+      "googleExpoClientId": ""
     },
     "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/7067ae90-2994-477c-9616-cc290d9c2d06"
     },
-    "owner": "vaibhav07351",
-    "privacy": "public"
+    "owner": "vaibhav07351"
   }
 }

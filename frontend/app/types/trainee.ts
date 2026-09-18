@@ -71,6 +71,11 @@ export type Trainee = {
     social_handle?: string;
     image_url?: string;
     active_supplements?: string;
+    /** Set when the client already has an app account linked (invite redeemed or discovery accepted). */
+    user_id?: string;
+    email?: string;
+    rating?: number;
+    rating_count?: number;
 
     fitness_tests?: FitnessTest[];
     lab_tests?: LabTest[];

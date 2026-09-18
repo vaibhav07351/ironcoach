@@ -12,8 +12,7 @@ func RegisterExerciseRoutes(router *gin.Engine) {
 	protected := router.Group("/exercises").Use(middlewares.AuthMiddleware())
 
 	protected.POST("", exerciseController.AddExercise)
-	protected.GET("/:category", exerciseController.GetExercisesByCategory)
+	protected.GET("/category/:category_id", exerciseController.GetExercisesByCategory)
 	protected.PUT("/:id", exerciseController.UpdateExercise)
 	protected.DELETE("/:id", exerciseController.DeleteExercise)
-
 }

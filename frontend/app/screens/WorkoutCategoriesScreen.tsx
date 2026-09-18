@@ -15,6 +15,7 @@ import { RootStackParamList } from '../types/navigation';
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
+import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutCategories'>;
 
@@ -38,7 +39,9 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
             }
 
             const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-            const response = await fetch(`${backendUrl}/categories`, {
+            const response = await fetch(
+                `${backendUrl}/categories?trainee_id=${encodeURIComponent(traineeId)}`,
+                {
                 headers: { Authorization: `${token}` },
             });
 
@@ -85,7 +88,9 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                 }
 
                 const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-                const response = await fetch(`${backendUrl}/categories/${selectedCategory.id}`, {
+                const response = await fetch(
+                    `${backendUrl}/categories/${selectedCategory.id}?trainee_id=${encodeURIComponent(traineeId)}`,
+                    {
                     method: 'DELETE',
                     headers: { Authorization: `${token}` },
                 });
@@ -137,7 +142,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
     useFocusEffect(
         useCallback(() => {
             fetchCategories();
-        }, [])
+        }, [traineeId])
     );
 
     const handleCategorySelect = (category: { id: string; name: string }) => {
@@ -184,7 +189,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
             )}
 
             {isLoading ? (
-                <ActivityIndicator size="large" color="#6200ee" style={{ marginTop: 280 }} />
+                <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 280 }} />
             ) : categories.length === 0 ? (
                 <View style={styles.noDataContainer}>
                     <Text style={styles.noDataText}>No categories available.</Text>
@@ -218,7 +223,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                         <Text style={styles.modalSubtitle}>"{selectedCategory?.name}"</Text>
                         <View style={styles.modalButtonContainer}>
                             <TouchableOpacity
-                                style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}
+                                style={[styles.modalButton, { backgroundColor: Colors.success }]}
                                 onPress={() => {
                                     handleEditCategory();
                                 }}
@@ -226,7 +231,7 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                                 <Text style={styles.modalButtonText}>✏️ Edit</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={[styles.modalButton, { backgroundColor: '#FF5252' }]}
+                                style={[styles.modalButton, { backgroundColor: Colors.error }]}
                                 onPress={showDeleteConfirmation}
                             >
                                 <Text style={styles.modalButtonText}>🗑️ Delete</Text>
@@ -251,12 +256,12 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
                         </Text>
                         <View style={styles.deleteModalButtons}>
                             <TouchableOpacity
-                                style={[styles.deleteModalButton, { backgroundColor: '#888' }]}
+                                style={[styles.deleteModalButton, { backgroundColor: Colors.textSecondary }]}
                                 onPress={() => setIsDeleteModalVisible(false)}>
                                 <Text style={styles.deleteModalButtonText}>Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={[styles.deleteModalButton, { backgroundColor: '#FF5252' }]}
+                                style={[styles.deleteModalButton, { backgroundColor: Colors.error }]}
                                 onPress={handleDeleteCategory}>
                                 <Text style={styles.deleteModalButtonText}>Delete</Text>
                             </TouchableOpacity>
@@ -269,61 +274,58 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16 },
+    container: { flex: 1, padding: Spacing.medium, backgroundColor: Colors.background },
     title: {
         fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 16,
+        fontFamily: Fonts.display,
+        fontWeight: '600',
+        marginBottom: Spacing.medium,
         textAlign: 'center',
+        color: Colors.textPrimary,
     },
     hintBanner: {
-        backgroundColor: '#E3F2FD',
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 16,
+        backgroundColor: Colors.accentSoft,
+        borderRadius: Radii.sm,
+        padding: Spacing.medium,
+        marginBottom: Spacing.medium,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         borderLeftWidth: 4,
-        borderLeftColor: '#2196F3',
+        borderLeftColor: Colors.accent,
     },
     hintText: {
         fontSize: 14,
-        color: '#1976D2',
+        color: Colors.textPrimary,
         flex: 1,
         fontWeight: '500',
     },
     dismissButton: {
         padding: 4,
-        marginLeft: 8,
+        marginLeft: Spacing.small,
     },
     dismissButtonText: {
         fontSize: 16,
-        color: '#1976D2',
+        color: Colors.textSecondary,
         fontWeight: 'bold',
     },
     categoryCard: {
-        padding: 16,
-        backgroundColor: '#FAFAFA',
-        borderRadius: 12,
-        marginBottom: 12,
+        padding: Spacing.medium,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.md,
+        marginBottom: Spacing.medium,
         borderWidth: 1,
-        borderColor: '#E0E0E0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        borderColor: Colors.border,
     },
     categoryContent: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
     },
-    categoryText: { 
-        fontSize: 18, 
-        fontWeight: 'bold',
-        color: '#333',
+    categoryText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: Colors.textPrimary,
         flex: 1,
         textAlign: 'center',
     },
@@ -336,25 +338,25 @@ const styles = StyleSheet.create({
         width: 4,
         height: 4,
         borderRadius: 2,
-        backgroundColor: '#666',
+        backgroundColor: Colors.textSecondary,
         marginHorizontal: 1,
     },
     longPressHint: {
         fontSize: 12,
-        color: '#888',
+        color: Colors.textSecondary,
         fontStyle: 'italic',
         textAlign: 'center',
         marginTop: 4,
     },
     addButton: {
-        marginTop: 20,
-        backgroundColor: '#6200ee',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 8,
+        marginTop: Spacing.large,
+        backgroundColor: Colors.primary,
+        paddingVertical: Spacing.medium,
+        paddingHorizontal: Spacing.medium,
+        borderRadius: Radii.sm,
         alignItems: 'center',
     },
-    addButtonText: { color: '#fff', fontSize: 16 },
+    addButtonText: { color: Colors.textOnPrimary, fontSize: 16, fontWeight: '600' },
     noDataContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -362,38 +364,36 @@ const styles = StyleSheet.create({
     },
     noDataText: {
         fontSize: 16,
-        color: '#555',
+        color: Colors.textSecondary,
         textAlign: 'center',
     },
     modalOverlay: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     modalContainer: {
         width: '85%',
-        backgroundColor: '#FFF',
-        borderRadius: 12,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 5,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.md,
+        padding: Spacing.large,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     modalTitle: {
         fontSize: 20,
-        fontWeight: 'bold',
+        fontFamily: Fonts.display,
+        fontWeight: '600',
         textAlign: 'center',
-        marginBottom: 8,
-        color: '#333',
+        marginBottom: Spacing.small,
+        color: Colors.textPrimary,
     },
     modalSubtitle: {
         fontSize: 16,
         textAlign: 'center',
-        marginBottom: 16,
-        color: '#666',
+        marginBottom: Spacing.medium,
+        color: Colors.textSecondary,
         fontStyle: 'italic',
     },
     modalButtonContainer: {
@@ -402,52 +402,55 @@ const styles = StyleSheet.create({
     },
     modalButton: {
         flex: 1,
-        marginHorizontal: 8,
-        paddingVertical: 12,
-        borderRadius: 8,
+        marginHorizontal: Spacing.small,
+        paddingVertical: Spacing.medium,
+        borderRadius: Radii.sm,
         alignItems: 'center',
     },
     modalButtonText: {
-        color: '#FFF',
+        color: Colors.textOnPrimary,
         fontSize: 16,
         fontWeight: '600',
     },
     deleteModalContent: {
-        backgroundColor: '#fff',
-        padding: 20,
-        borderRadius: 12,
+        backgroundColor: Colors.surface,
+        padding: Spacing.large,
+        borderRadius: Radii.md,
         width: '90%',
         maxWidth: 400,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     deleteModalTitle: {
         fontSize: 20,
-        fontWeight: 'bold',
+        fontFamily: Fonts.display,
+        fontWeight: '600',
         textAlign: 'center',
-        marginBottom: 16,
-        color: '#333',
+        marginBottom: Spacing.medium,
+        color: Colors.textPrimary,
     },
     deleteModalText: {
         fontSize: 16,
         textAlign: 'center',
-        marginBottom: 24,
-        color: '#666',
+        marginBottom: Spacing.large,
+        color: Colors.textSecondary,
         lineHeight: 22,
     },
     deleteModalButtons: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        gap: 12,
+        gap: Spacing.medium,
     },
     deleteModalButton: {
         flex: 1,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 8,
+        paddingVertical: Spacing.medium,
+        paddingHorizontal: Spacing.medium,
+        borderRadius: Radii.sm,
         alignItems: 'center',
     },
     deleteModalButtonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#FFF',
+        color: Colors.textOnPrimary,
     },
 });

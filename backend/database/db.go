@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -14,45 +15,73 @@ import (
 
 var DB *mongo.Client
 
-func ConnectDB() {
-   // Load environment variables based on the environment
-	env := os.Getenv("ENV") // Check for the ENV variable
-	if env != "production" {
-		// Load the .env file in non-production environments
-		err := godotenv.Load("../../.env")
-		if err != nil {
-			log.Fatalf("Error loading .env file: %v", err)
-		}
-		fmt.Println("Loaded .env file for development")
-	} else {
-		fmt.Println("Running in production mode, skipping .env file")
+// LoadEnv loads .env for non-production from the working directory (or backend/).
+func LoadEnv() {
+	if os.Getenv("ENV") == "production" {
+		log.Println("Running in production mode, skipping .env file")
+		return
 	}
 
-    // Get MongoDB URI from environment variables
-    mongoURI := os.Getenv("MONGODB_URI")
-    if mongoURI == "" {
-        log.Fatal("MONGODB_URI is not set in the environment variables")
-    }
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Could not determine working directory: %v", err)
+	}
 
-    // Set up MongoDB client options
-    clientOptions := options.Client().ApplyURI(mongoURI)
+	candidates := []string{
+		filepath.Join(wd, ".env"),
+		filepath.Join(wd, "backend", ".env"),
+		filepath.Join(wd, "..", "backend", ".env"),
+	}
 
-    // Create a context with a timeout
-    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer cancel()
+	var tried []string
+	for _, path := range candidates {
+		abs, absErr := filepath.Abs(path)
+		if absErr != nil {
+			continue
+		}
+		tried = append(tried, abs)
 
-    // Connect to MongoDB
-    client, err := mongo.Connect(ctx, clientOptions)
-    if err != nil {
-        log.Fatalf("Failed to connect to MongoDB: %v", err)
-    }
+		info, statErr := os.Stat(abs)
+		if statErr != nil || info.IsDir() {
+			continue
+		}
 
-    // Check the connection
-    if err := client.Ping(ctx, nil); err != nil {
-        log.Fatalf("Failed to ping MongoDB: %v", err)
-    }
+		if loadErr := godotenv.Load(abs); loadErr != nil {
+			log.Fatalf("Found .env at %s but failed to parse it: %v", abs, loadErr)
+		}
 
-    // Save the client
-    DB = client
-    log.Println("Connected to MongoDB!")
+		log.Printf("Loaded .env from %s", abs)
+		return
+	}
+
+	log.Fatalf(
+		"No .env file found. Run from ironcoach/backend (tried: %v). Or set ENV=production and inject env vars.",
+		tried,
+	)
+}
+
+func ConnectDB() {
+	LoadEnv()
+
+	mongoURI := os.Getenv("MONGODB_URI")
+	if mongoURI == "" {
+		log.Fatal("MONGODB_URI is not set in the environment variables")
+	}
+
+	clientOptions := options.Client().ApplyURI(mongoURI)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, clientOptions)
+	if err != nil {
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
+	}
+
+	if err := client.Ping(ctx, nil); err != nil {
+		log.Fatalf("Failed to ping MongoDB: %v", err)
+	}
+
+	DB = client
+	fmt.Println("Connected to MongoDB!")
 }

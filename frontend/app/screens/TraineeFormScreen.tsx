@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Switch, Animated, Modal } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Platform, Switch, Animated, Modal } from 'react-native';
  
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -11,6 +11,8 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
+import { AuthContext } from '../contexts/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TraineeForm'>;
 
@@ -119,12 +121,12 @@ const InputField: React.FC<InputFieldProps> = React.memo(({
             ]}
         >
             <View style={styles.labelContainer}>
-                {icon && <Ionicons name={icon} size={18} color="#6366f1" style={styles.labelIcon} />}
+                {icon && <Ionicons name={icon} size={18} color={Colors.primary} style={styles.labelIcon} />}
                 <Text style={styles.inputLabel}>{label}</Text>
                 {maxLength && (
                     <Text style={[
                         styles.characterCount,
-                        { color: remainingChars && remainingChars < 10 ? '#ef4444' : '#6b7280' }
+                        { color: remainingChars && remainingChars < 10 ? Colors.error : Colors.textSecondary }
                     ]}>
                         {remainingChars}/{maxLength}
                     </Text>
@@ -139,7 +141,7 @@ const InputField: React.FC<InputFieldProps> = React.memo(({
                     ]}
                     value={value}
                     onChangeText={onChangeText}
-                    placeholderTextColor="#9ca3af"
+                    placeholderTextColor={Colors.textSecondary}
                     multiline={multiline}
                     textAlignVertical={multiline ? 'top' : 'center'}
                     autoCapitalize="words"
@@ -150,7 +152,7 @@ const InputField: React.FC<InputFieldProps> = React.memo(({
             </View>
             {error && (
                 <View style={styles.errorContainer}>
-                    <Ionicons name="warning" size={16} color="#ef4444" />
+                    <Ionicons name="warning" size={16} color={Colors.error} />
                     <Text style={styles.errorText}>{error}</Text>
                 </View>
             )}
@@ -160,7 +162,9 @@ const InputField: React.FC<InputFieldProps> = React.memo(({
 
 export default function TraineeFormScreen({ route, navigation }: Props) {
     const { trainee, traineeId } = route.params || {};
-    
+    const { role } = useContext(AuthContext);
+    const isClient = role === 'client';
+    const isEditing = Boolean(traineeId || trainee);
     // Form state
     const [name, setName] = useState(trainee?.name || '');
     const [phoneNumber, setPhoneNumber] = useState(trainee?.phone_number || '');
@@ -603,7 +607,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             Toast.show({ 
                 type: 'error', 
                 text1: 'Loading Error', 
-                text2: 'Failed to load trainee details.',
+                text2: 'Failed to load client details.',
                 position: 'top',
                 topOffset: 60
             });
@@ -668,27 +672,46 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
         try {
             const imageUrl = image && image.uri !== trainee?.image_url ? await uploadImage() : trainee?.image_url;
 
-            const traineeData = {
-                id: traineeId || trainee?.id || '',
-                name: name.trim(),
-                phone_number: phoneNumber.trim(),
-                dob: dob.trim(),
-                gender: gender.trim(),
-                profession: profession.trim(),
-                weight: parseFloat(weight) || 0,
-                height: parseFloat(height),
-                bmi: bmi ? parseFloat(bmi) : undefined,
-                start_date: startDate.trim(),
-                membership_type: membershipType.trim(),
-                emergency_contact: emergencyContact.trim(),
-                medical_history: medicalHistory.trim(),
-                social_handle: socialHandle.trim(),
-                goals: goals.trim(),
-                notes: notes.trim(),
-                active_status: activeStatus,
-                image_url: imageUrl,
-                active_supplements: activeSupplements.trim(),
-            };
+            const traineeData = isClient
+                ? {
+                      id: traineeId || trainee?.id || '',
+                      name: name.trim(),
+                      phone_number: phoneNumber.trim(),
+                      dob: dob.trim(),
+                      gender: gender.trim(),
+                      profession: profession.trim(),
+                      weight: parseFloat(weight) || 0,
+                      height: parseFloat(height),
+                      bmi: bmi ? parseFloat(bmi) : undefined,
+                      emergency_contact: emergencyContact.trim(),
+                      medical_history: medicalHistory.trim(),
+                      social_handle: socialHandle.trim(),
+                      goals: goals.trim(),
+                      notes: notes.trim(),
+                      image_url: imageUrl,
+                      active_supplements: activeSupplements.trim(),
+                  }
+                : {
+                      id: traineeId || trainee?.id || '',
+                      name: name.trim(),
+                      phone_number: phoneNumber.trim(),
+                      dob: dob.trim(),
+                      gender: gender.trim(),
+                      profession: profession.trim(),
+                      weight: parseFloat(weight) || 0,
+                      height: parseFloat(height),
+                      bmi: bmi ? parseFloat(bmi) : undefined,
+                      start_date: startDate.trim(),
+                      membership_type: membershipType.trim(),
+                      emergency_contact: emergencyContact.trim(),
+                      medical_history: medicalHistory.trim(),
+                      social_handle: socialHandle.trim(),
+                      goals: goals.trim(),
+                      notes: notes.trim(),
+                      active_status: activeStatus,
+                      image_url: imageUrl,
+                      active_supplements: activeSupplements.trim(),
+                  };
 
             const token = await AsyncStorage.getItem('token');
             if (!token) {
@@ -718,7 +741,11 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             Toast.show({
                 type: 'success',
                 text1: 'Success!',
-                text2: traineeId ? 'Trainee updated successfully.' : 'Trainee added successfully.',
+                text2: isClient
+                    ? 'Profile updated successfully.'
+                    : traineeId
+                      ? 'Client updated successfully.'
+                      : 'Client added successfully.',
                 position: 'top',
                 topOffset: 60
             });
@@ -729,7 +756,11 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
             Toast.show({
                 type: 'error',
                 text1: 'Submission Error',
-                text2: traineeId ? 'Failed to update trainee.' : 'Failed to add trainee.',
+                text2: isClient
+                    ? 'Failed to update profile.'
+                    : traineeId
+                      ? 'Failed to update client.'
+                      : 'Failed to add client.',
                 position: 'top',
                 topOffset: 60
             });
@@ -763,14 +794,18 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                         ]}
                     >
                         <LinearGradient
-                            colors={['#6366f1', '#8b5cf6', '#ec4899']}
+                            colors={[Colors.primary, Colors.primaryMuted]}
                             style={styles.gradientSpinner}
                         >
-                            <Ionicons name="fitness" size={40} color="#fff" />
+                            <Ionicons name="fitness" size={40} color={Colors.textOnPrimary} />
                         </LinearGradient>
                     </Animated.View>
                     <Text style={styles.loadingText}>
-                        {traineeId ? 'Updating Trainee...' : 'Adding Trainee...'}
+                        {isClient
+                            ? 'Saving profile...'
+                            : traineeId
+                              ? 'Updating Client...'
+                              : 'Adding Client...'}
                     </Text>
                     <Text style={styles.loadingSubText}>
                         Please wait while we save the information
@@ -782,9 +817,8 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
 
     return (
         <View style={styles.container}>
-            <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                 <LinearGradient
-                    colors={['#f8fafc', '#e2e8f0']}
+                    colors={[Colors.background, Colors.backgroundAlt]}
                     style={styles.background}
                 >
                     <ScrollView 
@@ -794,8 +828,10 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                     >
                         {isLoading ? (
                             <View style={styles.loadingScreen}>
-                                <ActivityIndicator size="large" color="#6366f1" />
-                                <Text style={styles.loadingScreenText}>Loading trainee details...</Text>
+                                <ActivityIndicator size="large" color={Colors.primary} />
+                                <Text style={styles.loadingScreenText}>
+                                    {isClient ? 'Loading your profile...' : 'Loading client details...'}
+                                </Text>
                             </View>
                         ) : (
                             <Animated.View
@@ -809,10 +845,18 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                             >
                                 <View style={styles.header}>
                                     <Text style={styles.title}>
-                                        {traineeId || trainee ? 'Edit Trainee' : 'Add New Trainee'}
+                                        {isClient
+                                            ? 'Edit profile'
+                                            : isEditing
+                                              ? 'Edit Client'
+                                              : 'Add New Client'}
                                     </Text>
                                     <Text style={styles.subtitle}>
-                                        {traineeId || trainee ? 'Update trainee information' : 'Fill in the details below'}
+                                        {isClient
+                                            ? 'Update your details'
+                                            : isEditing
+                                              ? 'Update client information'
+                                              : 'Fill in the details below'}
                                     </Text>
                                 </View>
 
@@ -822,17 +866,17 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                                             <Image source={{ uri: image.uri }} style={styles.profileImage} />
                                         ) : (
                                             <LinearGradient
-                                                colors={['#6366f1', '#8b5cf6']}
+                                                colors={[Colors.primary, Colors.primaryMuted]}
                                                 style={styles.imagePlaceholder}
                                             >
-                                                <Ionicons name="person" size={60} color="#fff" />
+                                                <Ionicons name="person" size={60} color={Colors.textOnPrimary} />
                                             </LinearGradient>
                                         )}
                                     </View>
 
                                     <View style={styles.imageButtons}>
                                         <TouchableOpacity style={styles.uploadButton} onPress={handlePickImage}>
-                                            <Ionicons name="camera" size={20} color="#fff" />
+                                            <Ionicons name="camera" size={20} color={Colors.textOnPrimary} />
                                             <Text style={styles.uploadButtonText}>
                                                 {image ? 'Change Photo' : 'Upload Photo'}
                                             </Text>
@@ -840,7 +884,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
 
                                         {image && (
                                             <TouchableOpacity style={styles.removeButton} onPress={handleRemoveImage}>
-                                                <Ionicons name="trash" size={20} color="#fff" />
+                                                <Ionicons name="trash" size={20} color={Colors.textOnPrimary} />
                                             </TouchableOpacity>
                                         )}
                                     </View>
@@ -931,6 +975,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                                     />
                                 </View>
 
+                                {!isClient ? (
                                 <View style={styles.formSection}>
                                     <Text style={styles.sectionTitle}>Membership Details</Text>
                                     <InputField 
@@ -955,17 +1000,18 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                                     
                                     <View style={styles.switchContainer}>
                                         <View style={styles.switchLabelContainer}>
-                                            <Ionicons name="power" size={18} color="#6366f1" />
+                                            <Ionicons name="power" size={18} color={Colors.primary} />
                                             <Text style={styles.switchLabel}>Active Status</Text>
                                         </View>
                                         <Switch 
                                             value={activeStatus} 
                                             onValueChange={setActiveStatus}
-                                            trackColor={{ false: '#e5e7eb', true: '#a7f3d0' }}
-                                            thumbColor={activeStatus ? '#10b981' : '#6b7280'}
+                                            trackColor={{ false: Colors.border, true: Colors.activeCard }}
+                                            thumbColor={activeStatus ? Colors.success : Colors.textSecondary}
                                         />
                                     </View>
                                 </View>
+                                ) : null}
 
                                 <View style={styles.formSection}>
                                     <Text style={styles.sectionTitle}>Additional Information</Text>
@@ -1041,14 +1087,18 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                                     <LinearGradient
                                         colors={
                                             Object.keys(errors).some(key => errors[key]) || isSubmitting
-                                                ? ['#9ca3af', '#6b7280']
-                                                : ['#6366f1', '#8b5cf6']
+                                                ? [Colors.border, Colors.textSecondary]
+                                                : [Colors.primary, Colors.primaryMuted]
                                         }
                                         style={styles.submitButtonGradient}
                                     >
-                                        <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                                        <Ionicons name="checkmark-circle" size={24} color={Colors.textOnPrimary} />
                                         <Text style={styles.submitButtonText}>
-                                            {traineeId || trainee ? 'Update Trainee' : 'Add Trainee'}
+                                            {isClient
+                                                ? 'Save profile'
+                                                : isEditing
+                                                  ? 'Update Client'
+                                                  : 'Add Client'}
                                         </Text>
                                     </LinearGradient>
                                 </TouchableOpacity>
@@ -1057,7 +1107,6 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
                     </ScrollView>
                 </LinearGradient>
                 <LoadingModal />
-            </KeyboardAvoidingView>
             
             {/* Toast component should be rendered at the root level */}
             <Toast />
@@ -1069,7 +1118,7 @@ export default function TraineeFormScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
+        backgroundColor: Colors.background,
     },
     background: {
         flex: 1,
@@ -1080,7 +1129,7 @@ const styles = StyleSheet.create({
     },
     formContainer: {
         flex: 1,
-        padding: 20,
+        padding: Spacing.large,
     },
     header: {
         marginBottom: 30,
@@ -1088,14 +1137,15 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 28,
+        fontFamily: Fonts.display,
         fontWeight: 'bold',
-        color: '#1f2937',
+        color: Colors.textPrimary,
         textAlign: 'center',
-        marginBottom: 8,
+        marginBottom: Spacing.small,
     },
     subtitle: {
         fontSize: 16,
-        color: '#6b7280',
+        color: Colors.textSecondary,
         textAlign: 'center',
     },
     imageSection: {
@@ -1103,14 +1153,14 @@ const styles = StyleSheet.create({
         marginBottom: 30,
     },
     imageContainer: {
-        marginBottom: 20,
+        marginBottom: Spacing.large,
     },
     profileImage: {
         width: 120,
         height: 120,
         borderRadius: 60,
         borderWidth: 4,
-        borderColor: '#e5e7eb',
+        borderColor: Colors.border,
     },
     imagePlaceholder: {
         width: 120,
@@ -1119,37 +1169,37 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 4,
-        borderColor: '#e5e7eb',
+        borderColor: Colors.border,
     },
     imageButtons: {
         flexDirection: 'row',
         gap: 12,
     },
     uploadButton: {
-        backgroundColor: '#6366f1',
-        paddingHorizontal: 20,
+        backgroundColor: Colors.primary,
+        paddingHorizontal: Spacing.large,
         paddingVertical: 12,
-        borderRadius: 25,
+        borderRadius: Radii.lg,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        shadowColor: '#6366f1',
+        gap: Spacing.small,
+        shadowColor: Colors.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 6,
     },
     uploadButtonText: {
-        color: '#fff',
+        color: Colors.textOnPrimary,
         fontSize: 14,
         fontWeight: '600',
     },
     removeButton: {
-        backgroundColor: '#ef4444',
-        paddingHorizontal: 16,
+        backgroundColor: Colors.error,
+        paddingHorizontal: Spacing.medium,
         paddingVertical: 12,
-        borderRadius: 25,
-        shadowColor: '#ef4444',
+        borderRadius: Radii.lg,
+        shadowColor: Colors.error,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -1160,27 +1210,28 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 20,
+        fontFamily: Fonts.display,
         fontWeight: 'bold',
-        color: '#1f2937',
-        marginBottom: 20,
+        color: Colors.textPrimary,
+        marginBottom: Spacing.large,
         paddingLeft: 4,
     },
     inputContainer: {
-        marginBottom: 20,
+        marginBottom: Spacing.large,
     },
     labelContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: Spacing.small,
         paddingHorizontal: 4,
     },
     labelIcon: {
-        marginRight: 8,
+        marginRight: Spacing.small,
     },
     inputLabel: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#374151',
+        color: Colors.textPrimary,
         flex: 1,
     },
     characterCount: {
@@ -1188,29 +1239,29 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     inputWrapper: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.md,
         borderWidth: 2,
-        borderColor: '#e5e7eb',
-        shadowColor: '#000',
+        borderColor: Colors.border,
+        shadowColor: Colors.textPrimary,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
         shadowRadius: 2,
         elevation: 1,
     },
     inputWrapperError: {
-        borderColor: '#ef4444',
-        backgroundColor: '#fef2f2',
+        borderColor: Colors.error,
+        backgroundColor: Colors.inactiveCard,
     },
     input: {
-        paddingHorizontal: 16,
+        paddingHorizontal: Spacing.medium,
         paddingVertical: 14,
         fontSize: 16,
-        color: '#1f2937',
-        borderRadius: 12,
+        color: Colors.textPrimary,
+        borderRadius: Radii.md,
     },
     inputError: {
-        color: '#dc2626',
+        color: Colors.error,
     },
     multilineInput: {
         minHeight: 80,
@@ -1224,7 +1275,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
     },
     errorText: {
-        color: '#ef4444',
+        color: Colors.error,
         fontSize: 14,
         marginLeft: 6,
         flex: 1,
@@ -1233,13 +1284,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#fff',
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        borderRadius: 12,
+        backgroundColor: Colors.surface,
+        paddingHorizontal: Spacing.medium,
+        paddingVertical: Spacing.medium,
+        borderRadius: Radii.md,
         borderWidth: 2,
-        borderColor: '#e5e7eb',
-        shadowColor: '#000',
+        borderColor: Colors.border,
+        shadowColor: Colors.textPrimary,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
         shadowRadius: 2,
@@ -1252,14 +1303,14 @@ const styles = StyleSheet.create({
     switchLabel: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#374151',
-        marginLeft: 8,
+        color: Colors.textPrimary,
+        marginLeft: Spacing.small,
     },
     submitButton: {
-        borderRadius: 16,
+        borderRadius: Radii.md,
         overflow: 'hidden',
-        marginTop: 20,
-        shadowColor: '#6366f1',
+        marginTop: Spacing.large,
+        shadowColor: Colors.primary,
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.3,
         shadowRadius: 12,
@@ -1270,15 +1321,15 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     submitButtonGradient: {
-        paddingVertical: 16,
-        paddingHorizontal: 24,
+        paddingVertical: Spacing.medium,
+        paddingHorizontal: Spacing.large,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 12,
     },
     submitButtonText: {
-        color: '#fff',
+        color: Colors.textOnPrimary,
         fontSize: 18,
         fontWeight: 'bold',
     },
@@ -1289,23 +1340,23 @@ const styles = StyleSheet.create({
         padding: 40,
     },
     loadingScreenText: {
-        marginTop: 16,
+        marginTop: Spacing.medium,
         fontSize: 16,
-        color: '#6b7280',
+        color: Colors.textSecondary,
         textAlign: 'center',
     },
     loadingOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(20, 32, 27, 0.5)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     loadingContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.lg,
         padding: 40,
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: Colors.textPrimary,
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.25,
         shadowRadius: 20,
@@ -1315,7 +1366,7 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        marginBottom: 20,
+        marginBottom: Spacing.large,
         overflow: 'hidden',
     },
     gradientSpinner: {
@@ -1325,13 +1376,14 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         fontSize: 18,
+        fontFamily: Fonts.display,
         fontWeight: 'bold',
-        color: '#1f2937',
-        marginBottom: 8,
+        color: Colors.textPrimary,
+        marginBottom: Spacing.small,
     },
     loadingSubText: {
         fontSize: 14,
-        color: '#6b7280',
+        color: Colors.textSecondary,
         textAlign: 'center',
     },
 });

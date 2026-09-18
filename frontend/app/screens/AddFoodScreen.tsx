@@ -6,9 +6,6 @@ import {
     TouchableOpacity,
     FlatList,
     TextInput,
-    KeyboardAvoidingView,
-    Platform,
-    Button,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -16,6 +13,7 @@ import { RootStackParamList } from '../types/navigation';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Constants from 'expo-constants';
 import Toast from 'react-native-toast-message';
+import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 
 type Food = {
     name: string;
@@ -73,7 +71,6 @@ export default function AddFoodScreen({ route, navigation }: Props) {
                 throw new Error('Diet entry not found.');
             }
             const data = await response.json();
-            // console.log('Fetched Existing Diet Entry:', data);
 
             if (data?.meals) {
                 setMeals(data.meals);
@@ -103,22 +100,17 @@ export default function AddFoodScreen({ route, navigation }: Props) {
         const updatedFoods = editingIndex !== null
             ? meals.find((meal) => meal.name === mealName)?.foods?.map((food, index) =>
                   index === editingIndex ? currentFood : food
-              ) || [] // Ensure foods are always an array
+              ) || []
             : [...(meals.find((meal) => meal.name === mealName)?.foods || []), currentFood];
     
-        // Update meals state to reflect changes
         setMeals((prevMeals) => {
             const otherMeals = prevMeals.filter((meal) => meal.name !== mealName);
             return [...otherMeals, { name: mealName, foods: updatedFoods }];
         });
     
-        // Reset current food state
         setCurrentFood({ name: '', quantity: 0, units: '', calories: 0, proteins: 0 });
         setEditingIndex(null);
     };
-    
-    
-    
 
     const handleEditFood = (index: number) => {
         const meal = meals.find((meal) => meal.name === mealName);
@@ -133,7 +125,7 @@ export default function AddFoodScreen({ route, navigation }: Props) {
             const otherMeals = prevMeals.filter((meal) => meal.name !== mealName);
             const updatedFoods = prevMeals
                 .find((meal) => meal.name === mealName)
-                ?.foods?.filter((_, i) => i !== index) || [];  // Ensure foods is never undefined
+                ?.foods?.filter((_, i) => i !== index) || [];
     
             return [...otherMeals, { name: mealName, foods: updatedFoods }];
         });
@@ -190,14 +182,13 @@ export default function AddFoodScreen({ route, navigation }: Props) {
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to create new diet entry.');
+                    throw new Error('Failed to create diet entry.');
                 }
 
                 Toast.show({
                     type: 'success',
-                    text1: 'New Diet Entry Created',
+                    text1: 'Diet Entry Created',
                 });
-
             }
 
             navigation.goBack();
@@ -214,18 +205,18 @@ export default function AddFoodScreen({ route, navigation }: Props) {
 
     const renderFoodItem = ({ item, index }: { item: Food; index: number }) => (
         <View style={styles.foodItem}>
-            <View>
+            <View style={{ flex: 1 }}>
                 <Text style={styles.foodName}>{item.name}</Text>
                 <Text style={styles.foodStats}>
-                    {item.quantity} {item.units} | {item.calories} cal | {item.proteins} g protein
+                    {item.quantity} {item.units} · {item.calories} cal · {item.proteins} g protein
                 </Text>
             </View>
             <View style={styles.actions}>
-                <TouchableOpacity onPress={() => handleEditFood(index)}>
-                    <Icon name="pencil-outline" size={24} color="#007bff" />
+                <TouchableOpacity onPress={() => handleEditFood(index)} hitSlop={8}>
+                    <Icon name="pencil-outline" size={22} color={Colors.primary} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDeleteFood(index)}>
-                    <Icon name="trash-can-outline" size={24} color="#ff0000" />
+                <TouchableOpacity onPress={() => handleDeleteFood(index)} hitSlop={8}>
+                    <Icon name="trash-can-outline" size={22} color={Colors.error} />
                 </TouchableOpacity>
             </View>
         </View>
@@ -234,56 +225,67 @@ export default function AddFoodScreen({ route, navigation }: Props) {
     const currentMealFoods = meals.find((meal) => meal.name === mealName)?.foods || [];
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-            <Text style={styles.title}>Add Foods to {mealName}</Text>
-            <Text>Date: {date}</Text>
+        <View style={styles.container}>
+            <Text style={styles.eyebrow}>Diet</Text>
+            <Text style={styles.title}>{mealName}</Text>
+            <Text style={styles.date}>{date}</Text>
 
             <View style={styles.inputForm}>
                 <TextInput
                     style={styles.input}
-                    placeholder="Food Name"
+                    placeholder="Food name"
+                    placeholderTextColor={Colors.textSecondary}
                     value={currentFood.name}
                     onChangeText={(text) => setCurrentFood({ ...currentFood, name: text })}
                 />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Quantity"
-                    keyboardType="numeric"
-                    value={currentFood.quantity === 0 ? '' : currentFood.quantity.toString()}
-                    onChangeText={(text) =>
-                        setCurrentFood({ ...currentFood, quantity: parseFloat(text) || 0 })
-                    }
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Units (e.g., grams, piece)"
-                    value={currentFood.units}
-                    onChangeText={(text) => setCurrentFood({ ...currentFood, units: text })}
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Calories"
-                    keyboardType="numeric"
-                    value={currentFood.calories === 0 ? '' : currentFood.calories.toString()}
-                    onChangeText={(text) =>
-                        setCurrentFood({ ...currentFood, calories: parseFloat(text) || 0 })
-                    }
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Proteins"
-                    keyboardType="numeric"
-                    value={currentFood.proteins === 0 ? '' : currentFood.proteins.toString()}
-                    onChangeText={(text) =>
-                        setCurrentFood({ ...currentFood, proteins: parseFloat(text) || 0 })
-                    }
-                />
-                <TouchableOpacity style={styles.addButton} onPress={handleAddOrEditFood}>
+                <View style={styles.row}>
+                    <TextInput
+                        style={[styles.input, styles.half]}
+                        placeholder="Qty"
+                        placeholderTextColor={Colors.textSecondary}
+                        keyboardType="numeric"
+                        value={currentFood.quantity === 0 ? '' : currentFood.quantity.toString()}
+                        onChangeText={(text) =>
+                            setCurrentFood({ ...currentFood, quantity: parseFloat(text) || 0 })
+                        }
+                    />
+                    <TextInput
+                        style={[styles.input, styles.half]}
+                        placeholder="Units"
+                        placeholderTextColor={Colors.textSecondary}
+                        value={currentFood.units}
+                        onChangeText={(text) => setCurrentFood({ ...currentFood, units: text })}
+                    />
+                </View>
+                <View style={styles.row}>
+                    <TextInput
+                        style={[styles.input, styles.half]}
+                        placeholder="Calories"
+                        placeholderTextColor={Colors.textSecondary}
+                        keyboardType="numeric"
+                        value={currentFood.calories === 0 ? '' : currentFood.calories.toString()}
+                        onChangeText={(text) =>
+                            setCurrentFood({ ...currentFood, calories: parseFloat(text) || 0 })
+                        }
+                    />
+                    <TextInput
+                        style={[styles.input, styles.half]}
+                        placeholder="Protein (g)"
+                        placeholderTextColor={Colors.textSecondary}
+                        keyboardType="numeric"
+                        value={currentFood.proteins === 0 ? '' : currentFood.proteins.toString()}
+                        onChangeText={(text) =>
+                            setCurrentFood({ ...currentFood, proteins: parseFloat(text) || 0 })
+                        }
+                    />
+                </View>
+                <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={handleAddOrEditFood}
+                    activeOpacity={0.88}
+                >
                     <Text style={styles.addButtonText}>
-                        {editingIndex !== null ? 'Update Food' : 'Add Food'}
+                        {editingIndex !== null ? 'Update food' : 'Add food'}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -293,43 +295,110 @@ export default function AddFoodScreen({ route, navigation }: Props) {
                 keyExtractor={(_, index) => index.toString()}
                 renderItem={renderFoodItem}
                 ListEmptyComponent={<Text style={styles.emptyText}>No foods added yet.</Text>}
+                style={{ flex: 1 }}
             />
 
-            <Button title="Save Meal" onPress={saveMeal} />
-        </KeyboardAvoidingView>
+            <TouchableOpacity style={styles.saveMeal} onPress={saveMeal} activeOpacity={0.88}>
+                <Text style={styles.saveMealText}>Save meal</Text>
+            </TouchableOpacity>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16 },
-    title: { fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
-    inputForm: { marginBottom: 16 },
+    container: {
+        flex: 1,
+        padding: Spacing.medium,
+        backgroundColor: Colors.background,
+    },
+    eyebrow: {
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        color: Colors.accent,
+        marginBottom: 4,
+    },
+    title: {
+        fontFamily: Fonts.display,
+        fontSize: 26,
+        fontWeight: '700',
+        color: Colors.primary,
+        marginBottom: 4,
+    },
+    date: {
+        color: Colors.textSecondary,
+        marginBottom: Spacing.medium,
+    },
+    inputForm: {
+        marginBottom: Spacing.medium,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.md,
+        padding: Spacing.medium,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    row: {
+        flexDirection: 'row',
+        gap: Spacing.small,
+    },
+    half: {
+        flex: 1,
+    },
     input: {
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        padding: 8,
-        marginBottom: 8,
+        borderColor: Colors.border,
+        borderRadius: Radii.sm,
+        padding: 12,
+        marginBottom: Spacing.small,
+        backgroundColor: Colors.background,
+        color: Colors.textPrimary,
+        fontSize: 15,
     },
     addButton: {
-        backgroundColor: '#6200ee',
-        padding: 10,
-        borderRadius: 8,
+        backgroundColor: Colors.primary,
+        padding: 12,
+        borderRadius: Radii.sm,
         alignItems: 'center',
-        marginBottom: 16,
+        marginTop: 4,
     },
-    addButtonText: { color: '#fff', fontWeight: 'bold' },
+    addButtonText: { color: Colors.textOnPrimary, fontWeight: '800' },
     foodItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 12,
-        backgroundColor: '#e3f2fd',
-        borderRadius: 8,
-        marginBottom: 8,
+        padding: Spacing.medium,
+        backgroundColor: Colors.surface,
+        borderRadius: Radii.sm,
+        marginBottom: Spacing.small,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        gap: Spacing.small,
     },
-    foodName: { fontSize: 16, fontWeight: 'bold' },
-    foodStats: { fontSize: 14, color: '#555' },
-    actions: { flexDirection: 'row', justifyContent: 'space-between', width: 60 },
-    emptyText: { fontSize: 14, color: '#999', textAlign: 'center', marginTop: 20 },
+    foodName: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: Colors.textPrimary,
+        marginBottom: 2,
+    },
+    foodStats: { fontSize: 13, color: Colors.textSecondary },
+    actions: { flexDirection: 'row', gap: 14 },
+    emptyText: {
+        fontSize: 14,
+        color: Colors.textSecondary,
+        textAlign: 'center',
+        marginTop: Spacing.large,
+    },
+    saveMeal: {
+        backgroundColor: Colors.accent,
+        paddingVertical: 14,
+        borderRadius: Radii.md,
+        alignItems: 'center',
+        marginTop: Spacing.small,
+    },
+    saveMealText: {
+        color: Colors.textPrimary,
+        fontWeight: '800',
+        fontSize: 16,
+    },
 });
