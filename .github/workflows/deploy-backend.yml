@@ -81,6 +81,10 @@ jobs:
 
           "${SSH[@]}" "${USER}@${HOST}" "mkdir -p ~/ironcoach-backend"
 
+          # Ubuntu Minimal has no rsync by default; install once on the VM.
+          "${SSH[@]}" "${USER}@${HOST}" \
+            'if ! command -v rsync >/dev/null 2>&1; then sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rsync; fi'
+
           rsync -az --delete \
             -e "$RSYNC_SSH" \
             --exclude '.env' \
