@@ -7,8 +7,13 @@ logs/
 npm-debug.log*
 
 # Environment variables
-
+.env
 !.env.example
+
+# SSH / deploy secrets
+*.key
+*.pem
+Resources/
 
 # Build outputs
 dist/
