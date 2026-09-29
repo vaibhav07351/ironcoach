@@ -103,7 +103,7 @@ jobs:
         run: |
           set -euo pipefail
           for i in 1 2 3 4 5; do
-            if curl -fsS --max-time 20 https://ironcoach.duckdns.org/ | grep -q "Gym trainer"; then
+            if curl -fsS --max-time 20 https://ironcoach.duckdns.org/ | grep -q "TrainerNearMe"; then
               echo "smoke: ok"
               exit 0
             fi
