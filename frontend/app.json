@@ -54,7 +54,7 @@
       "eas": {
         "projectId": "7067ae90-2994-477c-9616-cc290d9c2d06"
       },
-      "backendUrl": "http://localhost:8080",
+      "backendUrl": "https://ironcoach.duckdns.org",
       "googleWebClientId": "883815662037-7l4am1d65uoo5cetj09nurm2ednjg1lg.apps.googleusercontent.com",
       "googleAndroidClientId": "883815662037-j43hk42ou4lf9eu88c07a8tpnbedk2pr.apps.googleusercontent.com",
       "googleIosClientId": "",
