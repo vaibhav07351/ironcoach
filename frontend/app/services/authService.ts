@@ -29,3 +29,33 @@ export async function fetchMe(token: string): Promise<PublicUser> {
   }
   return (await response.json()) as PublicUser;
 }
+
+export async function updateClientInterests(
+  token: string,
+  interests: string[]
+): Promise<PublicUser> {
+  const response = await apiFetch(
+    '/auth/interests',
+    { method: 'PUT', body: JSON.stringify({ interests }) },
+    token
+  );
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+  return (await response.json()) as PublicUser;
+}
+
+export async function completeTrainerExpertise(
+  token: string,
+  expertises: string[]
+): Promise<PublicUser> {
+  const response = await apiFetch(
+    '/auth/onboarding/trainer/expertise',
+    { method: 'PUT', body: JSON.stringify({ expertises }) },
+    token
+  );
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+  return (await response.json()) as PublicUser;
+}

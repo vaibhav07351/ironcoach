@@ -17,24 +17,34 @@ import Toast from 'react-native-toast-message';
 import { RootStackParamList } from '../types/navigation';
 import { AuthContext } from '../contexts/AuthContext';
 import { googleAuth } from '../services/authService';
-import { UserRole } from '../types/auth';
+import { PublicUser, UserRole } from '../types/auth';
 import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
-function routeAfterAuth(
+export function routeAfterAuth(
   navigation: NavigationProp,
-  needsInvite: boolean,
-  role: UserRole
+  user: Pick<
+    PublicUser,
+    'needs_invite' | 'needs_interests' | 'needs_onboarding' | 'role'
+  >
 ): void {
-  if (role === 'client' && needsInvite) {
+  if (user.role === 'client' && user.needs_interests) {
+    navigation.replace('ClientInterests');
+    return;
+  }
+  if (user.role === 'client' && user.needs_invite) {
     navigation.replace('FindCoachHub');
     return;
   }
-  if (role === 'client') {
+  if (user.role === 'client') {
     navigation.replace('ClientHome');
+    return;
+  }
+  if (user.role === 'trainer' && user.needs_onboarding) {
+    navigation.replace('TrainerExpertise');
     return;
   }
   navigation.replace('Dashboard');
@@ -43,7 +53,7 @@ function routeAfterAuth(
 export default function LoginScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { login, isAuthenticated, user, state } = useContext(AuthContext);
-  const [role, setRole] = useState<UserRole>('trainer');
+  const [role, setRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const extra = Constants.expoConfig?.extra ?? {};
@@ -56,13 +66,21 @@ export default function LoginScreen() {
 
   useEffect(() => {
     if (state.status === 'signedIn' && user) {
-      routeAfterAuth(navigation, user.needs_invite, user.role);
+      routeAfterAuth(navigation, user);
     }
   }, [state.status, user, navigation]);
 
   useEffect(() => {
     const handleResponse = async (): Promise<void> => {
       if (response?.type !== 'success') {
+        return;
+      }
+      if (!role) {
+        Toast.show({
+          type: 'error',
+          text1: 'Choose a role',
+          text2: 'Select trainer or client before continuing.',
+        });
         return;
       }
       const idToken = response.params.id_token;
@@ -81,10 +99,10 @@ export default function LoginScreen() {
         await login(auth.token, auth.user);
         Toast.show({
           type: 'success',
-          text1: 'Welcome to IronCoach',
+          text1: 'Welcome to TrainerNearMe',
           text2: auth.user.name || auth.user.email,
         });
-        routeAfterAuth(navigation, auth.user.needs_invite, auth.user.role);
+        routeAfterAuth(navigation, auth.user);
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : 'Sign-in failed';
@@ -105,23 +123,24 @@ export default function LoginScreen() {
     );
   }
 
-  const googleReady = !!request && !isLoading;
+  const googleReady = !!request && !isLoading && role !== null;
 
   return (
     <View style={styles.container}>
       <View style={styles.heroGlow} />
       <View style={styles.brandBlock}>
         <Image
-          source={require('../../assets/images/ironcoach.png')}
+          source={require('../../assets/images/trainernearme.png')}
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.brand}>IronCoach</Text>
+        <Text style={styles.brand}>TrainerNearMe</Text>
         <Text style={styles.tagline}>
           Stay accountable. Train with intent. Show up this week.
         </Text>
       </View>
 
+      <Text style={styles.rolePrompt}>I am signing in as</Text>
       <View style={styles.roleRow}>
         <TouchableOpacity
           style={[styles.roleChip, role === 'trainer' && styles.roleChipActive]}
@@ -166,9 +185,11 @@ export default function LoginScreen() {
       </TouchableOpacity>
 
       <Text style={styles.hint}>
-        {role === 'client'
-          ? 'After sign-in, enter the invite code from your trainer.'
-          : 'One tap to start coaching — no password to remember.'}
+        {role === null
+          ? 'Choose trainer or client, then continue with Google.'
+          : role === 'client'
+            ? 'After sign-in, tell us what you want to train for.'
+            : 'After sign-in, pick what you coach — then finish your profile.'}
       </Text>
 
       {!extra.googleWebClientId && (
@@ -226,6 +247,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     maxWidth: 300,
+  },
+  rolePrompt: {
+    textAlign: 'center',
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: Spacing.small,
   },
   roleRow: {
     flexDirection: 'row',

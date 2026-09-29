@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "IronCoach",
+    "name": "TrainerNearMe",
     "slug": "IronCoach",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/ironcoach.png",
+    "icon": "./assets/images/trainernearme.png",
     "scheme": "ironcoach",
     "userInterfaceStyle": "automatic",
-    "description": "Accountability-first fitness coaching for trainers and clients",
+    "description": "Find coaches near you — gym, swimming, badminton, yoga, and more",
     "primaryColor": "#0B3D2E",
     "ios": {
       "supportsTablet": true,
@@ -15,8 +15,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/ironcoach.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/trainernearme.png",
+        "backgroundColor": "#0B3D2E"
       },
       "package": "com.vaibhavbhardwaj.ironcoach",
       "versionCode": 1,
@@ -31,13 +31,13 @@
     },
     "web": {
       "bundler": "metro",
-      "favicon": "./assets/images/ironcoach.png"
+      "favicon": "./assets/images/trainernearme.png"
     },
     "plugins": [
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/ironcoach.png",
+          "image": "./assets/images/trainernearme.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#F3F0E8"
@@ -46,7 +46,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow IronCoach to use your location to find coaches near you."
+          "locationWhenInUsePermission": "Allow TrainerNearMe to use your location to find coaches near you."
         }
       ]
     ],

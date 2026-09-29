@@ -79,6 +79,9 @@ func (r *UserRepository) UpsertByGoogleSub(user models.User) (models.User, error
 		"created_at": now,
 		"role":       user.Role,
 	}
+	if user.OnboardingDone != nil {
+		setOnInsert["onboarding_done"] = *user.OnboardingDone
+	}
 	set := bson.M{
 		"email":      user.Email,
 		"name":       user.Name,

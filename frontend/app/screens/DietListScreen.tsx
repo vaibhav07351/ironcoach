@@ -389,6 +389,20 @@ export default function DietListScreen({ route, navigation, trainee }: Props) {
     { name: 'Lunch', foods: [], calories: 0, proteins: 0 },
     { name: 'Evening Snack', foods: [], calories: 0, proteins: 0 },
     { name: 'Dinner', foods: [], calories: 0, proteins: 0 },
+    {
+      name: 'Post Workout',
+      foods: [
+        {
+          name: 'Whey protein',
+          quantity: 1,
+          units: 'scoop',
+          calories: 120,
+          proteins: 24,
+        },
+      ],
+      calories: 120,
+      proteins: 24,
+    },
   ];
 
   const mergedMeals = defaultMeals.map((defaultMeal) => {

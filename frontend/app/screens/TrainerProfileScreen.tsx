@@ -27,6 +27,7 @@ import {
 } from '../services/locationService';
 import { Colors, Radii, Spacing } from '@/constants/theme';
 import { StarRating } from '@/components/StarRating';
+import { EXPERTISE_OPTIONS } from '../constants/expertise';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TrainerProfile'>;
 
@@ -40,6 +41,7 @@ export default function TrainerProfileScreen({ navigation }: Props) {
   const [headline, setHeadline] = useState('');
   const [bio, setBio] = useState('');
   const [speciality, setSpeciality] = useState('');
+  const [expertises, setExpertises] = useState<string[]>([]);
   const [city, setCity] = useState('');
   const [area, setArea] = useState('');
   const [pincode, setPincode] = useState('');
@@ -60,6 +62,7 @@ export default function TrainerProfileScreen({ navigation }: Props) {
       setHeadline(data.headline || '');
       setBio(data.bio || '');
       setSpeciality(data.speciality || '');
+      setExpertises(data.expertises?.length ? data.expertises : ['other']);
       setCity(data.city || '');
       setArea(data.area || '');
       setPincode(data.pincode || '');
@@ -204,6 +207,7 @@ export default function TrainerProfileScreen({ navigation }: Props) {
         headline: headline.trim(),
         bio: bio.trim(),
         speciality: speciality.trim(),
+        expertises,
         city: city.trim(),
         area: area.trim(),
         pincode: pincode.trim(),
@@ -297,7 +301,36 @@ export default function TrainerProfileScreen({ navigation }: Props) {
         placeholderTextColor={Colors.textSecondary}
       />
 
-      <Text style={styles.label}>Speciality</Text>
+      <Text style={styles.label}>What you coach</Text>
+      <Text style={styles.hint}>
+        Pick every sport you train people for. Clients matching these see you first.
+      </Text>
+      <View style={styles.chipRow}>
+        {EXPERTISE_OPTIONS.map((opt) => {
+          const active = expertises.includes(opt.code);
+          return (
+            <TouchableOpacity
+              key={opt.code}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => {
+                setExpertises((prev) => {
+                  if (prev.includes(opt.code)) {
+                    const next = prev.filter((c) => c !== opt.code);
+                    return next.length === 0 ? ['other'] : next;
+                  }
+                  return [...prev, opt.code];
+                });
+              }}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <Text style={styles.label}>Speciality note (optional)</Text>
       <TextInput
         style={styles.input}
         value={speciality}
@@ -509,6 +542,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: Spacing.small,
   },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: Spacing.small,
+  },
+  chip: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radii.lg,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: Colors.surface,
+  },
+  chipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  chipText: { color: Colors.textPrimary, fontWeight: '600', fontSize: 13 },
+  chipTextActive: { color: Colors.textOnPrimary },
   input: {
     backgroundColor: Colors.surface,
     borderWidth: 1,

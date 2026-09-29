@@ -33,6 +33,8 @@ export type RootStackParamList = {
     ClientHome: undefined;
     InviteRedeem: undefined;
     FindCoachHub: undefined;
+    ClientInterests: undefined;
+    TrainerExpertise: undefined;
     TrainerDiscover: undefined;
     CoachRequests: undefined;
     InviteClient: { traineeId: string; traineeName: string };
@@ -87,5 +89,10 @@ export type RootStackParamList = {
         date: string;
         mealName: string;
         existingFoods: Food[];
+    };
+    LogSession: {
+        traineeId: string;
+        selectedDate: Date;
+        activityType: string;
     };
 };

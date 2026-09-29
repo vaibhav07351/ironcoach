@@ -82,14 +82,16 @@ func (s *AuthService) AuthenticateGoogle(req GoogleAuthRequest) (*AuthResponse, 
 			return nil, errors.New("role is required for new users (trainer or client)")
 		}
 		now := time.Now()
+		onboardingDone := role != models.RoleTrainer // clients skip trainer category gate
 		user, err = s.users.UpsertByGoogleSub(models.User{
-			GoogleSub: info.Sub,
-			Email:     info.Email,
-			Name:      info.Name,
-			Picture:   info.Picture,
-			Role:      role,
-			CreatedAt: now,
-			UpdatedAt: now,
+			GoogleSub:      info.Sub,
+			Email:          info.Email,
+			Name:           info.Name,
+			Picture:        info.Picture,
+			Role:           role,
+			OnboardingDone: &onboardingDone,
+			CreatedAt:      now,
+			UpdatedAt:      now,
 		})
 		if err != nil {
 			return nil, err
@@ -154,6 +156,7 @@ func (s *AuthService) ensureTrainerProfile(user models.User) error {
 		DateOfBirth:      "2000-01-01",
 		Experience:       0,
 		TrainerType:      "personal",
+		Expertises:       []string{models.ExpertiseOther},
 		DiscoveryVisible: true,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
@@ -182,12 +185,11 @@ func (s *AuthService) GetMe(userID string) (models.PublicUser, error) {
 }
 
 func toPublicUser(user models.User) models.PublicUser {
-	needsOnboarding := user.Role == models.RoleTrainer && user.TrainerID == ""
+	// Legacy trainers (onboarding_done unset) are treated as done so existing accounts are not gated.
+	needsOnboarding := user.Role == models.RoleTrainer &&
+		(user.TrainerID == "" || (user.OnboardingDone != nil && !*user.OnboardingDone))
 	needsInvite := user.Role == models.RoleClient && user.TraineeID == ""
-	if user.Role == models.RoleTrainer && user.TrainerID != "" {
-		// still may need profile fields — treat phone placeholder as onboarding
-		needsOnboarding = false
-	}
+	needsInterests := user.Role == models.RoleClient && len(user.Interests) == 0
 	return models.PublicUser{
 		ID:              user.ID,
 		Email:           user.Email,
@@ -196,7 +198,64 @@ func toPublicUser(user models.User) models.PublicUser {
 		Role:            user.Role,
 		TrainerID:       user.TrainerID,
 		TraineeID:       user.TraineeID,
+		Interests:       user.Interests,
 		NeedsOnboarding: needsOnboarding,
 		NeedsInvite:     needsInvite,
+		NeedsInterests:  needsInterests,
 	}
+}
+
+// CompleteTrainerExpertise saves coaching categories and marks trainer onboarding done.
+func (s *AuthService) CompleteTrainerExpertise(userID string, expertises []string) (models.PublicUser, error) {
+	normalized, ok := models.NormalizeExpertises(expertises)
+	if !ok || len(normalized) == 0 {
+		return models.PublicUser{}, errors.New("invalid expertise code")
+	}
+	user, err := s.users.FindByID(userID)
+	if err != nil || user.ID == "" {
+		return models.PublicUser{}, errors.New("user not found")
+	}
+	if user.Role != models.RoleTrainer {
+		return models.PublicUser{}, errors.New("trainers only")
+	}
+	if user.TrainerID == "" {
+		return models.PublicUser{}, errors.New("trainer profile not linked")
+	}
+
+	if err := s.trainers.UpdateTrainer(user.TrainerID, map[string]interface{}{
+		"expertises": normalized,
+	}); err != nil {
+		return models.PublicUser{}, err
+	}
+
+	done := true
+	if err := s.users.Update(userID, map[string]interface{}{
+		"onboarding_done": done,
+	}); err != nil {
+		return models.PublicUser{}, err
+	}
+	user.OnboardingDone = &done
+	return toPublicUser(user), nil
+}
+
+// UpdateClientInterests saves validated interest codes for a client user.
+func (s *AuthService) UpdateClientInterests(userID string, interests []string) (models.PublicUser, error) {
+	normalized, ok := models.NormalizeExpertises(interests)
+	if !ok {
+		return models.PublicUser{}, errors.New("invalid interest code")
+	}
+	user, err := s.users.FindByID(userID)
+	if err != nil || user.ID == "" {
+		return models.PublicUser{}, errors.New("user not found")
+	}
+	if user.Role != models.RoleClient {
+		return models.PublicUser{}, errors.New("clients only")
+	}
+	if err := s.users.Update(userID, map[string]interface{}{
+		"interests": normalized,
+	}); err != nil {
+		return models.PublicUser{}, err
+	}
+	user.Interests = normalized
+	return toPublicUser(user), nil
 }

@@ -95,7 +95,7 @@ async function fetchNominatim(url: string): Promise<NominatimResult | null> {
       signal: controller.signal,
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'IronCoach/1.0 (trainer-location)',
+        'User-Agent': 'TrainerNearMe/1.0 (trainer-location)',
       },
     });
     if (!response.ok) {
@@ -191,7 +191,7 @@ export async function resolvePlaceFromPincode(
           signal: controller.signal,
           headers: {
             Accept: 'application/json',
-            'User-Agent': 'IronCoach/1.0 (trainer-location)',
+            'User-Agent': 'TrainerNearMe/1.0 (trainer-location)',
           },
         });
         if (response.ok) {

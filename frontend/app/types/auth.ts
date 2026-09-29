@@ -8,8 +8,10 @@ export type PublicUser = {
   role: UserRole;
   trainer_id?: string;
   trainee_id?: string;
+  interests?: string[];
   needs_onboarding: boolean;
   needs_invite: boolean;
+  needs_interests: boolean;
 };
 
 export type AuthResponse = {

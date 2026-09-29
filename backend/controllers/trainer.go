@@ -2,9 +2,11 @@ package controllers
 
 import (
 	"ironcoach/models"
+	"ironcoach/repositories"
 	"ironcoach/services"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -93,24 +95,25 @@ func (c *TrainerController) UpdateDiscoveryProfile(ctx *gin.Context) {
 	email := ctx.MustGet("email").(string)
 
 	var body struct {
-		Headline         *string  `json:"headline"`
-		Bio              *string  `json:"bio"`
-		Speciality       *string  `json:"speciality"`
-		City             *string  `json:"city"`
-		Area             *string  `json:"area"`
-		Pincode          *string  `json:"pincode"`
-		Latitude         *float64 `json:"latitude"`
-		Longitude        *float64 `json:"longitude"`
-		HourlyRate       *float64 `json:"hourly_rate"`
-		ImageURL         *string  `json:"image_url"`
-		Experience       *int     `json:"experience"`
-		TrainerType      *string  `json:"trainer_type"`
-		DiscoveryVisible *bool    `json:"discovery_visible"`
-		Name             *string  `json:"name"`
-		PhoneNumber      *string  `json:"phone_number"`
-		Address          *string  `json:"address"`
-		Availability     *string  `json:"availability"`
-		SocialHandle     *string  `json:"social_handle"`
+		Headline         *string   `json:"headline"`
+		Bio              *string   `json:"bio"`
+		Speciality       *string   `json:"speciality"`
+		Expertises       *[]string `json:"expertises"`
+		City             *string   `json:"city"`
+		Area             *string   `json:"area"`
+		Pincode          *string   `json:"pincode"`
+		Latitude         *float64  `json:"latitude"`
+		Longitude        *float64  `json:"longitude"`
+		HourlyRate       *float64  `json:"hourly_rate"`
+		ImageURL         *string   `json:"image_url"`
+		Experience       *int      `json:"experience"`
+		TrainerType      *string   `json:"trainer_type"`
+		DiscoveryVisible *bool     `json:"discovery_visible"`
+		Name             *string   `json:"name"`
+		PhoneNumber      *string   `json:"phone_number"`
+		Address          *string   `json:"address"`
+		Availability     *string   `json:"availability"`
+		SocialHandle     *string   `json:"social_handle"`
 	}
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "validation_error", "message": err.Error()}})
@@ -126,6 +129,14 @@ func (c *TrainerController) UpdateDiscoveryProfile(ctx *gin.Context) {
 	}
 	if body.Speciality != nil {
 		update["speciality"] = *body.Speciality
+	}
+	if body.Expertises != nil {
+		normalized, ok := models.NormalizeExpertises(*body.Expertises)
+		if !ok {
+			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": gin.H{"code": "validation_error", "message": "invalid expertise code"}})
+			return
+		}
+		update["expertises"] = normalized
 	}
 	if body.City != nil {
 		update["city"] = *body.City
@@ -209,7 +220,20 @@ func (c *TrainerController) DiscoverTrainers(ctx *gin.Context) {
 		}
 	}
 
-	items, err := c.service.DiscoverTrainers(lat, lng, limit)
+	var interests []string
+	if userID, ok := ctx.Get("user_id"); ok {
+		if id, ok := userID.(string); id != "" && ok {
+			userRepo := repositories.NewUserRepository()
+			if user, err := userRepo.FindByID(id); err == nil && len(user.Interests) > 0 {
+				interests = user.Interests
+			}
+		}
+	}
+	if v := ctx.Query("interests"); v != "" {
+		interests = strings.Split(v, ",")
+	}
+
+	items, err := c.service.DiscoverTrainers(lat, lng, limit, interests)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "list_failed", "message": "Failed to discover trainers"}})
 		return

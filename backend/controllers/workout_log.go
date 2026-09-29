@@ -31,7 +31,7 @@ func (ctrl *WorkoutLogController) AddWorkoutLog(c *gin.Context) {
 
 	// Call service to add workout log
 	if err := ctrl.service.AddWorkoutLog(log); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add workout log"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "validation_error", "message": err.Error()}})
 		return
 	}
 

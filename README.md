@@ -1,9 +1,9 @@
 <h1>
-  🏋️‍♂️ IronCoach
-  <img src="./frontend/assets/images/ironcoach.png" alt="IronCoach Banner" width="40" style="margin-left: 10px;" />
+  🏋️‍♂️ TrainerNearMe
+  <img src="./frontend/assets/images/trainernearme.png" alt="TrainerNearMe Banner" width="40" style="margin-left: 10px;" />
 </h1>
 
-> **Your Personal Fitness Companion** - A comprehensive fitness tracking and coaching application designed to help trainers manage their clients and trainees achieve their fitness goals.
+> **Find coaches near you** — accountability-first coaching for gym, swimming, badminton, yoga, running, cricket, boxing, MMA, and more.
 
 
 [![Go Version](https://img.shields.io/badge/Go-1.19+-00ADD8?logo=go)](https://golang.org/)

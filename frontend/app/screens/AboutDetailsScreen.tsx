@@ -146,7 +146,7 @@ export default function AboutDetailsScreen({ trainee, navigation }: Props) {
                     resizeMode="cover"
                 />
                 <View style={styles.heroText}>
-                    <Text style={styles.eyebrow}>IronCoach</Text>
+                    <Text style={styles.eyebrow}>TrainerNearMe</Text>
                     <Text style={styles.title}>
                         {isTrainer ? 'Client profile' : 'My profile'}
                     </Text>

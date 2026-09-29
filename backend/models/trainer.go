@@ -10,6 +10,7 @@ type Trainer struct {
 	PhoneNumber      string    `json:"phone_number" bson:"phone_number" validate:"required,len=10"`
 	Address          string    `json:"address" bson:"address"`
 	Speciality       string    `json:"speciality" bson:"speciality"`
+	Expertises       []string  `json:"expertises" bson:"expertises"`
 	DateOfBirth      string    `json:"date_of_birth" bson:"date_of_birth" validate:"required"`
 	Gender           string    `json:"gender" bson:"gender" validate:"required,oneof=male female other"`
 	Experience       int       `json:"experience" bson:"experience" validate:"required,gte=0"`
@@ -34,20 +35,22 @@ type Trainer struct {
 
 // DiscoverTrainer is a public-safe projection for client swipe discovery.
 type DiscoverTrainer struct {
-	Name         string  `json:"name"`
-	Email        string  `json:"email"`
-	ImageURL     string  `json:"image_url,omitempty"`
-	Headline     string  `json:"headline,omitempty"`
-	Bio          string  `json:"bio,omitempty"`
-	Speciality   string  `json:"speciality,omitempty"`
-	Experience   int     `json:"experience"`
-	HourlyRate   float64 `json:"hourly_rate"`
-	TrainerType  string  `json:"trainer_type,omitempty"`
-	City         string  `json:"city,omitempty"`
-	Area         string  `json:"area,omitempty"`
-	Latitude     float64 `json:"latitude,omitempty"`
-	Longitude    float64 `json:"longitude,omitempty"`
-	DistanceKm   float64 `json:"distance_km"`
-	Rating       float64 `json:"rating"`
-	RatingCount  int     `json:"rating_count"`
+	Name        string   `json:"name"`
+	Email       string   `json:"email"`
+	ImageURL    string   `json:"image_url,omitempty"`
+	Headline    string   `json:"headline,omitempty"`
+	Bio         string   `json:"bio,omitempty"`
+	Speciality  string   `json:"speciality,omitempty"`
+	Expertises  []string `json:"expertises"`
+	Experience  int      `json:"experience"`
+	HourlyRate  float64  `json:"hourly_rate"`
+	TrainerType string   `json:"trainer_type,omitempty"`
+	City        string   `json:"city,omitempty"`
+	Area        string   `json:"area,omitempty"`
+	Latitude    float64  `json:"latitude,omitempty"`
+	Longitude   float64  `json:"longitude,omitempty"`
+	DistanceKm  float64  `json:"distance_km"`
+	Rating      float64  `json:"rating"`
+	RatingCount int      `json:"rating_count"`
+	MatchTier   string   `json:"match_tier"` // match | nearby
 }

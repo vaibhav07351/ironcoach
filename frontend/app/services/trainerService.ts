@@ -6,6 +6,7 @@ export type TrainerDetails = {
   image_url?: string;
   bio?: string;
   speciality?: string;
+  expertises?: string[];
   experience?: number;
   hourly_rate?: number;
   phone_number?: string;
@@ -31,6 +32,7 @@ export type DiscoverTrainer = {
   headline?: string;
   bio?: string;
   speciality?: string;
+  expertises?: string[];
   experience: number;
   hourly_rate: number;
   trainer_type?: string;
@@ -41,6 +43,7 @@ export type DiscoverTrainer = {
   distance_km: number;
   rating: number;
   rating_count?: number;
+  match_tier?: 'match' | 'nearby';
 };
 
 export type CoachRequest = {

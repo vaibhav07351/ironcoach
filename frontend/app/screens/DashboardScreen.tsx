@@ -24,6 +24,9 @@ import {
   type TrainerDetails,
 } from '../services/trainerService';
 import { TrainerHeaderAvatar } from '@/components/TrainerHeaderAvatar';
+import FirstRunHints, {
+  hasCompletedFirstRunHints,
+} from '@/components/FirstRunHints';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
@@ -33,8 +36,23 @@ function greetingForHour(hour: number): string {
   return 'Good evening';
 }
 
+const TRAINER_HINT_STEPS = [
+  {
+    title: 'Complete your profile',
+    body: 'Add a photo, bio, city, and rates so clients know who you are. Tap Next to open your profile.',
+  },
+  {
+    title: 'Invite your first client',
+    body: 'Use Add client on this screen, then share an invite code so they can join you.',
+  },
+  {
+    title: 'Track the week',
+    body: 'Your dashboard shows adherence scores. Open a client anytime to log workouts and meals.',
+  },
+];
+
 export default function DashboardScreen({ navigation }: Props) {
-  const { isAuthenticated, token, role } = useContext(AuthContext);
+  const { isAuthenticated, token, role, user } = useContext(AuthContext);
   const [trainerDetails, setTrainerDetails] = useState<TrainerDetails | null>(
     null
   );
@@ -42,6 +60,11 @@ export default function DashboardScreen({ navigation }: Props) {
   const [requestCount, setRequestCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showHints, setShowHints] = useState(false);
+
+  const hintsKey = user?.id
+    ? `first_run_hints_trainer_v1_${user.id}`
+    : 'first_run_hints_trainer_v1';
 
   const load = useCallback(async () => {
     if (!isAuthenticated) {
@@ -50,6 +73,10 @@ export default function DashboardScreen({ navigation }: Props) {
     }
     if (role === 'client') {
       navigation.replace('ClientHome');
+      return;
+    }
+    if (user?.needs_onboarding) {
+      navigation.replace('TrainerExpertise');
       return;
     }
 
@@ -68,6 +95,9 @@ export default function DashboardScreen({ navigation }: Props) {
       ]);
       setRoster(items);
       setRequestCount(count);
+
+      const seen = await hasCompletedFirstRunHints(hintsKey);
+      setShowHints(!seen);
     } catch {
       Toast.show({
         type: 'error',
@@ -78,7 +108,14 @@ export default function DashboardScreen({ navigation }: Props) {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [isAuthenticated, navigation, role, token]);
+  }, [
+    isAuthenticated,
+    navigation,
+    role,
+    token,
+    user?.needs_onboarding,
+    hintsKey,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
@@ -88,7 +125,7 @@ export default function DashboardScreen({ navigation }: Props) {
 
   useEffect(() => {
     navigation.setOptions({
-      title: 'IronCoach',
+      title: 'TrainerNearMe',
       headerRight: () => <TrainerHeaderAvatar />,
     });
   }, [navigation]);
@@ -263,6 +300,25 @@ export default function DashboardScreen({ navigation }: Props) {
         <Ionicons name="add" size={24} color={Colors.textPrimary} />
         <Text style={styles.fabText}>Add client</Text>
       </TouchableOpacity>
+
+      <FirstRunHints
+        storageKey={hintsKey}
+        steps={TRAINER_HINT_STEPS}
+        visible={showHints}
+        onDismiss={() => setShowHints(false)}
+        onPrimary={(stepIndex) => {
+          if (stepIndex === 0) {
+            navigation.navigate('TrainerProfile', {});
+          } else if (stepIndex === 1) {
+            navigation.navigate('TraineeForm', {});
+          }
+        }}
+        primaryLabel={(stepIndex, isLast) => {
+          if (stepIndex === 0) return 'Open profile';
+          if (stepIndex === 1) return 'Add client';
+          return isLast ? 'Got it' : 'Next';
+        }}
+      />
     </View>
   );
 }

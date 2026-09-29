@@ -103,7 +103,7 @@ export default function AddCustomCategoryScreen({ route, navigation }: Props) {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.eyebrow}>IronCoach</Text>
+            <Text style={styles.eyebrow}>TrainerNearMe</Text>
             <Text style={styles.title}>
                 {isUpdateMode ? 'Update category' : 'New category'}
             </Text>

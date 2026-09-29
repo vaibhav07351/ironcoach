@@ -53,10 +53,11 @@ func main() {
 	routes.RegisterImageRoutes(router)
 	routes.RegisterCoachRequestRoutes(router)
 	routes.RegisterRatingRoutes(router)
+	routes.RegisterNutritionRoutes(router)
 
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"message": "Hello, Gym trainer App!",
+			"message": "Hello, TrainerNearMe!",
 		})
 	})
 

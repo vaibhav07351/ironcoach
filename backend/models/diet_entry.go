@@ -4,11 +4,15 @@ import "time"
 
 // Food represents an individual item in a meal
 type Food struct {
-	Name     string  `json:"name" bson:"name"`         // Name of the food
-	Quantity float64 `json:"quantity" bson:"quantity"` // Quantity consumed
-	Units    string  `json:"units" bson:"units"`       // Units (e.g., grams, cups)
-	Calories float64 `json:"calories" bson:"calories"` // Calories for the food item
-	Proteins float64 `json:"proteins" bson:"proteins"` // Protein content in grams
+	Name       string  `json:"name" bson:"name"`
+	Quantity   float64 `json:"quantity" bson:"quantity"`
+	Units      string  `json:"units" bson:"units"`
+	Calories   float64 `json:"calories" bson:"calories"`
+	Proteins   float64 `json:"proteins" bson:"proteins"`
+	Carbs      float64 `json:"carbs,omitempty" bson:"carbs,omitempty"`
+	Fats       float64 `json:"fats,omitempty" bson:"fats,omitempty"`
+	ExternalID string  `json:"external_id,omitempty" bson:"external_id,omitempty"`
+	Brand      string  `json:"brand,omitempty" bson:"brand,omitempty"`
 }
 
 // Meal represents a single meal in a diet entry
@@ -27,9 +31,11 @@ type DietEntry struct {
 	TraineeID     string    `json:"trainee_id" bson:"trainee_id"`           // Link to Trainee
 	Date          string    `json:"date" bson:"date"`                       // Date of the diet entry (ISO 8601)
 	Meals         []Meal    `json:"meals" bson:"meals"`                     // List of meals
-	TotalCalories float64   `json:"total_calories" bson:"total_calories"`   // Total calories for the day
-	TotalProteins float64   `json:"total_proteins" bson:"total_proteins"`   // Total proteins for the day
-	Notes         string    `json:"notes,omitempty" bson:"notes,omitempty"` // Additional notes
-	CreatedAt     time.Time `json:"created_at" bson:"created_at"`           // Timestamp for record creation
-	UpdatedAt     time.Time `json:"updated_at" bson:"updated_at"`           // Timestamp for last update
+	TotalCalories float64   `json:"total_calories" bson:"total_calories"`
+	TotalProteins float64   `json:"total_proteins" bson:"total_proteins"`
+	TotalCarbs    float64   `json:"total_carbs,omitempty" bson:"total_carbs,omitempty"`
+	TotalFats     float64   `json:"total_fats,omitempty" bson:"total_fats,omitempty"`
+	Notes         string    `json:"notes,omitempty" bson:"notes,omitempty"`
+	CreatedAt     time.Time `json:"created_at" bson:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at" bson:"updated_at"`
 }

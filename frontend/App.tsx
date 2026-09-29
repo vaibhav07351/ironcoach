@@ -28,8 +28,11 @@ import ClientHomeScreen from './app/screens/ClientHomeScreen';
 import InviteRedeemScreen from './app/screens/InviteRedeemScreen';
 import InviteClientScreen from './app/screens/InviteClientScreen';
 import FindCoachHubScreen from './app/screens/FindCoachHubScreen';
+import ClientInterestsScreen from './app/screens/ClientInterestsScreen';
+import TrainerExpertiseScreen from './app/screens/TrainerExpertiseScreen';
 import TrainerDiscoverScreen from './app/screens/TrainerDiscoverScreen';
 import CoachRequestsScreen from './app/screens/CoachRequestsScreen';
+import LogSessionScreen from './app/screens/LogSessionScreen';
 import { TrainerHeaderAvatar } from './components/TrainerHeaderAvatar';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -70,7 +73,7 @@ export default function App(): React.JSX.Element {
               <Stack.Screen
                 name="ClientHome"
                 component={ClientHomeScreen}
-                options={{ title: 'IronCoach' }}
+                options={{ title: 'TrainerNearMe' }}
               />
               <Stack.Screen
                 name="InviteRedeem"
@@ -81,6 +84,16 @@ export default function App(): React.JSX.Element {
                 name="FindCoachHub"
                 component={FindCoachHubScreen}
                 options={{ title: 'Find a coach', headerShown: true }}
+              />
+              <Stack.Screen
+                name="ClientInterests"
+                component={ClientInterestsScreen}
+                options={{ title: 'Your interests', headerShown: false }}
+              />
+              <Stack.Screen
+                name="TrainerExpertise"
+                component={TrainerExpertiseScreen}
+                options={{ title: 'Your categories', headerShown: false }}
               />
               <Stack.Screen
                 name="TrainerDiscover"
@@ -101,7 +114,7 @@ export default function App(): React.JSX.Element {
                 name="Dashboard"
                 component={DashboardScreen}
                 options={{
-                  title: 'IronCoach',
+                  title: 'TrainerNearMe',
                   headerRight: () => <TrainerHeaderAvatar />,
                 }}
               />
@@ -144,6 +157,11 @@ export default function App(): React.JSX.Element {
                 name="AddExerciseForm"
                 component={AddExerciseFormScreen}
                 options={{ title: 'Log exercise' }}
+              />
+              <Stack.Screen
+                name="LogSession"
+                component={LogSessionScreen}
+                options={{ title: 'Log session' }}
               />
               <Stack.Screen
                 name="TraineeDetail"

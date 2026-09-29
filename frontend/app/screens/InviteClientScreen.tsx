@@ -45,7 +45,7 @@ export default function InviteClientScreen({ route }: Props) {
       return;
     }
     await Share.share({
-      message: `Join me on IronCoach with code ${invite.code}. Open the app, sign in with Google as a client, and enter this code.`,
+      message: `Join me on TrainerNearMe with code ${invite.code}. Open the app, sign in with Google as a client, and enter this code.`,
     });
   };
 

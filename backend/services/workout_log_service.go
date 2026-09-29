@@ -20,7 +20,22 @@ func NewWorkoutLogService() *WorkoutLogService {
 
 // Add a new workout log
 func (s *WorkoutLogService) AddWorkoutLog(log models.WorkoutLog) error {
-	// Set timestamps
+	if log.ActivityType == "" {
+		if len(log.Workouts) > 0 {
+			log.ActivityType = models.ActivityGym
+		} else {
+			log.ActivityType = models.ActivityOther
+		}
+	}
+	if !models.IsValidActivityType(log.ActivityType) {
+		return errors.New("invalid activity_type")
+	}
+	if log.ActivityType == models.ActivityGym && len(log.Workouts) == 0 {
+		return errors.New("gym sessions require workouts")
+	}
+	if log.ActivityType != models.ActivityGym && log.Metrics == nil {
+		return errors.New("non-gym sessions require metrics")
+	}
 	log.CreatedAt = time.Now()
 	log.UpdatedAt = time.Now()
 	return s.repository.CreateWorkoutLog(log)

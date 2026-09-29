@@ -24,6 +24,8 @@ func RegisterAuthRoutes(router *gin.Engine) {
 
 	protected.GET("/me", authController.Me)
 	protected.PUT("/auth/onboarding/trainer", authController.CompleteTrainerOnboarding)
+	protected.PUT("/auth/onboarding/trainer/expertise", middlewares.RequireRole(models.RoleTrainer), authController.CompleteTrainerExpertise)
+	protected.PUT("/auth/interests", middlewares.RequireRole(models.RoleClient), authController.UpdateClientInterests)
 
 	protected.POST("/invites", middlewares.RequireRole(models.RoleTrainer), inviteController.CreateInvite)
 	protected.POST("/invites/redeem", middlewares.RequireRole(models.RoleClient), inviteController.RedeemInvite)

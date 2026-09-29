@@ -19,7 +19,7 @@ export default function SignupScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Registration moved</Text>
       <Text style={styles.body}>
-        IronCoach now uses Google Sign-In. Choose trainer or client on the next
+        TrainerNearMe now uses Google Sign-In. Choose trainer or client on the next
         screen — no password needed.
       </Text>
       <TouchableOpacity

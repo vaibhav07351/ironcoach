@@ -58,20 +58,28 @@ func (s *DietEntryService) DeleteDietEntry(entryID string) error {
 
 // Helper function to calculate meal and total stats
 func calculateMealStats(entry *models.DietEntry) {
-    entry.TotalCalories = 0
-    entry.TotalProteins = 0
+	entry.TotalCalories = 0
+	entry.TotalProteins = 0
+	entry.TotalCarbs = 0
+	entry.TotalFats = 0
 
-    for i := range entry.Meals {
-        meal := &entry.Meals[i]
-        meal.Calories = 0
-        meal.Proteins = 0
+	for i := range entry.Meals {
+		meal := &entry.Meals[i]
+		meal.Calories = 0
+		meal.Proteins = 0
+		meal.Carbs = 0
+		meal.Fats = 0
 
-        for _, food := range meal.Foods {
-            meal.Calories += food.Calories
-            meal.Proteins += food.Proteins
-        }
+		for _, food := range meal.Foods {
+			meal.Calories += food.Calories
+			meal.Proteins += food.Proteins
+			meal.Carbs += food.Carbs
+			meal.Fats += food.Fats
+		}
 
-        entry.TotalCalories += meal.Calories
-        entry.TotalProteins += meal.Proteins
-    }
+		entry.TotalCalories += meal.Calories
+		entry.TotalProteins += meal.Proteins
+		entry.TotalCarbs += meal.Carbs
+		entry.TotalFats += meal.Fats
+	}
 }

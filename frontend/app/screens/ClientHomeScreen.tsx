@@ -20,8 +20,27 @@ import { fetchMyRating, upsertRating } from '../services/ratingService';
 import { AdherenceSummary } from '../types/auth';
 import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 import { StarRating } from '@/components/StarRating';
+import { ACTIVITY_OPTIONS, expertiseLabel } from '../constants/expertise';
+import FirstRunHints, {
+  hasCompletedFirstRunHints,
+} from '@/components/FirstRunHints';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ClientHome'>;
+
+const CLIENT_HINT_STEPS = [
+  {
+    title: 'Welcome to your week',
+    body: 'This home screen shows your adherence score, streak, and quick ways to log what you trained.',
+  },
+  {
+    title: 'Log a session',
+    body: 'Tap a sport chip below to log today’s session. Gym opens full workouts; other sports use a quick log.',
+  },
+  {
+    title: 'Training hub',
+    body: 'Open Training hub for workouts, diet, and progress in one place. You can skip these tips anytime.',
+  },
+];
 
 export default function ClientHomeScreen({ navigation }: Props) {
   const { token, user, logout, isAuthenticated } = useContext(AuthContext);
@@ -31,9 +50,18 @@ export default function ClientHomeScreen({ navigation }: Props) {
   const [coachAverage, setCoachAverage] = useState(0);
   const [coachRatingCount, setCoachRatingCount] = useState(0);
   const [savingRating, setSavingRating] = useState(false);
+  const [showHints, setShowHints] = useState(false);
+
+  const hintsKey = user?.id
+    ? `first_run_hints_client_v1_${user.id}`
+    : 'first_run_hints_client_v1';
 
   const load = useCallback(async () => {
     if (!token) {
+      return;
+    }
+    if (user?.needs_interests) {
+      navigation.replace('ClientInterests');
       return;
     }
     if (user?.needs_invite) {
@@ -51,6 +79,9 @@ export default function ClientHomeScreen({ navigation }: Props) {
         setCoachAverage(mine.average ?? 0);
         setCoachRatingCount(mine.rating_count ?? 0);
       }
+
+      const seen = await hasCompletedFirstRunHints(hintsKey);
+      setShowHints(!seen);
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : 'Failed to load adherence';
@@ -58,7 +89,14 @@ export default function ClientHomeScreen({ navigation }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [token, user?.needs_invite, user?.trainer_id, navigation]);
+  }, [
+    token,
+    user?.needs_invite,
+    user?.needs_interests,
+    user?.trainer_id,
+    navigation,
+    hintsKey,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
@@ -97,8 +135,31 @@ export default function ClientHomeScreen({ navigation }: Props) {
 
   const traineeId = user?.trainee_id;
   const firstName = user?.name?.split(' ')[0] || 'there';
+  const activityCodes =
+    user?.interests && user.interests.length > 0
+      ? user.interests
+      : ACTIVITY_OPTIONS.map((o) => o.code);
+
+  const startActivity = (code: string): void => {
+    if (!traineeId) {
+      return;
+    }
+    if (code === 'gym') {
+      navigation.navigate('WorkoutCategories', {
+        traineeId,
+        selectedDate: new Date(),
+      });
+      return;
+    }
+    navigation.navigate('LogSession', {
+      traineeId,
+      selectedDate: new Date(),
+      activityType: code,
+    });
+  };
 
   return (
+    <View style={styles.container}>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -116,7 +177,7 @@ export default function ClientHomeScreen({ navigation }: Props) {
         end={{ x: 1, y: 1 }}
         style={styles.hero}
       >
-        <Text style={styles.heroEyebrow}>IronCoach</Text>
+        <Text style={styles.heroEyebrow}>TrainerNearMe</Text>
         <Text style={styles.greeting}>Hey {firstName}</Text>
         <Text style={styles.heroSub}>Your week at a glance</Text>
 
@@ -151,30 +212,22 @@ export default function ClientHomeScreen({ navigation }: Props) {
       </LinearGradient>
 
       <View style={styles.body}>
-        <Text style={styles.section}>Today</Text>
-        <TouchableOpacity
-          style={styles.action}
-          disabled={!traineeId}
-          onPress={() => {
-            if (!traineeId) {
-              return;
-            }
-            navigation.navigate('WorkoutCategories', {
-              traineeId,
-              selectedDate: new Date(),
-            });
-          }}
-          activeOpacity={0.88}
-        >
-          <View style={styles.actionIcon}>
-            <Ionicons name="barbell-outline" size={22} color={Colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.actionTitle}>Log a workout</Text>
-            <Text style={styles.actionSub}>Sets, reps, and loads</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
-        </TouchableOpacity>
+        <Text style={styles.section}>Log a session</Text>
+        <Text style={styles.hint}>
+          Pick what you trained — quick fields for each sport.
+        </Text>
+        <View style={styles.activityRow}>
+          {activityCodes.map((code) => (
+            <TouchableOpacity
+              key={code}
+              style={styles.activityChip}
+              disabled={!traineeId}
+              onPress={() => startActivity(code)}
+            >
+              <Text style={styles.activityChipText}>{expertiseLabel(code)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
         <TouchableOpacity
           style={styles.action}
@@ -198,7 +251,7 @@ export default function ClientHomeScreen({ navigation }: Props) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.actionTitle}>Training hub</Text>
-            <Text style={styles.actionSub}>Workouts, diet, and progress</Text>
+            <Text style={styles.actionSub}>Sessions, diet, and progress</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
         </TouchableOpacity>
@@ -244,6 +297,29 @@ export default function ClientHomeScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
     </ScrollView>
+
+      <FirstRunHints
+        storageKey={hintsKey}
+        steps={CLIENT_HINT_STEPS}
+        visible={showHints}
+        onDismiss={() => setShowHints(false)}
+        onPrimary={(stepIndex) => {
+          if (stepIndex === 2 && traineeId) {
+            navigation.navigate('TraineeDetail', {
+              trainee: {
+                id: traineeId,
+                name: user?.name || 'Me',
+                trainer_id: user?.trainer_id || '',
+              } as never,
+            });
+          }
+        }}
+        primaryLabel={(stepIndex, isLast) => {
+          if (stepIndex === 2) return 'Open hub';
+          return isLast ? 'Got it' : 'Next';
+        }}
+      />
+    </View>
   );
 }
 
@@ -317,6 +393,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.large,
     paddingTop: Spacing.large,
   },
+  activityRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: Spacing.medium,
+  },
+  activityChip: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radii.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  activityChipText: {
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  hint: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    marginBottom: Spacing.small,
+  },
   section: {
     fontSize: 16,
     fontWeight: '700',
@@ -367,11 +467,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.small,
   },
   avgMeta: { color: Colors.textSecondary, fontSize: 12 },
-  hint: {
-    color: Colors.textSecondary,
-    fontSize: 12,
-    marginTop: 8,
-  },
   signOut: { marginTop: Spacing.xl, alignItems: 'center', padding: 12 },
   signOutText: { color: Colors.textSecondary },
 });

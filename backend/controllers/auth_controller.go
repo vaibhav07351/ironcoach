@@ -63,6 +63,86 @@ func (ctrl *AuthController) Me(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// UpdateClientInterests saves what the client wants to train for.
+func (ctrl *AuthController) UpdateClientInterests(c *gin.Context) {
+	role, _ := c.Get("role")
+	if role != models.RoleClient {
+		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"code": "forbidden", "message": "clients only"}})
+		return
+	}
+	userID, _ := c.Get("user_id")
+	id, _ := userID.(string)
+	if id == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"code": "unauthorized", "message": "missing user"}})
+		return
+	}
+
+	var body struct {
+		Interests []string `json:"interests" binding:"required,min=1"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "validation_error", "message": err.Error()}})
+		return
+	}
+
+	user, err := ctrl.service.UpdateClientInterests(id, body.Interests)
+	if err != nil {
+		status := http.StatusInternalServerError
+		code := "update_failed"
+		if err.Error() == "invalid interest code" {
+			status = http.StatusUnprocessableEntity
+			code = "validation_error"
+		}
+		c.JSON(status, gin.H{"error": gin.H{"code": code, "message": err.Error()}})
+		return
+	}
+	c.JSON(http.StatusOK, user)
+}
+
+// CompleteTrainerExpertise saves first-login coaching categories for a new trainer.
+func (ctrl *AuthController) CompleteTrainerExpertise(c *gin.Context) {
+	role, _ := c.Get("role")
+	if role != models.RoleTrainer {
+		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"code": "forbidden", "message": "trainers only"}})
+		return
+	}
+	userID, _ := c.Get("user_id")
+	id, _ := userID.(string)
+	if id == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"code": "unauthorized", "message": "missing user"}})
+		return
+	}
+
+	var body struct {
+		Expertises []string `json:"expertises" binding:"required,min=1"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "validation_error", "message": err.Error()}})
+		return
+	}
+
+	user, err := ctrl.service.CompleteTrainerExpertise(id, body.Expertises)
+	if err != nil {
+		status := http.StatusInternalServerError
+		code := "update_failed"
+		msg := err.Error()
+		switch msg {
+		case "invalid expertise code":
+			status = http.StatusUnprocessableEntity
+			code = "validation_error"
+		case "trainers only":
+			status = http.StatusForbidden
+			code = "forbidden"
+		case "user not found", "trainer profile not linked":
+			status = http.StatusNotFound
+			code = "not_found"
+		}
+		c.JSON(status, gin.H{"error": gin.H{"code": code, "message": msg}})
+		return
+	}
+	c.JSON(http.StatusOK, user)
+}
+
 // CompleteTrainerOnboarding updates basic trainer profile fields after Google signup.
 func (ctrl *AuthController) CompleteTrainerOnboarding(c *gin.Context) {
 	role, _ := c.Get("role")
@@ -72,12 +152,13 @@ func (ctrl *AuthController) CompleteTrainerOnboarding(c *gin.Context) {
 	}
 
 	var body struct {
-		PhoneNumber string  `json:"phone_number" binding:"required,len=10"`
-		Speciality  string  `json:"speciality"`
-		Bio         string  `json:"bio"`
-		TrainerType string  `json:"trainer_type"`
-		HourlyRate  float64 `json:"hourly_rate"`
-		Name        string  `json:"name"`
+		PhoneNumber string   `json:"phone_number" binding:"required,len=10"`
+		Speciality  string   `json:"speciality"`
+		Expertises  []string `json:"expertises"`
+		Bio         string   `json:"bio"`
+		TrainerType string   `json:"trainer_type"`
+		HourlyRate  float64  `json:"hourly_rate"`
+		Name        string   `json:"name"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "validation_error", "message": err.Error()}})
@@ -96,6 +177,14 @@ func (ctrl *AuthController) CompleteTrainerOnboarding(c *gin.Context) {
 		"phone_number": body.PhoneNumber,
 		"speciality":   body.Speciality,
 		"bio":          body.Bio,
+	}
+	if len(body.Expertises) > 0 {
+		normalized, ok := models.NormalizeExpertises(body.Expertises)
+		if !ok {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": gin.H{"code": "validation_error", "message": "invalid expertise code"}})
+			return
+		}
+		update["expertises"] = normalized
 	}
 	if body.Name != "" {
 		update["name"] = body.Name

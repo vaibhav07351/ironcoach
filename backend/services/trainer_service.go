@@ -51,7 +51,10 @@ func (s *TrainerService) RegisterTrainer(trainer models.Trainer) error {
 	}
 	trainer.CreatedAt = time.Now()
 	trainer.UpdatedAt = time.Now()
-	trainer.DiscoveryVisible = true
+  trainer.DiscoveryVisible = true
+	if len(trainer.Expertises) == 0 {
+		trainer.Expertises = []string{models.ExpertiseOther}
+	}
 
 	//save trainer to database
 	if err := s.repository.CreateTrainer(trainer); err != nil {
@@ -166,18 +169,27 @@ func (s *TrainerService) UpdateDiscoveryProfile(email string, update map[string]
 	return s.repository.UpdateTrainer(email, update)
 }
 
-func (s *TrainerService) DiscoverTrainers(lat, lng float64, limit int) ([]models.DiscoverTrainer, error) {
+func (s *TrainerService) DiscoverTrainers(lat, lng float64, limit int, clientInterests []string) ([]models.DiscoverTrainer, error) {
 	if limit <= 0 || limit > 50 {
 		limit = 50
 	}
+	const minMatchFill = 8
+
 	trainers, err := s.repository.FindDiscoveryVisible()
 	if err != nil {
 		return nil, err
 	}
 
+	interests, _ := models.NormalizeExpertises(clientInterests)
 	hasCoords := lat != 0 || lng != 0
-	results := make([]models.DiscoverTrainer, 0, len(trainers))
+
+	type ranked struct {
+		item  models.DiscoverTrainer
+		match bool
+	}
+	rankedItems := make([]ranked, 0, len(trainers))
 	for _, t := range trainers {
+		expertises := models.EffectiveExpertises(t.Expertises)
 		item := models.DiscoverTrainer{
 			Name:        t.Name,
 			Email:       t.Email,
@@ -185,6 +197,7 @@ func (s *TrainerService) DiscoverTrainers(lat, lng float64, limit int) ([]models
 			Headline:    t.Headline,
 			Bio:         t.Bio,
 			Speciality:  t.Speciality,
+			Expertises:  expertises,
 			Experience:  t.Experience,
 			HourlyRate:  t.HourlyRate,
 			TrainerType: t.TrainerType,
@@ -200,13 +213,19 @@ func (s *TrainerService) DiscoverTrainers(lat, lng float64, limit int) ([]models
 		} else {
 			item.DistanceKm = -1
 		}
-		results = append(results, item)
+		isMatch := models.ExpertiseOverlap(interests, expertises)
+		if isMatch {
+			item.MatchTier = "match"
+		} else {
+			item.MatchTier = "nearby"
+		}
+		rankedItems = append(rankedItems, ranked{item: item, match: isMatch})
 	}
 
-	sort.SliceStable(results, func(i, j int) bool {
-		di, dj := results[i].DistanceKm, results[j].DistanceKm
+	sortByDistance := func(a, b models.DiscoverTrainer) bool {
+		di, dj := a.DistanceKm, b.DistanceKm
 		if di < 0 && dj < 0 {
-			return results[i].Name < results[j].Name
+			return a.Name < b.Name
 		}
 		if di < 0 {
 			return false
@@ -215,7 +234,41 @@ func (s *TrainerService) DiscoverTrainers(lat, lng float64, limit int) ([]models
 			return true
 		}
 		return di < dj
-	})
+	}
+
+	matches := make([]models.DiscoverTrainer, 0)
+	nearby := make([]models.DiscoverTrainer, 0)
+	for _, r := range rankedItems {
+		if r.match {
+			matches = append(matches, r.item)
+		} else {
+			nearby = append(nearby, r.item)
+		}
+	}
+	sort.SliceStable(matches, func(i, j int) bool { return sortByDistance(matches[i], matches[j]) })
+	sort.SliceStable(nearby, func(i, j int) bool { return sortByDistance(nearby[i], nearby[j]) })
+
+	results := matches
+	if len(results) < minMatchFill {
+		need := minMatchFill - len(results)
+		if need > len(nearby) {
+			need = len(nearby)
+		}
+		results = append(results, nearby[:need]...)
+	}
+	// If still under limit and we have more nearby, fill up to limit
+	if len(results) < limit && len(nearby) > 0 {
+		start := 0
+		if len(matches) < minMatchFill {
+			start = minMatchFill - len(matches)
+			if start > len(nearby) {
+				start = len(nearby)
+			}
+		}
+		for i := start; i < len(nearby) && len(results) < limit; i++ {
+			results = append(results, nearby[i])
+		}
+	}
 
 	if len(results) > limit {
 		results = results[:limit]

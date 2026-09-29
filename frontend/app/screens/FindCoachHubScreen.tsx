@@ -42,7 +42,7 @@ export default function FindCoachHubScreen({ navigation }: Props) {
         end={{ x: 1, y: 1 }}
         style={styles.hero}
       >
-        <Text style={styles.brand}>IronCoach</Text>
+        <Text style={styles.brand}>TrainerNearMe</Text>
         <Text style={styles.title}>Find your coach</Text>
         <Text style={styles.subtitle}>
           Link with an invite, or discover coaches near you.

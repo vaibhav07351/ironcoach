@@ -23,6 +23,7 @@ import {
 } from '../services/trainerService';
 import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
 import { StarRating } from '@/components/StarRating';
+import { expertiseLabel } from '../constants/expertise';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TrainerDiscover'>;
 
@@ -237,7 +238,11 @@ export default function TrainerDiscoverScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.hint}>Swipe right to request · left to skip</Text>
+      <Text style={styles.hint}>
+        {current.match_tier === 'nearby'
+          ? 'Nearby coach · swipe right to request · left to skip'
+          : 'Matched to your interests · swipe right to request · left to skip'}
+      </Text>
       <Animated.View
         style={[
           styles.card,
@@ -258,6 +263,11 @@ export default function TrainerDiscoverScreen({ navigation }: Props) {
           style={styles.photo}
         />
         <View style={styles.cardBody}>
+          {current.match_tier === 'nearby' ? (
+            <Text style={styles.tierBadge}>Other coaches near you</Text>
+          ) : (
+            <Text style={styles.tierBadgeMatch}>Matches your interests</Text>
+          )}
           <Text style={styles.name}>{current.name}</Text>
           <Text style={styles.distance}>{distanceLabel}</Text>
           {current.rating > 0 ? (
@@ -273,7 +283,11 @@ export default function TrainerDiscoverScreen({ navigation }: Props) {
           {current.headline ? (
             <Text style={styles.headline}>{current.headline}</Text>
           ) : null}
-          {current.speciality ? (
+          {(current.expertises?.length ?? 0) > 0 ? (
+            <Text style={styles.meta}>
+              {current.expertises!.map(expertiseLabel).join(' · ')}
+            </Text>
+          ) : current.speciality ? (
             <Text style={styles.meta}>{current.speciality}</Text>
           ) : null}
           {current.bio ? (
@@ -326,6 +340,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: Colors.textSecondary,
     marginBottom: Spacing.small,
+  },
+  tierBadge: {
+    alignSelf: 'flex-start',
+    color: Colors.warning,
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  tierBadgeMatch: {
+    alignSelf: 'flex-start',
+    color: Colors.success,
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   title: {
     fontFamily: Fonts.display,

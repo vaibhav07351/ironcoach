@@ -133,7 +133,7 @@ export default function HealthQuestionnaireScreen({ trainee, navigation }: Props
         <SafeAreaView style={styles.safeArea}>
             <View style={styles.container}>
                 <View style={styles.header}>
-                    <Text style={styles.eyebrow}>IronCoach</Text>
+                    <Text style={styles.eyebrow}>TrainerNearMe</Text>
                     <Text style={styles.title}>Health questionnaire</Text>
                     <Text style={styles.subtitle}>Answer honestly — your coach uses this for safety.</Text>
                 </View>
