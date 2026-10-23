@@ -4,172 +4,193 @@ import (
 	"errors"
 	"ironcoach/models"
 	"ironcoach/repositories"
-	"ironcoach/utils"
 	"math"
+	"net/url"
 	"sort"
+	"strings"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type TrainerService struct {
-	repository     *repositories.TrainerRepository
-	categoryRepo   *repositories.CategoryRepository
-	exerciseRepo   *repositories.ExerciseRepository
-	traineeRepo    *repositories.TraineeRepository
-	workoutLogRepo *repositories.WorkoutLogRepository
-	dietEntryRepo  *repositories.DietEntryRepository
-	progressRepo   *repositories.ProgressRepository
+	repository *repositories.TrainerRepository
+	users      *repositories.UserRepository
 }
 
 // constructor for TrainerService
 func NewTrainerService() *TrainerService {
 	return &TrainerService{
-		repository:     repositories.NewTrainerRepository(),
-		categoryRepo:   repositories.NewCategoryRepository(),
-		exerciseRepo:   repositories.NewExerciseRepository(),
-		traineeRepo:    repositories.NewTraineeRepository(),
-		workoutLogRepo: repositories.NewWorkoutLogRepository(),
-		dietEntryRepo:  repositories.NewDietEntryRepository(),
-		progressRepo:   repositories.NewProgressRepository(),
+		repository: repositories.NewTrainerRepository(),
+		users:      repositories.NewUserRepository(),
 	}
 }
 
-// Register a new Trainer
+// RegisterTrainer creates the profile for a new trainer account. The profile is keyed by the
+// trainer's user id; a second profile for the same user or email is a conflict.
 func (s *TrainerService) RegisterTrainer(trainer models.Trainer) error {
-
-	existingTrainer, _ := s.repository.FindByEmail(trainer.Email)
-	if existingTrainer.Email != "" {
-		return errors.New("trainer with this email already exists")
+	if trainer.UserID == "" {
+		return errors.New("trainer profile needs a user id")
 	}
-
-	// Hash password when provided (legacy); Google SSO trainers may have empty password
-	if trainer.Password != "" {
-		hashedPassword, err := utils.HashPassword(trainer.Password)
-		if err != nil {
-			return err
-		}
-		trainer.Password = hashedPassword
+	now := time.Now()
+	trainer.CreatedAt = now
+	trainer.UpdatedAt = now
+	trainer.DiscoveryVisible = true
+	if trainer.TrainerType == "" {
+		trainer.TrainerType = "personal"
 	}
-	trainer.CreatedAt = time.Now()
-	trainer.UpdatedAt = time.Now()
-  trainer.DiscoveryVisible = true
 	if len(trainer.Expertises) == 0 {
 		trainer.Expertises = []string{models.ExpertiseOther}
 	}
 
-	//save trainer to database
+	// Categories/exercises are seeded per trainee (client catalog), not per trainer.
 	if err := s.repository.CreateTrainer(trainer); err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return ErrConflict("profile_exists", "a trainer profile already exists for this account")
+		}
 		return err
 	}
-
-	// Categories/exercises are seeded per trainee (client catalog), not per trainer.
 	return nil
 }
 
-func (s *TrainerService) LoginTrainer(email, password string) (token string, err error) {
-
-	//Find Trainer by email
-	trainer, err := s.repository.FindByEmail(email)
-	if err != nil || trainer.Email == "" {
-		err = errors.New("invalid email or password")
-		return
-	}
-
-	//verify password
-	if !utils.CheckPassword(trainer.Password, password) {
-		err = errors.New("invalid email or password")
-		return
-	}
-
-	// Generate JWT token with role claims (legacy email/password path)
-	token, err = utils.GenerateAuthJWT(utils.Claims{
-		Email:     trainer.Email,
-		Role:      models.RoleTrainer,
-		TrainerID: trainer.Email,
-	})
+// GetMyProfile returns the calling trainer's full profile.
+func (s *TrainerService) GetMyProfile(p Principal) (models.Trainer, error) {
+	trainer, err := s.repository.FindByUserID(p.UserID)
 	if err != nil {
-		err = errors.New("failed to generate token")
-		return
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return models.Trainer{}, ErrNotFound("trainer profile")
+		}
+		return models.Trainer{}, err
 	}
-
-	return
+	return trainer, nil
 }
 
-func (s *TrainerService) GetTrainers() ([]models.Trainer, error) {
-	return s.repository.GetTrainers()
-}
-
-func (s *TrainerService) GetTrainerByID(id string) (models.Trainer, error) {
-	return s.repository.GetTrainerByID(id)
-}
-
-// DeleteTrainerCascade performs cascading delete of trainer and all associated data
-func (s *TrainerService) DeleteTrainerCascade(trainerEmail string) error {
-	// Step 1: Get all trainee IDs for this trainer
-	traineeIDs, err := s.traineeRepo.GetTraineeIDsByTrainer(trainerEmail)
+// UpdateProfile validates and applies the provided profile fields, then returns the profile.
+func (s *TrainerService) UpdateProfile(p Principal, in models.TrainerProfileUpdate) (models.Trainer, error) {
+	if !p.IsTrainer() {
+		return models.Trainer{}, ErrForbidden("trainers only")
+	}
+	set, err := trainerFieldsFromInput(in)
 	if err != nil {
-		return err
+		return models.Trainer{}, err
 	}
-
-	// Step 3: Delete all trainee-related data first
-	if len(traineeIDs) > 0 {
-		// Delete workout logs
-		if err := s.workoutLogRepo.DeleteWorkoutLogsByTrainees(traineeIDs); err != nil {
-			return err
-		}
-
-		// Delete diet entries
-		if err := s.dietEntryRepo.DeleteDietEntriesByTrainees(traineeIDs); err != nil {
-			return err
-		}
-
-		// Delete progress entries
-		if err := s.progressRepo.DeleteProgressByTrainees(traineeIDs); err != nil {
-			return err
-		}
-
-		// Delete trainees
-		if err := s.traineeRepo.DeleteTraineesByTrainer(trainerEmail); err != nil {
-			return err
-		}
+	if len(set) == 0 {
+		return models.Trainer{}, ErrValidation("nothing to update")
 	}
+	found, err := s.repository.UpdateByUserID(p.UserID, set)
+	if err != nil {
+		return models.Trainer{}, err
+	}
+	if !found {
+		return models.Trainer{}, ErrNotFound("trainer profile")
+	}
+	return s.GetMyProfile(p)
+}
 
-	// Step 4: Delete trainee-scoped categories/exercises
-	for _, traineeID := range traineeIDs {
-		categories, err := s.categoryRepo.GetCategoriesByTrainee(traineeID)
-		if err != nil {
-			return err
+func trainerFieldsFromInput(in models.TrainerProfileUpdate) (bson.M, error) {
+	set := bson.M{}
+	texts := []struct {
+		field string
+		v     *string
+		max   int
+	}{
+		{"name", in.Name, 80}, {"headline", in.Headline, 120}, {"bio", in.Bio, 2000},
+		{"speciality", in.Speciality, 120}, {"city", in.City, 80}, {"area", in.Area, 80},
+		{"pincode", in.Pincode, 10}, {"address", in.Address, 300}, {"availability", in.Availability, 500},
+		{"social_handle", in.SocialHandle, 80}, {"phone_number", in.PhoneNumber, 15},
+	}
+	for _, t := range texts {
+		if t.v == nil {
+			continue
 		}
-		for _, category := range categories {
-			if err := s.exerciseRepo.DeleteExercisesByCategoryID(category.ID.Hex()); err != nil {
-				return err
+		v := strings.TrimSpace(*t.v)
+		if err := validateText(t.field, v, t.field == "name", t.max); err != nil {
+			return nil, err
+		}
+		set[t.field] = v
+	}
+	if in.UPIID != nil {
+		upi := strings.TrimSpace(*in.UPIID)
+		if upi != "" && !validUPIID(upi) {
+			return nil, ErrValidation("upi_id must look like name@bank")
+		}
+		set["upi_id"] = upi
+	}
+	if in.Expertises != nil {
+		normalized, ok := models.NormalizeExpertises(*in.Expertises)
+		if !ok {
+			return nil, ErrValidation("invalid expertise code")
+		}
+		set["expertises"] = normalized
+	}
+	if in.Latitude != nil || in.Longitude != nil {
+		if in.Latitude == nil || in.Longitude == nil {
+			return nil, ErrValidation("latitude and longitude must be set together")
+		}
+		if err := validateNumber("latitude", *in.Latitude, -90, 90); err != nil {
+			return nil, err
+		}
+		if err := validateNumber("longitude", *in.Longitude, -180, 180); err != nil {
+			return nil, err
+		}
+		set["latitude"] = *in.Latitude
+		set["longitude"] = *in.Longitude
+	}
+	if in.HourlyRate != nil {
+		if err := validateNumber("hourly_rate", *in.HourlyRate, 0, 100000); err != nil {
+			return nil, err
+		}
+		set["hourly_rate"] = *in.HourlyRate
+	}
+	if in.Experience != nil {
+		if *in.Experience < 0 || *in.Experience > 70 {
+			return nil, ErrValidation("experience must be between 0 and 70 years")
+		}
+		set["experience"] = *in.Experience
+	}
+	if in.TrainerType != nil {
+		if !models.TrainerTypes[*in.TrainerType] {
+			return nil, ErrValidation("trainer_type must be personal, group, online or rehabilitation")
+		}
+		set["trainer_type"] = *in.TrainerType
+	}
+	if in.ImageURL != nil {
+		v := strings.TrimSpace(*in.ImageURL)
+		if v != "" {
+			u, err := url.Parse(v)
+			if err != nil || u.Scheme != "https" || u.Host == "" || len(v) > 500 {
+				return nil, ErrValidation("image_url must be an https link")
 			}
 		}
-		if err := s.categoryRepo.DeleteCategoriesByTrainee(traineeID); err != nil {
-			return err
+		set["image_url"] = v
+	}
+	if in.DiscoveryVisible != nil {
+		set["discovery_visible"] = *in.DiscoveryVisible
+	}
+	return set, nil
+}
+
+// roundTo rounds v to the given number of decimals.
+func roundTo(v float64, decimals int) float64 {
+	p := math.Pow(10, float64(decimals))
+	return math.Round(v*p) / p
+}
+
+// DiscoverTrainers ranks visible coaches for a client: interest matches first, then nearby,
+// each by distance. interestsOverride (from the query) replaces the client's saved interests.
+func (s *TrainerService) DiscoverTrainers(p Principal, lat, lng float64, limit int, interestsOverride []string) ([]models.DiscoverTrainer, error) {
+	if lat < -90 || lat > 90 || lng < -180 || lng > 180 {
+		return nil, ErrValidation("lat/lng out of range")
+	}
+	clientInterests := interestsOverride
+	if len(clientInterests) == 0 {
+		user, err := s.users.FindByID(p.UserID)
+		if err != nil {
+			return nil, err
 		}
+		clientInterests = user.Interests
 	}
-
-	// Also clean legacy trainer-scoped categories if any remain.
-	if err := s.categoryRepo.DeleteCategoriesByTrainer(trainerEmail); err != nil {
-		return err
-	}
-
-	// Step 6: Finally, delete the trainer
-	if err := s.repository.DeleteTrainer(trainerEmail); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *TrainerService) UpdateDiscoveryProfile(email string, update map[string]interface{}) error {
-	if email == "" {
-		return errors.New("unauthorized")
-	}
-	return s.repository.UpdateTrainer(email, update)
-}
-
-func (s *TrainerService) DiscoverTrainers(lat, lng float64, limit int, clientInterests []string) ([]models.DiscoverTrainer, error) {
 	if limit <= 0 || limit > 50 {
 		limit = 50
 	}
@@ -190,9 +211,10 @@ func (s *TrainerService) DiscoverTrainers(lat, lng float64, limit int, clientInt
 	rankedItems := make([]ranked, 0, len(trainers))
 	for _, t := range trainers {
 		expertises := models.EffectiveExpertises(t.Expertises)
+		// Only an approximate location (about 1 km) is ever shared with clients.
 		item := models.DiscoverTrainer{
+			ID:          t.UserID,
 			Name:        t.Name,
-			Email:       t.Email,
 			ImageURL:    t.ImageURL,
 			Headline:    t.Headline,
 			Bio:         t.Bio,
@@ -203,13 +225,13 @@ func (s *TrainerService) DiscoverTrainers(lat, lng float64, limit int, clientInt
 			TrainerType: t.TrainerType,
 			City:        t.City,
 			Area:        t.Area,
-			Latitude:    t.Latitude,
-			Longitude:   t.Longitude,
+			Latitude:    roundTo(t.Latitude, 2),
+			Longitude:   roundTo(t.Longitude, 2),
 			Rating:      t.Rating,
 			RatingCount: t.RatingCount,
 		}
 		if hasCoords && (t.Latitude != 0 || t.Longitude != 0) {
-			item.DistanceKm = haversineKm(lat, lng, t.Latitude, t.Longitude)
+			item.DistanceKm = roundTo(haversineKm(lat, lng, t.Latitude, t.Longitude), 1)
 		} else {
 			item.DistanceKm = -1
 		}

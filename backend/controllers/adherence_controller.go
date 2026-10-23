@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"ironcoach/models"
 	"ironcoach/services"
 	"net/http"
 	"strconv"
@@ -17,62 +16,38 @@ func NewAdherenceController() *AdherenceController {
 	return &AdherenceController{service: services.NewAdherenceService()}
 }
 
+// MyAdherence returns the signed-in client's week (role enforced by the route).
 func (ctrl *AdherenceController) MyAdherence(c *gin.Context) {
-	role, _ := c.Get("role")
-	if role != models.RoleClient {
-		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"code": "forbidden", "message": "clients only"}})
+	p := principal(c)
+	if p.TraineeID == "" {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": gin.H{"code": "needs_invite", "message": "link with a coach first"}})
 		return
 	}
-
-	traineeID, _ := c.Get("trainee_id")
-	id, _ := traineeID.(string)
-	if id == "" {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": gin.H{"code": "needs_invite", "message": "link an invite code first"}})
-		return
-	}
-
-	summary, err := ctrl.service.SummaryForTrainee(id, "")
+	summary, err := ctrl.service.SummaryForTrainee(p.TraineeID, "", p.Location())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "adherence_failed", "message": err.Error()}})
+		respondError(c, err, "adherence_failed")
 		return
 	}
 	c.JSON(http.StatusOK, summary)
 }
 
+// TraineeAdherence returns one client's week (trainer ownership enforced by the route).
 func (ctrl *AdherenceController) TraineeAdherence(c *gin.Context) {
-	role, _ := c.Get("role")
-	if role != "" && role != models.RoleTrainer {
-		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"code": "forbidden", "message": "trainers only"}})
-		return
-	}
-
-	traineeID := c.Param("trainee_id")
-	summary, err := ctrl.service.SummaryForTrainee(traineeID, "")
+	summary, err := ctrl.service.SummaryForTrainee(c.Param("trainee_id"), "", principal(c).Location())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "adherence_failed", "message": err.Error()}})
+		respondError(c, err, "adherence_failed")
 		return
 	}
 	c.JSON(http.StatusOK, summary)
 }
 
+// Roster returns the trainer's active clients, most at-risk first.
 func (ctrl *AdherenceController) Roster(c *gin.Context) {
-	role, _ := c.Get("role")
-	if role != "" && role != models.RoleTrainer {
-		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"code": "forbidden", "message": "trainers only"}})
-		return
-	}
-
-	limit := 50
-	if q := c.Query("limit"); q != "" {
-		if n, err := strconv.Atoi(q); err == nil {
-			limit = n
-		}
-	}
-
-	trainerEmail := c.MustGet("email").(string)
-	roster, err := ctrl.service.RosterForTrainer(trainerEmail, limit)
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	p := principal(c)
+	roster, err := ctrl.service.RosterForTrainer(p.TrainerKey, limit, p.Location())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "adherence_failed", "message": err.Error()}})
+		respondError(c, err, "adherence_failed")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"items": roster, "count": len(roster)})

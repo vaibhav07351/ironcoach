@@ -1,38 +1,12 @@
-import { AuthResponse, Invite } from '../types/auth';
-import { apiFetch, parseApiError } from './api';
+import type { AuthResponse, Invite } from '../types/auth';
+import { http } from './http';
 
-export async function createInvite(
-  token: string,
-  traineeId: string
-): Promise<Invite> {
-  const response = await apiFetch(
-    '/invites',
-    {
-      method: 'POST',
-      body: JSON.stringify({ trainee_id: traineeId }),
-    },
-    token
-  );
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-  return (await response.json()) as Invite;
+/** Creates a single-use, 7-day invite code for one of the trainer's clients. */
+export function createInvite(traineeId: string): Promise<Invite> {
+  return http.post<Invite>('/invites', { trainee_id: traineeId });
 }
 
-export async function redeemInvite(
-  token: string,
-  code: string
-): Promise<AuthResponse> {
-  const response = await apiFetch(
-    '/invites/redeem',
-    {
-      method: 'POST',
-      body: JSON.stringify({ code }),
-    },
-    token
-  );
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-  return (await response.json()) as AuthResponse;
+/** Links the signed-in client to their coach. `shareConsent` must be true. */
+export function redeemInvite(code: string, shareConsent: boolean): Promise<AuthResponse> {
+  return http.post<AuthResponse>('/invites/redeem', { code: code.trim().toUpperCase(), share_consent: shareConsent });
 }

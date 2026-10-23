@@ -1,54 +1,43 @@
 import React from 'react';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import AboutDetailsScreen from './AboutDetailsScreen'; // Split AboutTrainee main details
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+import { Colors } from '@/constants/theme';
+import AboutDetailsScreen from './AboutDetailsScreen';
 import FitnessTestScreen from './FitnessTestScreen';
 import HealthQuestionnaireScreen from './HealthQuestionnaireScreen';
-import { Colors } from '@/constants/theme';
 
 const Tab = createMaterialTopTabNavigator();
 
-export default function AboutTraineeScreen({ trainee }: { trainee: any }) {
-    return (
-        <Tab.Navigator
-            screenOptions={{
-                tabBarActiveTintColor: Colors.primary,
-                tabBarInactiveTintColor: Colors.textSecondary,
-                tabBarIndicatorStyle: { backgroundColor: Colors.primary },
-                tabBarLabelStyle: { fontSize: 14, fontWeight: '600' },
-                tabBarStyle: { backgroundColor: Colors.surface },
-            }}
-        >
-            <Tab.Screen
-                name="About"
-                options={{
-                    tabBarIcon: ({ color }) => (
-                        <Icon name="account" size={19} color={color} />
-                    ),
-                }}
-            >
-                {({ navigation }) => <AboutDetailsScreen trainee={trainee} navigation={navigation} />}
-            </Tab.Screen>
-            <Tab.Screen
-                name="Fitness Test"
-                options={{
-                    tabBarIcon: ({ color }) => (
-                        <Icon name="weight-lifter" size={19} color={color} />
-                    ),
-                }}
-            >
-                {({ navigation }) => <FitnessTestScreen trainee={trainee} navigation={navigation} />}
-            </Tab.Screen>
-            <Tab.Screen
-                name="Health Questionnaire"
-                options={{
-                    tabBarIcon: ({ color }) => (
-                        <Icon name="clipboard-question-outline" size={15} color={color} />
-                    ),
-                }}
-            >
-                {({ navigation }) => <HealthQuestionnaireScreen trainee={trainee} navigation={navigation} />}
-            </Tab.Screen>
-        </Tab.Navigator>
-    );
+/** Profile, assessments and health questionnaire of the current client record. */
+export default function AboutTraineeScreen(): React.JSX.Element {
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.textSecondary,
+        tabBarIndicatorStyle: { backgroundColor: Colors.primary },
+        tabBarLabelStyle: { fontSize: 13, fontWeight: '600', textTransform: 'none' },
+        tabBarStyle: { backgroundColor: Colors.surface },
+      }}
+    >
+      <Tab.Screen
+        name="About"
+        component={AboutDetailsScreen}
+        options={{ tabBarIcon: ({ color }) => <MaterialCommunityIcons name="account" size={19} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Fitness Test"
+        component={FitnessTestScreen}
+        options={{ tabBarIcon: ({ color }) => <MaterialCommunityIcons name="weight-lifter" size={19} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Health"
+        component={HealthQuestionnaireScreen}
+        options={{
+          tabBarIcon: ({ color }) => <MaterialCommunityIcons name="clipboard-pulse-outline" size={19} color={color} />,
+        }}
+      />
+    </Tab.Navigator>
+  );
 }

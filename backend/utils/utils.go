@@ -7,20 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 )
-
-// HashPassword hashes a plain-text password
-func HashPassword(password string) (string, error) {
-	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	return string(hashed), err
-}
-
-// CheckPassword compares a hashed password with a plain-text password
-func CheckPassword(hashedPassword, plainPassword string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword))
-	return err == nil
-}
 
 var (
 	jwtKeyOnce sync.Once
@@ -46,14 +33,6 @@ type Claims struct {
 	TrainerID string `json:"trainer_id,omitempty"`
 	TraineeID string `json:"trainee_id,omitempty"`
 	jwt.RegisteredClaims
-}
-
-// GenerateJWT creates a signed token for a given email (legacy trainer login).
-func GenerateJWT(email string) (string, error) {
-	return GenerateAuthJWT(Claims{
-		Email: email,
-		Role:  "trainer",
-	})
 }
 
 // GenerateAuthJWT creates a signed token with full auth claims.

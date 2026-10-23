@@ -2,26 +2,30 @@ package models
 
 import "time"
 
+// Trainer is a coach's profile. UserID (the trainer's users._id) is the stable identity used by
+// every other record; Email is contact information only.
 type Trainer struct {
-	Name             string    `json:"name" bson:"name" validate:"required"`
-	Email            string    `json:"email" bson:"email" validate:"required,email"`
-	Password         string    `json:"-" bson:"password,omitempty"`
-	ImageURL         string    `json:"image_url,omitempty" bson:"image_url,omitempty"`
-	PhoneNumber      string    `json:"phone_number" bson:"phone_number" validate:"required,len=10"`
-	Address          string    `json:"address" bson:"address"`
-	Speciality       string    `json:"speciality" bson:"speciality"`
-	Expertises       []string  `json:"expertises" bson:"expertises"`
-	DateOfBirth      string    `json:"date_of_birth" bson:"date_of_birth" validate:"required"`
-	Gender           string    `json:"gender" bson:"gender" validate:"required,oneof=male female other"`
-	Experience       int       `json:"experience" bson:"experience" validate:"required,gte=0"`
-	Certifications   []string  `json:"certifications" bson:"certifications"`
-	HourlyRate       float64   `json:"hourly_rate" bson:"hourly_rate" validate:"gte=0"`
-	Bio              string    `json:"bio" bson:"bio"`
-	SocialHandle     string    `json:"social_handle,omitempty" bson:"social_handle,omitempty"`
-	Availability     string    `json:"availability" bson:"availability"`
-	Rating           float64   `json:"rating" bson:"rating" validate:"gte=0,lte=5"`
+	UserID         string   `json:"id" bson:"user_id,omitempty"`
+	Name           string   `json:"name" bson:"name"`
+	Email          string   `json:"email" bson:"email"`
+	ImageURL       string   `json:"image_url,omitempty" bson:"image_url,omitempty"`
+	PhoneNumber    string   `json:"phone_number" bson:"phone_number"`
+	Address        string   `json:"address" bson:"address"`
+	Speciality     string   `json:"speciality" bson:"speciality"`
+	Expertises     []string `json:"expertises" bson:"expertises"`
+	DateOfBirth    string   `json:"date_of_birth" bson:"date_of_birth"`
+	Gender         string   `json:"gender" bson:"gender"`
+	Experience     int      `json:"experience" bson:"experience"`
+	Certifications []string `json:"certifications" bson:"certifications"`
+	HourlyRate     float64  `json:"hourly_rate" bson:"hourly_rate"`
+	Bio            string   `json:"bio" bson:"bio"`
+	SocialHandle   string   `json:"social_handle,omitempty" bson:"social_handle,omitempty"`
+	Availability   string   `json:"availability" bson:"availability"`
+	// UPIID is the trainer's UPI address (e.g. name@bank), used only to build payment reminders.
+	UPIID            string    `json:"upi_id,omitempty" bson:"upi_id,omitempty"`
+	Rating           float64   `json:"rating" bson:"rating"`
 	RatingCount      int       `json:"rating_count" bson:"rating_count"`
-	TrainerType      string    `json:"trainer_type" bson:"trainer_type" validate:"required,oneof=personal group online rehabilitation"`
+	TrainerType      string    `json:"trainer_type" bson:"trainer_type"`
 	Headline         string    `json:"headline,omitempty" bson:"headline,omitempty"`
 	City             string    `json:"city,omitempty" bson:"city,omitempty"`
 	Area             string    `json:"area,omitempty" bson:"area,omitempty"`
@@ -33,10 +37,39 @@ type Trainer struct {
 	UpdatedAt        time.Time `json:"updated_at" bson:"updated_at"`
 }
 
-// DiscoverTrainer is a public-safe projection for client swipe discovery.
+// TrainerTypes are the accepted trainer_type values.
+var TrainerTypes = map[string]bool{"personal": true, "group": true, "online": true, "rehabilitation": true}
+
+// TrainerProfileUpdate is the accepted body for a trainer editing their profile. Only provided
+// fields change; identity, rating and timestamps are server-owned.
+type TrainerProfileUpdate struct {
+	Name             *string   `json:"name"`
+	Headline         *string   `json:"headline"`
+	Bio              *string   `json:"bio"`
+	Speciality       *string   `json:"speciality"`
+	Expertises       *[]string `json:"expertises"`
+	City             *string   `json:"city"`
+	Area             *string   `json:"area"`
+	Pincode          *string   `json:"pincode"`
+	Latitude         *float64  `json:"latitude"`
+	Longitude        *float64  `json:"longitude"`
+	HourlyRate       *float64  `json:"hourly_rate"`
+	ImageURL         *string   `json:"image_url"`
+	Experience       *int      `json:"experience"`
+	TrainerType      *string   `json:"trainer_type"`
+	DiscoveryVisible *bool     `json:"discovery_visible"`
+	PhoneNumber      *string   `json:"phone_number"`
+	Address          *string   `json:"address"`
+	Availability     *string   `json:"availability"`
+	SocialHandle     *string   `json:"social_handle"`
+	UPIID            *string   `json:"upi_id"`
+}
+
+// DiscoverTrainer is the public projection shown to clients browsing coaches. It never includes
+// email, phone or exact location: coordinates are rounded to about 1 km.
 type DiscoverTrainer struct {
+	ID          string   `json:"id"`
 	Name        string   `json:"name"`
-	Email       string   `json:"email"`
 	ImageURL    string   `json:"image_url,omitempty"`
 	Headline    string   `json:"headline,omitempty"`
 	Bio         string   `json:"bio,omitempty"`

@@ -8,11 +8,19 @@ npm-debug.log*
 
 # Environment variables
 .env
+.env.*
 !.env.example
 
-# SSH / deploy secrets
+# SSH / deploy secrets and service credentials
 *.key
 *.pem
+service-account*.json
+google-services.json
+credentials.json
+
+# Compiled backend binaries
+backend/bin/
+backend/*.exe
 Resources/
 
 # Build outputs

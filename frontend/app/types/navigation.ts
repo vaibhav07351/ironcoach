@@ -1,98 +1,77 @@
-import { Trainee } from './trainee';
-import { Food } from './food';
+import type { NavigatorScreenParams } from '@react-navigation/native';
 
-export type WeightBMIProgress = {
-    date: string;
-    weight: number;
-    bmi: number;
-    bodyFat?: number;
+import type { Food } from './food';
+import type { Trainee } from './trainee';
+import type { WorkoutLog } from './workout';
+
+/** Sections of one client record screen. Trainers see all of them; clients do not see Overview. */
+export type ClientSection = 'overview' | 'workouts' | 'diet' | 'weight' | 'attendance' | 'fees' | 'profile';
+
+/** Trainer bottom tabs. */
+export type TrainerTabParamList = {
+  Home: undefined;
+  Clients: undefined;
+  Account: undefined;
 };
 
-export type ExerciseRecord = {
-    date: string;
-    weight: number;
-    reps: number;
+/** Client bottom tabs. */
+export type ClientTabParamList = {
+  Home: undefined;
+  Account: undefined;
 };
 
-export type ExerciseProgress = {
-    exercise: string;
-    maxWeight: number;
-    avgWeight: number;
-    records: ExerciseRecord[];
-};
-
-export type Progress = {
-    weightBmi: WeightBMIProgress[]; // Array of weight and BMI progress
-    exercises: ExerciseProgress[]; // Array of exercise progress
-};
-
+/**
+ * The root stack. Which screens exist depends on the auth state (see RootNavigator); screens
+ * never redirect between roles by hand. All params are serialisable (dates are YYYY-MM-DD strings).
+ */
 export type RootStackParamList = {
-    Dashboard: undefined;
-    Login: undefined;
-    Signup: undefined;
-    ClientHome: undefined;
-    InviteRedeem: undefined;
-    FindCoachHub: undefined;
-    ClientInterests: undefined;
-    TrainerExpertise: undefined;
-    TrainerDiscover: undefined;
-    CoachRequests: undefined;
-    InviteClient: { traineeId: string; traineeName: string };
-    Trainees: { status: true | false };
-    TraineeDetail: { trainee: Trainee };
-    AboutTrainee: { trainee: Trainee };
-    TraineeForm: { trainee?: Trainee; traineeId?: string };
-    WorkoutLogs: { trainee: Trainee };
-    WorkoutLogForm: {
-        workoutLog?: {
-            id?: string;
-            date?: string;
-            workouts?: unknown[];
-            notes?: string;
-        };
-        trainee: Trainee;
-    };
-    Progress: { trainee: Trainee };
+  // Gate and auth
+  Splash: undefined;
+  UpdateRequired: undefined;
+  SignIn: undefined;
 
-    WorkoutCategories: { traineeId: string; selectedDate: Date };
-    AddCustomCategory: {
-        traineeId: string;
-        categoryId?: string;
-        currentName?: string;
-        selectedDate?: Date;
-    };
-    WorkoutExercises: {
-        category: string;
-        category_id: string;
-        traineeId: string;
-        selectedDate: Date;
-    };
-    AddCustomExercise: {
-        category: string;
-        category_id: string;
-        traineeId: string;
-        exerciseId?: string;
-        currentName?: string;
-    };
-    AddExerciseForm: {
-        exercise: string;
-        exercise_id: string;
-        traineeId: string;
-        selectedDate: Date;
-    };
+  // Onboarding
+  TrainerExpertise: undefined;
+  ClientInterests: undefined;
+  JoinCoach: undefined;
 
-    TrainerProfile: { trainerId?: string };
+  // Main
+  TrainerTabs: NavigatorScreenParams<TrainerTabParamList> | undefined;
+  ClientTabs: NavigatorScreenParams<ClientTabParamList> | undefined;
 
-    AddFood: {
-        dietEntryId?: string;
-        trainee: Trainee;
-        date: string;
-        mealName: string;
-        existingFoods: Food[];
-    };
-    LogSession: {
-        traineeId: string;
-        selectedDate: Date;
-        activityType: string;
-    };
+  // Account
+  DeleteAccount: undefined;
+  TrainerProfile: undefined;
+
+  // Trainer
+  CoachRequests: undefined;
+  InviteClient: { traineeId: string; traineeName: string };
+  Trainees: { status?: boolean } | undefined;
+  TraineeForm: { traineeId?: string } | undefined;
+
+  // Shared client record screens
+  TraineeDetail: { trainee: Pick<Trainee, 'id' | 'name'>; section?: ClientSection };
+  AddPackage: { traineeId: string; traineeName: string };
+  AddPayment: { traineeId: string; traineeName: string; duePaise?: number };
+  UpiSettings: undefined;
+  WorkoutLogForm: { traineeId: string; log: WorkoutLog };
+  WorkoutCategories: { traineeId: string; date: string };
+  AddCustomCategory: { traineeId: string; categoryId?: string; currentName?: string };
+  WorkoutExercises: { traineeId: string; categoryId: string; categoryName: string; date: string };
+  AddCustomExercise: {
+    traineeId: string;
+    categoryId: string;
+    categoryName: string;
+    exerciseId?: string;
+    currentName?: string;
+  };
+  AddExerciseForm: { traineeId: string; exercise: string; exerciseId: string; date: string };
+  LogSession: { traineeId: string; date: string; activityType: string };
+  AddFood: {
+    traineeId: string;
+    date: string;
+    mealName: string;
+    dietEntryId?: string;
+    existingFoods: Food[];
+  };
 };

@@ -27,10 +27,10 @@ type Meal struct {
 
 // DietEntry represents a log entry for a trainee's diet
 type DietEntry struct {
-	ID            string    `bson:"_id,omitempty" json:"id"`                // Unique ID for the diet entry
-	TraineeID     string    `json:"trainee_id" bson:"trainee_id"`           // Link to Trainee
-	Date          string    `json:"date" bson:"date"`                       // Date of the diet entry (ISO 8601)
-	Meals         []Meal    `json:"meals" bson:"meals"`                     // List of meals
+	ID            string    `bson:"_id,omitempty" json:"id"`      // Unique ID for the diet entry
+	TraineeID     string    `json:"trainee_id" bson:"trainee_id"` // Link to Trainee
+	Date          string    `json:"date" bson:"date"`             // Date of the diet entry (ISO 8601)
+	Meals         []Meal    `json:"meals" bson:"meals"`           // List of meals
 	TotalCalories float64   `json:"total_calories" bson:"total_calories"`
 	TotalProteins float64   `json:"total_proteins" bson:"total_proteins"`
 	TotalCarbs    float64   `json:"total_carbs,omitempty" bson:"total_carbs,omitempty"`
@@ -38,4 +38,19 @@ type DietEntry struct {
 	Notes         string    `json:"notes,omitempty" bson:"notes,omitempty"`
 	CreatedAt     time.Time `json:"created_at" bson:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at" bson:"updated_at"`
+}
+
+// DietEntryInput is the accepted body for creating a day's diet entry. Totals are always
+// computed by the server.
+type DietEntryInput struct {
+	TraineeID string `json:"trainee_id" binding:"required"`
+	Date      string `json:"date" binding:"required"`
+	Meals     []Meal `json:"meals"`
+	Notes     string `json:"notes"`
+}
+
+// DietEntryUpdate is the accepted body for editing an entry. trainee_id and date are fixed.
+type DietEntryUpdate struct {
+	Meals *[]Meal `json:"meals"`
+	Notes *string `json:"notes"`
 }

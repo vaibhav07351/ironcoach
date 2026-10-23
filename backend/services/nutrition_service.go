@@ -133,10 +133,10 @@ type usdaSearchResponse struct {
 }
 
 type usdaFood struct {
-	FdcID          int               `json:"fdcId"`
-	Description    string            `json:"description"`
-	BrandOwner     string            `json:"brandOwner"`
-	FoodNutrients  []usdaNutrient    `json:"foodNutrients"`
+	FdcID         int            `json:"fdcId"`
+	Description   string         `json:"description"`
+	BrandOwner    string         `json:"brandOwner"`
+	FoodNutrients []usdaNutrient `json:"foodNutrients"`
 }
 
 type usdaNutrient struct {

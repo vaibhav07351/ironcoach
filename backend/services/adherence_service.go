@@ -7,7 +7,12 @@ import (
 	"time"
 )
 
-const defaultExpectedWorkoutDays = 4
+const (
+	defaultExpectedWorkoutDays = 4
+	// activityWindowDays bounds how far back activity is read. Streaks longer than this
+	// are reported as the window length.
+	activityWindowDays = 120
+)
 
 type AdherenceService struct {
 	trainees    *repositories.TraineeRepository
@@ -23,20 +28,17 @@ func NewAdherenceService() *AdherenceService {
 	}
 }
 
-func weekStartUTC(t time.Time) time.Time {
-	t = t.UTC()
+// weekStart returns local midnight of the Monday of t's week in loc.
+func weekStart(t time.Time, loc *time.Location) time.Time {
+	t = t.In(loc)
 	weekday := int(t.Weekday())
 	if weekday == 0 {
 		weekday = 7 // Monday-based week
 	}
-	return time.Date(t.Year(), t.Month(), t.Day()-weekday+1, 0, 0, 0, 0, time.UTC)
+	return time.Date(t.Year(), t.Month(), t.Day()-weekday+1, 0, 0, 0, 0, loc)
 }
 
-func dateKey(t time.Time) string {
-	return t.UTC().Format("2006-01-02")
-}
-
-func uniqueDates(dates []string) map[string]struct{} {
+func toSet(dates []string) map[string]struct{} {
 	set := make(map[string]struct{}, len(dates))
 	for _, d := range dates {
 		if d != "" {
@@ -46,33 +48,16 @@ func uniqueDates(dates []string) map[string]struct{} {
 	return set
 }
 
-func (s *AdherenceService) collectActivityDates(traineeID string) (workoutDates, dietDates map[string]struct{}, err error) {
-	logs, err := s.workoutLogs.GetWorkoutLogsByTrainee(traineeID, "")
-	if err != nil {
-		return nil, nil, err
+// computeStreak counts consecutive local days with activity ending today. If today has no
+// activity yet, the streak continues from yesterday (the day is not over).
+func computeStreak(activity map[string]struct{}, now time.Time, loc *time.Location) int {
+	day := now.In(loc)
+	if _, ok := activity[localDate(day, loc)]; !ok {
+		day = day.AddDate(0, 0, -1)
 	}
-	entries, err := s.dietEntries.GetDietEntriesByTrainee(traineeID, "")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	wDates := make([]string, 0, len(logs))
-	for _, l := range logs {
-		wDates = append(wDates, l.Date)
-	}
-	dDates := make([]string, 0, len(entries))
-	for _, e := range entries {
-		dDates = append(dDates, e.Date)
-	}
-	return uniqueDates(wDates), uniqueDates(dDates), nil
-}
-
-func computeStreak(activity map[string]struct{}, today time.Time) int {
 	streak := 0
-	day := today.UTC()
-	for {
-		key := dateKey(day)
-		if _, ok := activity[key]; !ok {
+	for streak < activityWindowDays {
+		if _, ok := activity[localDate(day, loc)]; !ok {
 			break
 		}
 		streak++
@@ -81,22 +66,40 @@ func computeStreak(activity map[string]struct{}, today time.Time) int {
 	return streak
 }
 
-func (s *AdherenceService) SummaryForTrainee(traineeID, traineeName string) (models.AdherenceSummary, error) {
-	workoutDates, dietDates, err := s.collectActivityDates(traineeID)
+// activity loads workout and diet dates for the given trainees in two queries total.
+func (s *AdherenceService) activity(traineeIDs []string, now time.Time, loc *time.Location) (workouts, diets map[string][]string, err error) {
+	since := localDate(now.AddDate(0, 0, -activityWindowDays-1), loc)
+	workouts, err = s.workoutLogs.ActivityDates(traineeIDs, since)
+	if err != nil {
+		return nil, nil, err
+	}
+	diets, err = s.dietEntries.ActivityDates(traineeIDs, since)
+	if err != nil {
+		return nil, nil, err
+	}
+	return workouts, diets, nil
+}
+
+// SummaryForTrainee scores one trainee's current week in loc (access is checked by the caller).
+func (s *AdherenceService) SummaryForTrainee(traineeID, traineeName string, loc *time.Location) (models.AdherenceSummary, error) {
+	now := time.Now()
+	workouts, diets, err := s.activity([]string{traineeID}, now, loc)
 	if err != nil {
 		return models.AdherenceSummary{}, err
 	}
+	return computeSummary(traineeID, traineeName, workouts[traineeID], diets[traineeID], now, loc), nil
+}
 
-	now := time.Now().UTC()
-	start := weekStartUTC(now)
-	weekKeys := make([]string, 0, 7)
+// computeSummary is the pure scoring rule: 70% workout days vs expected, 30% diet days vs 7.
+// Dates are calendar dates in the user's zone, as logged by the app.
+func computeSummary(traineeID, traineeName string, workoutDateList, dietDateList []string, now time.Time, loc *time.Location) models.AdherenceSummary {
+	workoutDates := toSet(workoutDateList)
+	dietDates := toSet(dietDateList)
+
+	start := weekStart(now, loc)
+	workoutDays, dietDays := 0, 0
 	for i := 0; i < 7; i++ {
-		weekKeys = append(weekKeys, dateKey(start.AddDate(0, 0, i)))
-	}
-
-	workoutDays := 0
-	dietDays := 0
-	for _, k := range weekKeys {
+		k := localDate(start.AddDate(0, 0, i), loc)
 		if _, ok := workoutDates[k]; ok {
 			workoutDays++
 		}
@@ -106,7 +109,6 @@ func (s *AdherenceService) SummaryForTrainee(traineeID, traineeName string) (mod
 	}
 
 	expected := defaultExpectedWorkoutDays
-	// Score: 70% workouts vs expected, 30% diet days vs 7
 	workoutRatio := float64(workoutDays) / float64(expected)
 	if workoutRatio > 1 {
 		workoutRatio = 1
@@ -114,7 +116,7 @@ func (s *AdherenceService) SummaryForTrainee(traineeID, traineeName string) (mod
 	dietRatio := float64(dietDays) / 7.0
 	score := (workoutRatio*0.7 + dietRatio*0.3) * 100
 
-	merged := make(map[string]struct{})
+	merged := make(map[string]struct{}, len(workoutDates)+len(dietDates))
 	for k := range workoutDates {
 		merged[k] = struct{}{}
 	}
@@ -122,62 +124,79 @@ func (s *AdherenceService) SummaryForTrainee(traineeID, traineeName string) (mod
 		merged[k] = struct{}{}
 	}
 
-	yesterday := dateKey(now.AddDate(0, 0, -1))
-	_, hadYesterday := merged[yesterday]
-	// Missed if weekday Mon-Fri and no activity yesterday (simple signal)
-	yWeekday := now.AddDate(0, 0, -1).Weekday()
-	missedYesterday := !hadYesterday && yWeekday != time.Saturday && yWeekday != time.Sunday
+	yesterday := now.In(loc).AddDate(0, 0, -1)
+	_, hadYesterday := merged[localDate(yesterday, loc)]
+	// Missed if yesterday was a weekday with no activity (simple signal)
+	missedYesterday := !hadYesterday && yesterday.Weekday() != time.Saturday && yesterday.Weekday() != time.Sunday
 
-	atRisk := score < 50 || missedYesterday
+	lastActivity := ""
+	for k := range merged {
+		if k > lastActivity {
+			lastActivity = k
+		}
+	}
+	_, trainedToday := workoutDates[localDate(now, loc)]
 
 	return models.AdherenceSummary{
 		TraineeID:       traineeID,
 		TraineeName:     traineeName,
-		WeekStart:       dateKey(start),
+		WeekStart:       localDate(start, loc),
 		WorkoutDays:     workoutDays,
 		DietDays:        dietDays,
 		ExpectedDays:    expected,
 		Score:           score,
-		StreakDays:      computeStreak(merged, now),
-		AtRisk:          atRisk,
+		StreakDays:      computeStreak(merged, now, loc),
+		AtRisk:          score < 50 || missedYesterday,
 		MissedYesterday: missedYesterday,
-	}, nil
+
+		LastActivityDate: lastActivity,
+		TrainedToday:     trainedToday,
+	}
 }
 
-func (s *AdherenceService) RosterForTrainer(trainerEmail string, limit int) ([]models.AdherenceSummary, error) {
-	if limit <= 0 || limit > 100 {
+// RosterForTrainer scores all active trainees of a trainer in the trainer's zone, most at-risk
+// first. Three queries in total regardless of roster size.
+func (s *AdherenceService) RosterForTrainer(trainerKey string, limit int, loc *time.Location) ([]models.AdherenceSummary, error) {
+	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	ids, err := s.trainees.GetTraineeIDsByTrainer(trainerEmail)
+	roster, err := s.trainees.ListActiveRefs(trainerKey)
+	if err != nil {
+		return nil, err
+	}
+	summaries, err := s.SummariesForRefs(roster, loc)
+	if err != nil {
+		return nil, err
+	}
+	if len(summaries) > limit {
+		summaries = summaries[:limit]
+	}
+	return summaries, nil
+}
+
+// SummariesForRefs scores the given trainees (two activity queries in total), most at-risk first.
+func (s *AdherenceService) SummariesForRefs(roster []models.TraineeRef, loc *time.Location) ([]models.AdherenceSummary, error) {
+	ids := make([]string, 0, len(roster))
+	for _, t := range roster {
+		ids = append(ids, t.ID)
+	}
+
+	now := time.Now()
+	workouts, diets, err := s.activity(ids, now, loc)
 	if err != nil {
 		return nil, err
 	}
 
-	summaries := make([]models.AdherenceSummary, 0, len(ids))
-	for _, id := range ids {
-		trainee, err := s.trainees.GetTraineeByID(id)
-		if err != nil {
-			continue
-		}
-		if !trainee.ActiveStatus {
-			continue
-		}
-		sum, err := s.SummaryForTrainee(id, trainee.Name)
-		if err != nil {
-			continue
-		}
-		summaries = append(summaries, sum)
+	summaries := make([]models.AdherenceSummary, 0, len(roster))
+	for _, t := range roster {
+		summaries = append(summaries, computeSummary(t.ID, t.Name, workouts[t.ID], diets[t.ID], now, loc))
 	}
 
-	sort.Slice(summaries, func(i, j int) bool {
+	sort.SliceStable(summaries, func(i, j int) bool {
 		if summaries[i].AtRisk != summaries[j].AtRisk {
 			return summaries[i].AtRisk
 		}
 		return summaries[i].Score < summaries[j].Score
 	})
-
-	if len(summaries) > limit {
-		summaries = summaries[:limit]
-	}
 	return summaries, nil
 }

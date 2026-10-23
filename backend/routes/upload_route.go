@@ -1,13 +1,17 @@
 package routes
 
 import (
-    "github.com/gin-gonic/gin"
-    "ironcoach/controllers"
+	"ironcoach/controllers"
+	"ironcoach/middlewares"
+	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 func RegisterImageRoutes(router *gin.Engine) {
-    imageController := controllers.NewImageController()
+	imageController := controllers.NewImageController()
 
-    protected := router.Group("/images") // Add authentication middleware if needed
-    protected.POST("/upload", imageController.UploadImage)
+	protected := router.Group("/images").Use(middlewares.AuthMiddleware())
+	protected.Use(middlewares.RateLimitMiddleware(30, time.Hour, 5))
+	protected.POST("/upload", imageController.UploadImage)
 }

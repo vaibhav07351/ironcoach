@@ -21,39 +21,36 @@ func NewProgressController() *ProgressController {
 
 // GetProgress retrieves the progress data for a trainee
 func (ctrl *ProgressController) GetProgress(c *gin.Context) {
-	traineeID := c.Param("trainee_id")
-	if traineeID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Trainee ID is required"})
-		return
-	}
-
-	progress, err := ctrl.service.GetProgress(traineeID)
+	progress, err := ctrl.service.GetProgress(c.Param("trainee_id"))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch progress"})
+		respondError(c, err, "progress_failed")
 		return
 	}
-
 	c.JSON(http.StatusOK, progress)
 }
 
-// AddWeightProgress adds a new weight entry for the trainee
+// AddWeightProgress records the day's weight (one entry per day; re-logging replaces it).
 func (ctrl *ProgressController) AddWeightProgress(c *gin.Context) {
-	var weightBMI models.WeightBMIProgress
-	if err := c.ShouldBindJSON(&weightBMI); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var body struct {
+		TraineeID string  `json:"trainee_id" binding:"required"`
+		Date      string  `json:"date" binding:"required"`
+		Weight    float64 `json:"weight" binding:"required"`
+		BodyFat   float64 `json:"body_fat"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		respondBindError(c, err)
 		return
 	}
 
-	if weightBMI.TraineeID == "" || weightBMI.Date == "" || weightBMI.Weight == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Trainee ID, Date, and Weight are required"})
-		return
-	}
-
-	err := ctrl.service.AddWeightProgress(weightBMI)
+	err := ctrl.service.AddWeightProgress(principal(c), models.WeightBMIProgress{
+		TraineeID: body.TraineeID,
+		Date:      body.Date,
+		Weight:    body.Weight,
+		BodyFat:   body.BodyFat,
+	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add weight progress"})
+		respondError(c, err, "create_failed")
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "Weight progress added successfully"})
 }

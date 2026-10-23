@@ -4,6 +4,7 @@ import (
 	"errors"
 	"ironcoach/models"
 	"ironcoach/repositories"
+	"log/slog"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -12,12 +13,14 @@ import (
 type CategoryService struct {
 	repository   *repositories.CategoryRepository
 	exerciseRepo *repositories.ExerciseRepository
+	traineeRepo  *repositories.TraineeRepository
 }
 
 func NewCategoryService() *CategoryService {
 	return &CategoryService{
 		repository:   repositories.NewCategoryRepository(),
 		exerciseRepo: repositories.NewExerciseRepository(),
+		traineeRepo:  repositories.NewTraineeRepository(),
 	}
 }
 
@@ -41,19 +44,21 @@ func (s *CategoryService) AddCategory(category models.Category) error {
 	return s.repository.AddCategory(category)
 }
 
+// GetCategories lists a trainee's categories. A trainee whose default catalog was never seeded
+// (created before per-client catalogs, or seeding failed at creation) is seeded once here; after
+// that, an empty list stays empty if the client deleted everything.
 func (s *CategoryService) GetCategories(traineeID string) ([]models.Category, error) {
 	categories, err := s.repository.GetCategoriesByTrainee(traineeID)
 	if err != nil {
 		return nil, err
 	}
-	// Existing trainees created before client-scoped catalogs get defaults on first load.
-	if len(categories) == 0 {
-		if seedErr := s.SeedDefaultCatalog(traineeID); seedErr != nil {
-			return nil, seedErr
-		}
-		return s.repository.GetCategoriesByTrainee(traineeID)
+	if len(categories) > 0 {
+		return categories, nil
 	}
-	return categories, nil
+	if err := s.SeedDefaultCatalog(traineeID); err != nil {
+		return nil, err
+	}
+	return s.repository.GetCategoriesByTrainee(traineeID)
 }
 
 func (s *CategoryService) UpdateCategory(id string, updatedName string, traineeID string) error {
@@ -93,18 +98,15 @@ func (s *CategoryService) DeleteCategory(id string, traineeID string) error {
 	return s.exerciseRepo.DeleteExercisesByCategoryID(category.ID.Hex())
 }
 
-// SeedDefaultCatalog creates the default workout categories/exercises for a trainee.
+// SeedDefaultCatalog creates the default workout categories and exercises for a trainee, at most
+// once per trainee (guarded by an atomic flag on the trainee), in two bulk inserts.
 func (s *CategoryService) SeedDefaultCatalog(traineeID string) error {
 	if traineeID == "" {
 		return errors.New("trainee_id is required")
 	}
-
-	existing, err := s.repository.GetCategoriesByTrainee(traineeID)
-	if err != nil {
+	claimed, err := s.traineeRepo.ClaimCatalogSeed(traineeID)
+	if err != nil || !claimed {
 		return err
-	}
-	if len(existing) > 0 {
-		return nil
 	}
 
 	defaultData := []struct {
@@ -122,6 +124,8 @@ func (s *CategoryService) SeedDefaultCatalog(traineeID string) error {
 	}
 
 	now := time.Now()
+	categories := make([]models.Category, 0, len(defaultData))
+	var exercises []models.Exercise
 	for _, data := range defaultData {
 		category := models.Category{
 			ID:        primitive.NewObjectID(),
@@ -130,20 +134,24 @@ func (s *CategoryService) SeedDefaultCatalog(traineeID string) error {
 			CreatedAt: now,
 			UpdatedAt: now,
 		}
-		if err := s.repository.AddCategory(category); err != nil {
-			continue
-		}
+		categories = append(categories, category)
 		for _, exerciseName := range data.Exercises {
-			exercise := models.Exercise{
+			exercises = append(exercises, models.Exercise{
 				ID:         primitive.NewObjectID(),
 				Name:       exerciseName,
 				Category:   data.CategoryName,
 				CategoryID: category.ID,
 				CreatedAt:  now,
 				UpdatedAt:  now,
-			}
-			_ = s.exerciseRepo.AddExercise(exercise)
+			})
 		}
 	}
-	return nil
+
+	if err := s.repository.AddMany(categories); err != nil {
+		if relErr := s.traineeRepo.ReleaseCatalogSeed(traineeID); relErr != nil {
+			slog.Error("release catalog seed flag failed", "trainee_id", traineeID, "err", relErr)
+		}
+		return err
+	}
+	return s.exerciseRepo.AddMany(exercises)
 }

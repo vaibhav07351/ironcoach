@@ -1,14 +1,15 @@
 package middlewares
 
 import (
-	"ironcoach/models"
-	"ironcoach/repositories"
+	"ironcoach/services"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-// EnforceTraineeAccess allows trainers any of their trainees; clients only their linked trainee_id.
+// EnforceTraineeAccess allows the owning trainer, or the client linked to the trainee in the
+// path (or query) parameter. Ownership is checked against the database on every request.
 func EnforceTraineeAccess(paramName string) gin.HandlerFunc {
 	if paramName == "" {
 		paramName = "trainee_id"
@@ -19,13 +20,11 @@ func EnforceTraineeAccess(paramName string) gin.HandlerFunc {
 			requested = c.Query(paramName)
 		}
 		if requested == "" {
-			c.Next()
+			abortJSON(c, http.StatusBadRequest, "validation_error", paramName+" is required")
 			return
 		}
-		if errMsg := AuthorizeTraineeAccess(c, requested); errMsg != "" {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error": gin.H{"code": "forbidden", "message": errMsg},
-			})
+		if status, code, msg := checkTraineeAccess(c, requested); status != 0 {
+			abortJSON(c, status, code, msg)
 			return
 		}
 		c.Next()
@@ -33,38 +32,33 @@ func EnforceTraineeAccess(paramName string) gin.HandlerFunc {
 }
 
 // AuthorizeTraineeAccess returns an empty string when allowed, otherwise an error message.
-// Trainers may access trainees they own; clients may only access their linked trainee_id.
+// Used by handlers whose trainee id arrives in the body.
 func AuthorizeTraineeAccess(c *gin.Context, traineeID string) string {
 	if traineeID == "" {
 		return "trainee_id is required"
 	}
-
-	role, _ := c.Get("role")
-	roleStr, _ := role.(string)
-
-	if roleStr == models.RoleClient {
-		linked, _ := c.Get("trainee_id")
-		linkedID, _ := linked.(string)
-		if linkedID == "" || linkedID != traineeID {
-			return "clients can only access their own data"
-		}
-		return ""
-	}
-
-	// Trainers (and legacy tokens treated as trainers): verify ownership.
-	email, _ := c.Get("email")
-	trainerEmail, _ := email.(string)
-	if trainerEmail == "" {
-		return "unauthorized"
-	}
-
-	traineeRepo := repositories.NewTraineeRepository()
-	trainee, err := traineeRepo.GetTraineeByID(traineeID)
-	if err != nil {
-		return "trainee not found"
-	}
-	if trainee.TrainerID != trainerEmail {
-		return "trainee does not belong to this trainer"
+	if _, _, msg := checkTraineeAccess(c, traineeID); msg != "" {
+		return msg
 	}
 	return ""
+}
+
+func checkTraineeAccess(c *gin.Context, traineeID string) (status int, code, msg string) {
+	if authenticator == nil {
+		return http.StatusInternalServerError, "server_misconfigured", "something went wrong, please try again"
+	}
+	_, err := authenticator.AuthorizeTrainee(CurrentPrincipal(c), traineeID)
+	if err == nil {
+		return 0, "", ""
+	}
+	if e, ok := services.AsError(err); ok {
+		switch e.Kind {
+		case services.KindNotFound:
+			return http.StatusNotFound, e.Code, e.Message
+		default:
+			return http.StatusForbidden, "forbidden", e.Message
+		}
+	}
+	slog.Error("trainee access check failed", "request_id", RequestID(c), "trainee_id", traineeID, "err", err)
+	return http.StatusServiceUnavailable, "access_check_failed", "please try again in a moment"
 }

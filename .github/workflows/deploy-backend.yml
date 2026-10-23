@@ -13,7 +13,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Check formatting
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [[ -n "$unformatted" ]]; then
+            echo "Run gofmt on:" >&2
+            echo "$unformatted" >&2
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test (unit + Mongo integration)
+        env:
+          MONGODB_TEST_URI: mongodb://localhost:27017
+        run: go test -race -count=1 ./...
+
   deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,6 +69,9 @@ jobs:
           GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.GOOGLE_ANDROID_CLIENT_ID }}
           GOOGLE_IOS_CLIENT_ID: ${{ secrets.GOOGLE_IOS_CLIENT_ID }}
           GOOGLE_EXPO_CLIENT_ID: ${{ secrets.GOOGLE_EXPO_CLIENT_ID }}
+          USDA_API_KEY: ${{ secrets.USDA_API_KEY }}
+          MIN_APP_VERSION: ${{ vars.MIN_APP_VERSION }}
+          LATEST_APP_VERSION: ${{ vars.LATEST_APP_VERSION }}
         run: |
           set -euo pipefail
           required=(MONGODB_URI JWT_SECRET CLOUDINARY_CLOUD_NAME CLOUDINARY_API_KEY CLOUDINARY_API_SECRET GOOGLE_CLIENT_ID)
@@ -51,12 +93,16 @@ jobs:
             echo "GOOGLE_ANDROID_CLIENT_ID=${GOOGLE_ANDROID_CLIENT_ID:-}"
             echo "GOOGLE_IOS_CLIENT_ID=${GOOGLE_IOS_CLIENT_ID:-}"
             echo "GOOGLE_EXPO_CLIENT_ID=${GOOGLE_EXPO_CLIENT_ID:-}"
+            echo "USDA_API_KEY=${USDA_API_KEY:-DEMO_KEY}"
+            echo "MIN_APP_VERSION=${MIN_APP_VERSION:-1.0.0}"
+            echo "LATEST_APP_VERSION=${LATEST_APP_VERSION:-1.0.0}"
           } > /tmp/ironcoach.env
 
       - name: Setup SSH
         env:
           ORACLE_SSH_PRIVATE_KEY: ${{ secrets.ORACLE_SSH_PRIVATE_KEY }}
           ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+          ORACLE_KNOWN_HOSTS: ${{ secrets.ORACLE_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
           if [[ -z "${ORACLE_SSH_PRIVATE_KEY}" || -z "${ORACLE_HOST}" ]]; then
@@ -66,7 +112,15 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$ORACLE_SSH_PRIVATE_KEY" > ~/.ssh/oracle.key
           chmod 600 ~/.ssh/oracle.key
-          ssh-keyscan -H "$ORACLE_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # Pin the VM host key via the ORACLE_KNOWN_HOSTS secret (output of
+          # `ssh-keyscan -H <host>` captured once from a trusted network). Falling back to a live
+          # scan trusts whatever answers, so it only stays as a temporary fallback.
+          if [[ -n "${ORACLE_KNOWN_HOSTS:-}" ]]; then
+            printf '%s\n' "$ORACLE_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+          else
+            echo "::warning::ORACLE_KNOWN_HOSTS secret not set; trusting a live ssh-keyscan"
+            ssh-keyscan -H "$ORACLE_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
 
       - name: Sync backend + deploy
         env:
@@ -91,6 +145,8 @@ jobs:
             --exclude '.env.new' \
             --exclude '.caddyfile.sha256' \
             --exclude '.git' \
+            --exclude 'bin/' \
+            --exclude '*.exe' \
             backend/ "${USER}@${HOST}:~/ironcoach-backend/"
 
           scp -i ~/.ssh/oracle.key -o IdentitiesOnly=yes \
@@ -103,7 +159,7 @@ jobs:
         run: |
           set -euo pipefail
           for i in 1 2 3 4 5; do
-            if curl -fsS --max-time 20 https://ironcoach.duckdns.org/ | grep -q "TrainerNearMe"; then
+            if curl -fsS --max-time 20 https://ironcoach.duckdns.org/healthz | grep -q '"ok"'; then
               echo "smoke: ok"
               exit 0
             fi

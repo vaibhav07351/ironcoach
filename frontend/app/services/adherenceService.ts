@@ -1,26 +1,18 @@
-import { AdherenceSummary } from '../types/auth';
-import { apiFetch, parseApiError } from './api';
+import type { AdherenceSummary } from '../types/auth';
+import { http } from './http';
 
-export async function fetchMyAdherence(token: string): Promise<AdherenceSummary> {
-  const response = await apiFetch('/adherence/me', { method: 'GET' }, token);
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-  return (await response.json()) as AdherenceSummary;
+/** The signed-in client's current week. */
+export function fetchMyAdherence(): Promise<AdherenceSummary> {
+  return http.get<AdherenceSummary>('/adherence/me');
 }
 
-export async function fetchAdherenceRoster(
-  token: string,
-  limit = 50
-): Promise<AdherenceSummary[]> {
-  const response = await apiFetch(
-    `/adherence/roster?limit=${limit}`,
-    { method: 'GET' },
-    token
-  );
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-  const body = (await response.json()) as { items: AdherenceSummary[] };
-  return body.items ?? [];
+/** The trainer's active clients, most at-risk first. */
+export async function fetchAdherenceRoster(limit = 50): Promise<AdherenceSummary[]> {
+  const res = await http.get<{ items: AdherenceSummary[] }>('/adherence/roster', { query: { limit } });
+  return res.items ?? [];
+}
+
+/** One client's current week (trainer view). */
+export function fetchClientAdherence(traineeId: string): Promise<AdherenceSummary> {
+  return http.get<AdherenceSummary>(`/adherence/trainees/${encodeURIComponent(traineeId)}`);
 }

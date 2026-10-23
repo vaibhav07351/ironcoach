@@ -1,47 +1,12 @@
-import { apiFetch, parseApiError } from './api';
+import type { MyRating, RatingTarget } from '../types/coach';
+import { http } from './http';
 
-export type RatingUpsert = {
-  to_kind: 'trainer' | 'client';
-  to_id: string;
-  score: number;
-};
-
-export type MineRatingResponse = {
-  score: number | null;
-  average: number;
-  rating_count: number;
-};
-
-export async function upsertRating(
-  token: string,
-  body: RatingUpsert
-): Promise<void> {
-  const response = await apiFetch(
-    '/ratings',
-    { method: 'PUT', body: JSON.stringify(body) },
-    token
-  );
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
+/** Rates the client's coach or one of the trainer's clients (0.5 to 5 in half steps). */
+export function upsertRating(toKind: RatingTarget, toId: string, score: number): Promise<void> {
+  return http.put<void>('/ratings', { to_kind: toKind, to_id: toId, score });
 }
 
-export async function fetchMyRating(
-  token: string,
-  toKind: 'trainer' | 'client',
-  toId: string
-): Promise<MineRatingResponse> {
-  const params = new URLSearchParams({
-    to_kind: toKind,
-    to_id: toId,
-  });
-  const response = await apiFetch(
-    `/ratings/mine?${params.toString()}`,
-    { method: 'GET' },
-    token
-  );
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-  return (await response.json()) as MineRatingResponse;
+/** The caller's own score for a target plus the target's average. */
+export function fetchMyRating(toKind: RatingTarget, toId: string): Promise<MyRating> {
+  return http.get<MyRating>('/ratings/mine', { query: { to_kind: toKind, to_id: toId } });
 }

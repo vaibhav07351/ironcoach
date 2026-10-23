@@ -17,7 +17,7 @@ type UserRepository struct {
 }
 
 func NewUserRepository() *UserRepository {
-	db := database.DB.Database("ironcoach")
+	db := database.Database()
 	return &UserRepository{collection: db.Collection("users")}
 }
 
@@ -82,6 +82,12 @@ func (r *UserRepository) UpsertByGoogleSub(user models.User) (models.User, error
 	if user.OnboardingDone != nil {
 		setOnInsert["onboarding_done"] = *user.OnboardingDone
 	}
+	if user.Timezone != "" {
+		setOnInsert["timezone"] = user.Timezone
+	}
+	if user.TermsAcceptedAt != nil {
+		setOnInsert["terms_accepted_at"] = *user.TermsAcceptedAt
+	}
 	set := bson.M{
 		"email":      user.Email,
 		"name":       user.Name,
@@ -97,4 +103,63 @@ func (r *UserRepository) UpsertByGoogleSub(user models.User) (models.User, error
 		opts,
 	).Decode(&result)
 	return result, err
+}
+
+// unlinkedUserFilter matches client accounts not linked to any trainee.
+var unlinkedUserFilter = bson.A{
+	bson.M{"trainee_id": bson.M{"$exists": false}},
+	bson.M{"trainee_id": ""},
+	bson.M{"trainee_id": nil},
+}
+
+// LinkTrainee links an unlinked client account to a trainee in one conditional write.
+// Returns false if the user does not exist or is already linked.
+func (r *UserRepository) LinkTrainee(userID, traineeID, trainerKey string) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	res, err := r.collection.UpdateOne(ctx,
+		bson.M{"_id": userID, "role": models.RoleClient, "$or": unlinkedUserFilter},
+		bson.M{"$set": bson.M{"trainee_id": traineeID, "trainer_id": trainerKey, "updated_at": time.Now()}},
+	)
+	if err != nil {
+		return false, err
+	}
+	return res.ModifiedCount > 0, nil
+}
+
+// UnlinkTrainee clears a client's coach link.
+func (r *UserRepository) UnlinkTrainee(userID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := r.collection.UpdateOne(ctx,
+		bson.M{"_id": userID},
+		bson.M{"$unset": bson.M{"trainee_id": "", "trainer_id": ""}, "$set": bson.M{"updated_at": time.Now()}},
+	)
+	return err
+}
+
+// UnlinkByTrainees clears the coach link of every client linked to one of the trainees.
+func (r *UserRepository) UnlinkByTrainees(traineeIDs []string) error {
+	if len(traineeIDs) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := r.collection.UpdateMany(ctx,
+		bson.M{"trainee_id": bson.M{"$in": traineeIDs}},
+		bson.M{"$unset": bson.M{"trainee_id": "", "trainer_id": ""}, "$set": bson.M{"updated_at": time.Now()}},
+	)
+	return err
+}
+
+// Delete removes a user account document.
+func (r *UserRepository) Delete(userID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": userID})
+	return err
 }

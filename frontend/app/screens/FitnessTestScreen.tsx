@@ -1,1239 +1,272 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Platform, Modal, Alert, ToastAndroid } from 'react-native';
-import { Trainee, FitnessTest, LabTest } from '../types/trainee';
+import React, { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, TextInput, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FitnessTestWithUI, LabTestWithUI, TestRecord, CategoryGroup, LabCategoryGroup, fitnessTestTemplates, labTestTemplates } from '../types/trainee';
-import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
+import Toast from 'react-native-toast-message';
 
-type Props = {
-    trainee: Trainee;
-    navigation: any;
-};
+import { AppText } from '@/components/AppText';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { Chip } from '@/components/Chip';
+import { ErrorState } from '@/components/ErrorState';
+import { LoadingState } from '@/components/LoadingState';
+import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
+import { Colors, Radii, Spacing } from '@/constants/theme';
+import { useAuth } from '../contexts/AuthContext';
+import { useTraineeRecord } from '../contexts/TraineeRecordContext';
+import { errorMessage } from '../services/http';
+import { getTrainee, updateTrainee } from '../services/traineeService';
+import { fitnessTestTemplates, type FitnessTest } from '../types/trainee';
+import { isFuture, longDateLabel, parseLocalDate, todayLocal } from '../utils/date';
 
-export default function FitnessTestScreen({ trainee, navigation }: Props) {
-    const [isEditing, setIsEditing] = useState(false);
-    const [currentTestDate, setCurrentTestDate] = useState('');
-    const [showHistoryModal, setShowHistoryModal] = useState(false);
-    const [loading, setLoading] = useState(false);
-    
-    // Backend data
-    const [traineeData, setTraineeData] = useState<Trainee>(trainee);
-    const [testHistory, setTestHistory] = useState<TestRecord[]>([]);
+type Results = Record<string, { result1: string; result2: string }>;
 
-    const [results, setResults] = useState<FitnessTestWithUI[]>([]);
-    const [labResults, setLabResults] = useState<LabTestWithUI[]>([]);
+const CATEGORIES = Array.from(new Set(fitnessTestTemplates.map((t) => t.category)));
 
-    const backendUrl = Constants.expoConfig?.extra?.backendUrl; 
-
-    // Toast function for cross-platform compatibility
-    const showToast = (message: string) => {
-        if (Platform.OS === 'android') {
-            ToastAndroid.show(message, ToastAndroid.SHORT);
-        } else {
-            Alert.alert('Success', message);
-        }
-    };
-
-    useEffect(() => {
-        fetchTraineeData();
-    }, []);
-
-    const fetchTraineeData = async () => {
-        setLoading(true);
-        try {
-            const token = await AsyncStorage.getItem('token');
-            const response = await fetch(`${backendUrl}/trainees/${trainee.id}`, {
-                headers: { Authorization: `${token}` },
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                const traineeOnly = {
-                    ...data,
-                    fitness_tests: data.fitness_tests || [],
-                    lab_tests: data.lab_tests || []
-                };
-                setTraineeData(traineeOnly);
-                processTraineeData(traineeOnly);
-            }
-        } catch (error) {
-            console.error('Error fetching trainee data:', error);
-            Alert.alert('Error', 'Failed to fetch client data');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const processTraineeData = (data: Trainee) => {
-        // Process fitness tests from backend data
-        const fitnessTests = (data.fitness_tests || []).map(test => ({
-            ...test,
-            date: new Date(test.date).toISOString().slice(0, 10)
-        }));
-        const labTests = (data.lab_tests || []).map(test => ({
-            ...test,
-            date: new Date(test.date).toISOString().slice(0, 10)
-        }));
-
-
-        // Group tests by date for history
-        const groupedByDate: { [date: string]: { fitnessTests: FitnessTest[], labTests: LabTest[] } } = {};
-        
-        fitnessTests.forEach(test => {
-            if (!groupedByDate[test.date]) {
-                groupedByDate[test.date] = { fitnessTests: [], labTests: [] };
-            }
-            groupedByDate[test.date].fitnessTests.push(test);
-        });
-
-        labTests.forEach(test => {
-            if (!groupedByDate[test.date]) {
-                groupedByDate[test.date] = { fitnessTests: [], labTests: [] };
-            }
-            groupedByDate[test.date].labTests.push(test);
-        });
-
-        // Convert to history format and sort by date (newest first)
-        const history = Object.entries(groupedByDate).map(([date, tests]) => ({
-            date,
-            fitnessTests: tests.fitnessTests,
-            labTests: tests.labTests
-        })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        setTestHistory(history);
-
-        // Load most recent data if available, otherwise initialize with today's date
-        if (history.length > 0) {
-            const mostRecentDate = history[0].date;
-            setTestHistory(history); // ✅ update history first
-            setCurrentTestDate(mostRecentDate);
-            
-            // ✅ use data directly from history to avoid relying on async state
-            const record = history.find(record => record.date === mostRecentDate);
-            if (record) {
-                const fitnessMap = new Map(record.fitnessTests.map(test => [test.test, test]));
-                const labMap = new Map(record.labTests.map(test => [test.test, test]));
-
-                const updatedResults = fitnessTestTemplates.map(template => {
-                    const item = fitnessMap.get(template.test);
-                    return {
-                        ...template,
-                        result1: item?.result1 || '',
-                        result2: item?.result2 || '',
-                        date: mostRecentDate
-                    };
-                });
-                setResults(updatedResults);
-
-                const updatedLabResults = labTestTemplates.map(template => {
-                    const item = labMap.get(template.test);
-                    return {
-                        ...template,
-                        value: item?.value || '',
-                        date: mostRecentDate
-                    };
-                });
-                setLabResults(updatedLabResults);
-            }
-        } else {
-            // No history, initialize with today's date and empty data
-            const today = getCurrentDate();
-            setCurrentTestDate(today);
-            initializeResultsWithDate(today);
-        }
-    };
-
-    const initializeResultsWithDate = (date: string) => {
-        // Initialize fitness test results
-        const fitnessResults = fitnessTestTemplates.map(template => ({
-            ...template,
-            date: date,
-            result1: '',
-            result2: ''
-        }));
-        setResults(fitnessResults);
-
-        // Initialize lab test results
-        const labResultsData = labTestTemplates.map(template => ({
-            ...template,
-            date: date,
-            value: ''
-        }));
-        setLabResults(labResultsData);
-    };
-
-    const handleToggleEdit = () => {
-        if (!isEditing) {
-            // When starting to edit, ensure we have a valid date
-            if (!currentTestDate) {
-                const today = getCurrentDate();
-                setCurrentTestDate(today);
-                initializeResultsWithDate(today);
-            }
-        }
-        setIsEditing(!isEditing);
-    };
-
-    const generateTestHistory = (data: Trainee): TestRecord[] => {
-        const groupedByDate: { [date: string]: { fitnessTests: FitnessTest[], labTests: LabTest[] } } = {};
-
-        (data.fitness_tests || []).forEach(test => {
-            const date = test.date; // ✅ Use as-is
-            if (!groupedByDate[date]) groupedByDate[date] = { fitnessTests: [], labTests: [] };
-            groupedByDate[date].fitnessTests.push(test);
-        });
-
-        (data.lab_tests || []).forEach(test => {
-            const date = test.date; // ✅ Use as-is
-            if (!groupedByDate[date]) groupedByDate[date] = { fitnessTests: [], labTests: [] };
-            groupedByDate[date].labTests.push(test);
-        });
-
-        return Object.entries(groupedByDate).map(([date, tests]) => ({
-            date,
-            fitnessTests: tests.fitnessTests,
-            labTests: tests.labTests
-        })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    };
-
-
-    const preloadTestDataFromRecord = (record: TestRecord, date: string) => {
-        const fitnessMap = new Map(record.fitnessTests.map(test => [test.test, test]));
-        const labMap = new Map(record.labTests.map(test => [test.test, test]));
-
-        const updatedResults = fitnessTestTemplates.map(template => {
-            const item = fitnessMap.get(template.test);
-            return {
-                ...template,
-                result1: item?.result1 || '',
-                result2: item?.result2 || '',
-                date
-            };
-        });
-        setResults(updatedResults);
-
-        const updatedLabResults = labTestTemplates.map(template => {
-            const item = labMap.get(template.test);
-            return {
-                ...template,
-                value: item?.value || '',
-                date
-            };
-        });
-        setLabResults(updatedLabResults);
-    };
-
-
-    const handleSave = async () => {
-        if (!currentTestDate) {
-            Alert.alert('Error', 'Please select a test date');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            // Prepare fitness tests data (only include tests with results)
-            const fitnessTestsToSave = results
-                .filter(test => test.result1.trim() || test.result2.trim())
-                .map(test => ({
-                    date: currentTestDate,
-                    category: test.category,
-                    test: test.test,
-                    result1: test.result1.trim(),
-                    result2: test.result2.trim()
-                }));
-
-            // Prepare lab tests data (only include tests with values)
-            const labTestsToSave = labResults
-                .filter(test => test.value.trim())
-                .map(test => ({
-                    date: currentTestDate,
-                    category: test.category,
-                    test: test.test,
-                    value: test.value.trim()
-                }));
-
-            // Get existing tests that are not from current date
-            const existingFitnessTests = (traineeData.fitness_tests || []).filter(test => test.date !== currentTestDate);
-            const existingLabTests = (traineeData.lab_tests || []).filter(test => test.date !== currentTestDate);
-
-            // Combine existing tests with new ones
-            const updatedFitnessTests = [...existingFitnessTests, ...fitnessTestsToSave];
-            const updatedLabTests = [...existingLabTests, ...labTestsToSave];
-
-            // Update trainee data
-            const updatedData = {
-                ...traineeData,
-                fitness_tests: updatedFitnessTests,
-                lab_tests: updatedLabTests
-            };
-
-            // Send to backend
-            const token = await AsyncStorage.getItem('token');
-            const response = await fetch(`${backendUrl}/trainees/${trainee.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `${token}`,
-                },
-                body: JSON.stringify(updatedData),
-            });
-
-            if (response.ok) {
-            const savedData = await response.json();
-
-            // ✅ Extract only trainee data
-            const traineeOnly = {
-                ...traineeData,
-                fitness_tests: updatedFitnessTests,
-                lab_tests: updatedLabTests
-            };
-
-            setTraineeData(traineeOnly);
-            // Instead of waiting for async state to update, do it immediately
-            const history = generateTestHistory(traineeOnly); // ✅ generate locally
-            setTestHistory(history);
-            setTraineeData(traineeOnly);
-
-            setCurrentTestDate(currentTestDate); // 🔁 re-set same date
-
-            const record = history.find(record => record.date === currentTestDate);
-            if (record) {
-                preloadTestDataFromRecord(record, currentTestDate);
-            }
-            
-            setIsEditing(false);
-            showToast('Assessment saved successfully!');
-        } else {
-                throw new Error('Failed to save data');
-            }
-        } catch (error) {
-            console.error('Error saving data:', error);
-            Alert.alert('Error', 'Failed to save assessment data');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Helper function to validate numeric input
-    const validateNumericInput = (text: string): string => {
-        // Allow numbers, decimal points, and empty string
-        const numericRegex = /^\d*\.?\d*$/;
-        return numericRegex.test(text) ? text : '';
-    };
-
-    const updateResult = (id: number, field: 'result1' | 'result2', value: string) => {
-        const validatedValue = validateNumericInput(value);
-        if (value === '' || validatedValue === value) {
-            setResults(prev => prev.map(item => 
-                item.id === id ? { ...item, [field]: validatedValue } : item
-            ));
-        }
-    };
-
-    const updateLabResult = (id: number, field: 'value', value: string) => {
-        const validatedValue = validateNumericInput(value);
-        if (value === '' || validatedValue === value) {
-            setLabResults(prev => prev.map(item => 
-                item.id === id ? { ...item, [field]: validatedValue } : item
-            ));
-        }
-    };
-
-    const loadHistoryData = (date: string) => {
-        // console.log('Loading history data for date:', date); // Debug log
-        // console.log('Available test history:', testHistory); // Debug log
-        
-        const historyRecord = testHistory.find(record => record.date === date);
-        // console.log('Found history record:', historyRecord); // Debug log
-        
-        if (historyRecord) {
-            // Create a map for quick lookup
-            const fitnessMap = new Map(historyRecord.fitnessTests.map(test => [test.test, test]));
-            const labMap = new Map(historyRecord.labTests.map(test => [test.test, test]));
-            
-            // console.log('Fitness map:', fitnessMap); // Debug log
-            // console.log('Lab map:', labMap); // Debug log
-            
-            // Update current results with historical data
-            setResults(prev => prev.map(item => {
-                const historyItem = fitnessMap.get(item.test);
-                return historyItem ? { 
-                    ...item, 
-                    result1: historyItem.result1 || '', 
-                    result2: historyItem.result2 || '',
-                    date: date
-                } : { ...item, result1: '', result2: '', date: date };
-            }));
-            
-            setLabResults(prev => prev.map(item => {
-                const historyItem = labMap.get(item.test);
-                return historyItem ? { 
-                    ...item, 
-                    value: historyItem.value || '',
-                    date: date
-                } : { ...item, value: '', date: date };
-            }));
-        } else {
-            // If no history record found, initialize with empty values for the selected date
-            setResults(prev => prev.map(item => ({ 
-                ...item, 
-                result1: '', 
-                result2: '', 
-                date: date 
-            })));
-            
-            setLabResults(prev => prev.map(item => ({ 
-                ...item, 
-                value: '', 
-                date: date 
-            })));
-        }
-        
-        setCurrentTestDate(date);
-    };
-
-    const getCategoryGroups = (): CategoryGroup => {
-        const groups: CategoryGroup = {};
-        results.forEach(item => {
-            if (!groups[item.category]) {
-                groups[item.category] = [];
-            }
-            groups[item.category].push(item);
-        });
-        return groups;
-    };
-
-    const getLabCategoryGroups = (): LabCategoryGroup => {
-        const groups: LabCategoryGroup = {};
-        labResults.forEach(item => {
-            if (!groups[item.category]) {
-                groups[item.category] = [];
-            }
-            groups[item.category].push(item);
-        });
-        return groups;
-    };
-
-    const categoryGroups = getCategoryGroups();
-    const labCategoryGroups = getLabCategoryGroups();
-
-    const formatDate = (dateString: string): string => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return date.toLocaleDateString();
-    };
-
-    const getCurrentDate = (): string => {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    const createNewAssessment = () => {
-        const today = getCurrentDate();
-        setCurrentTestDate(today);
-        initializeResultsWithDate(today);
-        setShowHistoryModal(false);
-    };
-
-    // Check if any data has been entered
-    const hasDataEntered = () => {
-        const hasFitnessData = results.some(test => test.result1.trim() || test.result2.trim());
-        const hasLabData = labResults.some(test => test.value.trim());
-        return hasFitnessData || hasLabData;
-    };
-
-    return (
-        <ScrollView style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.headerContent}>
-                    <View style={styles.headerText}>
-                        <Text style={styles.title}>Fitness Assessment</Text>
-                        <Text style={styles.subtitle}>{trainee.name} • Gender: {trainee.gender}</Text>
-                    </View>
-                </View>
-            </View>
-
-            {/* Test Date Section */}
-            <View style={styles.dateSection}>
-                <View style={styles.dateCard}>
-                    <View style={styles.dateHeader}>
-                        <MaterialIcons name="event" size={24} color={Colors.primary} />
-                        <Text style={styles.dateTitle}>Assessment Date</Text>
-                    </View>
-                    <View style={styles.dateControls}>
-                        {isEditing ? (
-                            <TextInput
-                                value={currentTestDate}
-                                onChangeText={setCurrentTestDate}
-                                placeholder="YYYY-MM-DD"
-                                style={styles.dateInput}
-                            />
-                        ) : (
-                            <Text style={styles.dateDisplay}>
-                                {currentTestDate ? formatDate(currentTestDate) : 'Select Date'}
-                            </Text>
-                        )}
-                        <TouchableOpacity
-                            onPress={() => setShowHistoryModal(true)}
-                            style={styles.historyButton}
-                        >
-                            <MaterialIcons name="history" size={18} color={Colors.primary} />
-                            <Text style={styles.historyButtonText}>History</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </View>
-
-            {/* Single Action Button */}
-            <View style={styles.actionButtonContainer}>
-                <TouchableOpacity
-                    onPress={isEditing ? handleSave : handleToggleEdit}
-                    style={[styles.mainActionButton, isEditing ? styles.saveButton : styles.editButton]}
-                    disabled={loading}
-                >
-                    <MaterialIcons 
-                        name={isEditing ? "save" : "edit"} 
-                        size={20} 
-                        color={Colors.textOnPrimary} 
-                    />
-                    <Text style={styles.mainActionButtonText}>
-                        {loading ? 'Saving...' : (isEditing ? 'Save Assessment' : 'Edit Assessment')}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Physical Fitness Tests Section */}
-            <View style={styles.majorSection}>
-                <View style={styles.majorSectionHeader}>
-                    <View style={styles.sectionTitleContainer}>
-                        <MaterialIcons name="fitness-center" size={24} color={Colors.primary} />
-                        <Text style={styles.majorSectionTitle}>Physical Fitness Tests</Text>
-                    </View>
-                </View>
-
-                <View style={styles.sectionContent}>
-                    {Object.entries(categoryGroups).map(([category, items]) => {
-                        const firstItem = items[0];
-                        
-                        return (
-                            <View key={category} style={styles.categoryCard}>
-                                {/* Category Header */}
-                                <View style={[styles.categoryHeader, { backgroundColor: firstItem.color }]}>
-                                    <View style={styles.categoryHeaderContent}>
-                                        <MaterialIcons 
-                                            name={firstItem.icon as any} 
-                                            size={18} 
-                                            color={Colors.textOnPrimary} 
-                                        />
-                                        <Text style={styles.categoryTitle}>{category}</Text>
-                                    </View>
-                                </View>
-
-                                {/* Tests */}
-                                {items.map((item, index) => (
-                                    <View key={item.id} style={[styles.testItem, index !== items.length - 1 && styles.testItemBorder]}>
-                                        <View style={styles.testContent}>
-                                            {/* Test Details */}
-                                            <View style={styles.testDetails}>
-                                                <Text style={styles.testName}>{item.test}</Text>
-                                                
-                                                {/* Results */}
-                                                <View style={styles.resultsContainer}>
-                                                    <View style={styles.resultItem}>
-                                                        <Text style={styles.resultLabel}>Test 1</Text>
-                                                        {isEditing ? (
-                                                            <TextInput
-                                                                value={item.result1}
-                                                                onChangeText={(text) => updateResult(item.id, 'result1', text)}
-                                                                placeholder="Enter result"
-                                                                style={styles.resultInput}
-                                                                keyboardType="numeric"
-                                                            />
-                                                        ) : (
-                                                            <View style={styles.resultDisplay}>
-                                                                <Text style={[styles.resultText, !item.result1 && styles.resultTextEmpty]}>
-                                                                    {item.result1 || '-'}
-                                                                </Text>
-                                                            </View>
-                                                        )}
-                                                    </View>
-                                                    
-                                                    <View style={styles.resultItem}>
-                                                        <Text style={styles.resultLabel}>Test 2</Text>
-                                                        {isEditing ? (
-                                                            <TextInput
-                                                                value={item.result2}
-                                                                onChangeText={(text) => updateResult(item.id, 'result2', text)}
-                                                                placeholder="Enter result"
-                                                                style={styles.resultInput}
-                                                                keyboardType="numeric"
-                                                            />
-                                                        ) : (
-                                                            <View style={styles.resultDisplay}>
-                                                                <Text style={[styles.resultText, !item.result2 && styles.resultTextEmpty]}>
-                                                                    {item.result2 || '-'}
-                                                                </Text>
-                                                            </View>
-                                                        )}
-                                                    </View>
-                                                </View>
-                                            </View>
-                                        </View>
-                                    </View>
-                                ))}
-                            </View>
-                        );
-                    })}
-                </View>
-            </View>
-
-            {/* Laboratory Tests Section */}
-            <View style={styles.majorSection}>
-                <View style={styles.majorSectionHeader}>
-                    <View style={styles.sectionTitleContainer}>
-                        <MaterialIcons name="science" size={24} color={Colors.success} />
-                        <Text style={styles.majorSectionTitle}>Laboratory Tests</Text>
-                    </View>
-                </View>
-
-                <View style={styles.sectionContent}>
-                    {Object.entries(labCategoryGroups).map(([category, items]) => {
-                        const firstItem = items[0];
-                        
-                        return (
-                            <View key={category} style={styles.categoryCard}>
-                                {/* Category Header */}
-                                <View style={[styles.categoryHeader, { backgroundColor: firstItem.color }]}>
-                                    <View style={styles.categoryHeaderContent}>
-                                        <MaterialIcons 
-                                            name={firstItem.icon as any} 
-                                            size={18} 
-                                            color={Colors.textOnPrimary} 
-                                        />
-                                        <Text style={styles.categoryTitle}>{category}</Text>
-                                    </View>
-                                </View>
-
-                                {/* Lab Tests */}
-                                {items.map((item, index) => (
-                                    <View key={item.id} style={[styles.labTestItem, index !== items.length - 1 && styles.testItemBorder]}>
-                                        <View style={styles.labTestContent}>
-                                            <View style={styles.labTestHeader}>
-                                                <Text style={styles.labTestName}>{item.test}</Text>
-                                                <Text style={styles.normalRange}>Normal: {item.normalRange} {item.unit}</Text>
-                                            </View>
-                                            
-                                            <View style={styles.labResultsContainer}>
-                                                <View style={styles.labResultItem}>
-                                                    <Text style={styles.resultLabel}>Value</Text>
-                                                    {isEditing ? (
-                                                        <TextInput
-                                                            value={item.value}
-                                                            onChangeText={(text) => updateLabResult(item.id, 'value', text)}
-                                                            placeholder={`Enter value`}
-                                                            style={styles.resultInput}
-                                                            keyboardType="numeric"
-                                                        />
-                                                    ) : (
-                                                        <View style={styles.resultDisplay}>
-                                                            <Text style={[styles.resultText, !item.value && styles.resultTextEmpty]}>
-                                                                {item.value ? `${item.value} ${item.unit}` : '-'}
-                                                            </Text>
-                                                        </View>
-                                                    )}
-                                                </View>
-                                            </View>
-                                        </View>
-                                    </View>
-                                ))}
-                            </View>
-                        );
-                    })}
-                </View>
-            </View>
-
-            {/* History Modal */}
-            <Modal
-                visible={showHistoryModal}
-                animationType="slide"
-                presentationStyle="pageSheet"
-            >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Assessment History</Text>
-                        <TouchableOpacity
-                            onPress={() => setShowHistoryModal(false)}
-                            style={styles.closeButton}
-                        >
-                            <MaterialIcons name="close" size={24} color={Colors.textSecondary} />
-                        </TouchableOpacity>
-                    </View>
-                    
-                    <ScrollView style={styles.modalContent}>
-                        <TouchableOpacity
-                            onPress={createNewAssessment}
-                            style={styles.historyItem}
-                        >
-                            <View style={styles.historyItemContent}>
-                                <MaterialIcons name="add" size={20} color={Colors.success} />
-                                <Text style={[styles.historyDate, { color: Colors.success }]}>Create New Assessment</Text>
-                            </View>
-                        </TouchableOpacity>
-                        
-                        {testHistory.map((record) => (
-                            <TouchableOpacity
-                                key={record.date}
-                                onPress={() => {
-                                    loadHistoryData(record.date);
-                                    setShowHistoryModal(false);
-                                }}
-                                style={[
-                                    styles.historyItem,
-                                    currentTestDate === record.date && styles.selectedHistoryItem
-                                ]}
-                            >
-                                <View style={styles.historyItemContent}>
-                                    <MaterialIcons name="event" size={20} color={Colors.textSecondary} />
-                                    <View style={styles.historyItemText}>
-                                        <Text style={styles.historyDate}>{formatDate(record.date)}</Text>
-                                        <Text style={styles.historySubtext}>
-                                            {record.fitnessTests.length} fitness tests, {' '}
-                                            {record.labTests.length} lab tests
-                                        </Text>
-                                    </View>
-                                </View>
-                                {currentTestDate === record.date && (
-                                    <MaterialIcons name="check-circle" size={20} color={Colors.success} />
-                                )}
-                            </TouchableOpacity>
-                        ))}
-                        
-                        {testHistory.length === 0 && (
-                            <View style={styles.emptyState}>
-                                <MaterialIcons name="history" size={48} color={Colors.border} />
-                                <Text style={styles.emptyStateText}>No previous assessments found</Text>
-                                <Text style={styles.emptyStateSubtext}>Create your first assessment above</Text>
-                            </View>
-                        )}
-                    </ScrollView>
-                </View>
-            </Modal>
-        </ScrollView>
-    );
+function resultsFor(tests: FitnessTest[], date: string): Results {
+  const out: Results = {};
+  for (const t of fitnessTestTemplates) {
+    const found = tests.find((x) => x.date === date && x.test === t.test);
+    out[t.test] = { result1: found?.result1 ?? '', result2: found?.result2 ?? '' };
+  }
+  return out;
 }
 
+/**
+ * Fitness assessments, grouped by date. Trainers record two attempts per test; clients see them.
+ * Saving sends only `fitness_tests` for the whole history, replacing just the edited date.
+ * (Lab tests are not shown in v1; stored lab data is left untouched.)
+ */
+export default function FitnessTestScreen(): React.JSX.Element {
+  const record = useTraineeRecord();
+  const { user } = useAuth();
+  const isTrainer = user?.role === 'trainer';
+  const [tests, setTests] = useState<FitnessTest[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [date, setDate] = useState<string>(todayLocal());
+  const [editing, setEditing] = useState(false);
+  const [draftDate, setDraftDate] = useState(todayLocal());
+  const [draft, setDraft] = useState<Results>({});
+  const [saving, setSaving] = useState(false);
+
+  const dates = useMemo(
+    () => Array.from(new Set((tests ?? []).map((t) => t.date))).sort((a, b) => b.localeCompare(a)),
+    [tests]
+  );
+
+  const load = useCallback(async () => {
+    try {
+      const trainee = await getTrainee(record.id);
+      const loaded = trainee.fitness_tests ?? [];
+      setTests(loaded);
+      setLoadError(null);
+      const latest = Array.from(new Set(loaded.map((t) => t.date))).sort((a, b) => b.localeCompare(a))[0];
+      if (latest) {
+        setDate((current) => (loaded.some((t) => t.date === current) ? current : latest));
+      }
+    } catch (e: unknown) {
+      setLoadError(errorMessage(e));
+    }
+  }, [record.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
+
+  const startEdit = (forDate: string): void => {
+    setDraftDate(forDate);
+    setDraft(resultsFor(tests ?? [], forDate));
+    setEditing(true);
+  };
+
+  const draftDateError =
+    !parseLocalDate(draftDate) ? 'Use the format YYYY-MM-DD' : isFuture(draftDate) ? 'Date cannot be in the future' : undefined;
+
+  const onSave = async (): Promise<void> => {
+    if (!tests || draftDateError) {
+      return;
+    }
+    const entries: FitnessTest[] = fitnessTestTemplates
+      .filter((t) => draft[t.test]?.result1.trim() || draft[t.test]?.result2.trim())
+      .map((t) => ({
+        date: draftDate,
+        category: t.category,
+        test: t.test,
+        result1: draft[t.test].result1.trim(),
+        result2: draft[t.test].result2.trim(),
+      }));
+    const next = [...tests.filter((t) => t.date !== draftDate), ...entries];
+    setSaving(true);
+    try {
+      await updateTrainee(record.id, { fitness_tests: next });
+      setTests(next);
+      setDate(draftDate);
+      setEditing(false);
+      Toast.show({ type: 'success', text1: 'Assessment saved' });
+    } catch (e: unknown) {
+      Toast.show({ type: 'error', text1: 'Not saved', text2: errorMessage(e) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!tests) {
+    return loadError ? <ErrorState message={loadError} onRetry={() => void load()} /> : <LoadingState />;
+  }
+
+  const shown = editing ? draft : resultsFor(tests, date);
+  const hasData = dates.length > 0;
+
+  return (
+    <Screen
+      footer={
+        isTrainer ? (
+          editing ? (
+            <View style={styles.footerRow}>
+              <Button title="Cancel" variant="secondary" onPress={() => setEditing(false)} style={styles.flex} />
+              <Button
+                title="Save"
+                onPress={() => void onSave()}
+                loading={saving}
+                disabled={!!draftDateError}
+                style={styles.flex}
+              />
+            </View>
+          ) : (
+            <View style={styles.footerRow}>
+              <Button title="New assessment" variant="secondary" onPress={() => startEdit(todayLocal())} style={styles.flex} />
+              {hasData ? <Button title="Edit" onPress={() => startEdit(date)} style={styles.flex} /> : null}
+            </View>
+          )
+        ) : undefined
+      }
+    >
+      {editing ? (
+        <TextField
+          label="Assessment date"
+          value={draftDate}
+          onChangeText={setDraftDate}
+          placeholder="YYYY-MM-DD"
+          error={draftDateError}
+          autoCorrect={false}
+        />
+      ) : hasData ? (
+        <View>
+          <AppText variant="label" tone="secondary">
+            Assessments
+          </AppText>
+          <View style={styles.dates}>
+            {dates.map((d) => (
+              <Chip key={d} label={longDateLabel(d)} selected={d === date} onPress={() => setDate(d)} />
+            ))}
+          </View>
+        </View>
+      ) : (
+        <AppText tone="secondary" style={styles.empty}>
+          {isTrainer
+            ? 'No assessments yet. Tap New assessment to record the first one.'
+            : 'Your coach has not recorded an assessment yet.'}
+        </AppText>
+      )}
+
+      {(editing || hasData) &&
+        CATEGORIES.map((category) => {
+          const items = fitnessTestTemplates.filter((t) => t.category === category);
+          return (
+            <Card key={category} style={styles.category}>
+              <View style={styles.categoryHeader}>
+                <MaterialIcons
+                  name={items[0].icon as keyof typeof MaterialIcons.glyphMap}
+                  size={18}
+                  color={items[0].color}
+                />
+                <AppText variant="subheading" style={styles.categoryTitle}>
+                  {category}
+                </AppText>
+              </View>
+              {items.map((t) => (
+                <View key={t.test} style={styles.testRow}>
+                  <AppText style={styles.testName}>{t.test}</AppText>
+                  {(['result1', 'result2'] as const).map((field) =>
+                    editing ? (
+                      <TextInput
+                        key={field}
+                        value={draft[t.test]?.[field] ?? ''}
+                        onChangeText={(v) => setDraft({ ...draft, [t.test]: { ...draft[t.test], [field]: v } })}
+                        placeholder={field === 'result1' ? 'Try 1' : 'Try 2'}
+                        placeholderTextColor={Colors.textMuted}
+                        accessibilityLabel={`${t.test} ${field === 'result1' ? 'try 1' : 'try 2'}`}
+                        style={styles.input}
+                        maxLength={20}
+                      />
+                    ) : (
+                      <AppText key={field} style={styles.value}>
+                        {shown[t.test]?.[field] || '-'}
+                      </AppText>
+                    )
+                  )}
+                </View>
+              ))}
+            </Card>
+          );
+        })}
+    </Screen>
+  );
+}
 
 const styles = StyleSheet.create({
-  
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-// Action Button Container - NEW
-  actionButtonContainer: {
-    paddingHorizontal: Spacing.medium,
-    paddingVertical: Spacing.small,
-    backgroundColor: Colors.background,
-  },
-
-  // Main Action Button - NEW
-  mainActionButton: {
+  flex: { flex: 1 },
+  footerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.medium,
-    paddingVertical: 12,
-    borderRadius: Radii.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-
-  // Main Action Button Text - NEW
-  mainActionButtonText: {
-    color: Colors.textOnPrimary,
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  // Header Styles - Compact
-  header: {
-    backgroundColor: Colors.surface,
-    paddingTop: Platform.OS === 'ios' ? 45 : 15,
-    paddingBottom: 12,
-    paddingHorizontal: Spacing.medium,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    fontFamily: Fonts.display,
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-
-  // Date Section Styles - Compact
-  dateSection: {
-    paddingHorizontal: Spacing.medium,
-    paddingVertical: Spacing.small,
-  },
-  dateCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.sm,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  dateHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.small,
-  },
-  dateTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginLeft: 6,
-  },
-  dateControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dateInput: {
-    flex: 1,
-    fontSize: 13,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 6,
-    backgroundColor: Colors.backgroundAlt,
-    marginRight: 8,
-  },
-  dateDisplay: {
-    flex: 1,
-    fontSize: 13,
-    color: Colors.textPrimary,
-    fontWeight: '500',
-    paddingVertical: Spacing.small,
-  },
-  historyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: Colors.activeCard,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: Colors.primaryMuted,
-  },
-  historyButtonText: {
-    color: Colors.primary,
-    fontWeight: '600',
-    marginLeft: 4,
-    fontSize: 12,
-  },
-
-  // Major Section Styles - Different backgrounds
-  majorSection: {
-    marginBottom: 12,
-  },
-  majorSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.medium,
-    paddingVertical: 10,
-    backgroundColor: Colors.surface,
-    borderTopWidth: 2,
-    borderTopColor: Colors.primary,
-  },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  majorSectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-    marginLeft: Spacing.small,
-  },
-  sectionContent: {
-    paddingHorizontal: Spacing.medium,
-    paddingTop: 2,
-    // Physical Fitness Tests - Light Blue Background
-    backgroundColor: Colors.backgroundAlt,
-  },
-  
-  // Lab Section Content - Light Green Background
-  labSectionContent: {
-    paddingHorizontal: Spacing.medium,
-    paddingTop: 2,
-    backgroundColor: Colors.activeCard,
-  },
-
-  // Action Button Styles - Compact
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    minWidth: 70,
-    justifyContent: 'center',
-  },
-  editButton: {
-    backgroundColor: Colors.primary,
-  },
-  saveButton: {
-    backgroundColor: Colors.success,
-  },
-  actionButtonText: {
-    color: Colors.textOnPrimary,
-    fontWeight: '600',
-    marginLeft: 4,
-    fontSize: 12,
-  },
-
-  // Category Card Styles - Compact
-  categoryCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.sm,
-    marginBottom: Spacing.small,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  categoryHeader: {
-    paddingHorizontal: 12,
-    paddingVertical: Spacing.small,
-  },
-  categoryHeaderContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  categoryTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.textOnPrimary,
-    marginLeft: 6,
-  },
-
-  // Test Item Styles - Very Compact
-  testItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  testItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  testContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  testDetails: {
-    flex: 1,
-  },
-  testName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 6,
-  },
-
-  // Results Container Styles - Compact
-  resultsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: Spacing.small,
   },
-  resultItem: {
-    flex: 1,
-  },
-  resultLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  resultInput: {
-    fontSize: 12,
-    padding: 6,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 4,
-    backgroundColor: Colors.backgroundAlt,
-    textAlign: 'center',
-    minHeight: 28,
-  },
-  resultDisplay: {
-    padding: 6,
-    backgroundColor: Colors.backgroundAlt,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    minHeight: 28,
-    justifyContent: 'center',
-  },
-  resultText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  resultTextEmpty: {
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-  },
-
-  // Lab Test Styles - Very Compact
-  labTestItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  labTestContent: {
-    flex: 1,
-  },
-  labTestHeader: {
-    marginBottom: 6,
-  },
-  labTestName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 2,
-  },
-  normalRange: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  labResultsContainer: {
+  dates: {
     flexDirection: 'row',
-  },
-  labResultItem: {
-    flex: 1,
-    maxWidth: 120,
-  },
-
-  // Modal Styles - Compact
-  modalContainer: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.medium,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    paddingTop: Platform.OS === 'ios' ? 45 : 15,
-  },
-  modalTitle: {
-    fontFamily: Fonts.display,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-  },
-  closeButton: {
-    padding: 6,
-    borderRadius: 6,
-    backgroundColor: Colors.backgroundAlt,
-  },
-  modalContent: {
-    flex: 1,
-    paddingHorizontal: Spacing.medium,
-    paddingTop: Spacing.small,
-  },
-
-  // History Item Styles - Compact
-  historyItem: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.sm,
-    padding: 12,
+    flexWrap: 'wrap',
+    marginTop: Spacing.small,
     marginBottom: Spacing.small,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
+  },
+  empty: {
+    marginBottom: Spacing.medium,
+  },
+  category: {
+    marginBottom: Spacing.medium,
+  },
+  categoryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    marginBottom: Spacing.small,
   },
-  selectedHistoryItem: {
-    borderWidth: 2,
-    borderColor: Colors.success,
-    backgroundColor: Colors.activeCard,
-  },
-  historyItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  historyItemText: {
+  categoryTitle: {
     marginLeft: Spacing.small,
-    flex: 1,
   },
-  historyDate: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 1,
-  },
-  historySubtext: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-  },
-
-  // Empty State Styles - Compact
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 30,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginTop: 12,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  emptyStateSubtext: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-
-  // Completion Progress Styles - Compact
-  progressContainer: {
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  progressBar: {
-    height: 3,
-    backgroundColor: Colors.border,
-    borderRadius: 1.5,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 1.5,
-  },
-  progressText: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-    marginTop: 2,
-    textAlign: 'right',
-  },
-
-  // Additional Utility Styles - Compact
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: Spacing.small,
-  },
-  spacer: {
-    height: Spacing.small,
-  },
-  row: {
+  testRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: Spacing.xs,
+    gap: Spacing.small,
   },
-  flex1: {
+  testName: {
     flex: 1,
+    minWidth: 0,
   },
-  textCenter: {
+  input: {
+    width: 76,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radii.sm,
+    paddingHorizontal: Spacing.small,
+    fontSize: 16,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.surface,
     textAlign: 'center',
   },
-  textRight: {
-    textAlign: 'right',
+  value: {
+    width: 76,
+    textAlign: 'center',
   },
-  marginBottom4: {
-    marginBottom: 4,
-  },
-  marginBottom6: {
-    marginBottom: 6,
-  },
-  marginBottom8: {
-    marginBottom: Spacing.small,
-  },
-  paddingHorizontal12: {
-    paddingHorizontal: 12,
-  },
-  paddingVertical4: {
-    paddingVertical: 4,
-  },
-  paddingVertical6: {
-    paddingVertical: 6,
-  },
-
-  // Status Indicator Styles - Compact
-  statusIndicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginLeft: 6,
-  },
-  statusNormal: {
-    backgroundColor: Colors.success,
-  },
-  statusHigh: {
-    backgroundColor: Colors.error,
-  },
-  statusLow: {
-    backgroundColor: Colors.warning,
-  },
-  
-
-  // Responsive adjustments for larger screens
-  ...(Platform.OS === 'web' && {
-    container: {
-      maxWidth: 700,
-      alignSelf: 'center',
-      width: '100%',
-    },
-  }),
 });

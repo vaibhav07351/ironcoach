@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -52,7 +52,7 @@ export default function FirstRunHints({
     try {
       await AsyncStorage.setItem(storageKey, '1');
     } catch {
-      // ignore storage failures — still dismiss for this session
+      // ignore storage failures: still dismiss for this session
     }
     onDismiss();
   };

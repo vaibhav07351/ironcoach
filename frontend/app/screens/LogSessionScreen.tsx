@@ -1,361 +1,100 @@
-import React, { useContext, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Toast from 'react-native-toast-message';
-import { RootStackParamList } from '../types/navigation';
-import { AuthContext } from '../contexts/AuthContext';
-import { apiFetch, parseApiError } from '../services/api';
+
+import { AppText } from '@/components/AppText';
+import { Button } from '@/components/Button';
+import { Screen } from '@/components/Screen';
+import { TextField } from '@/components/TextField';
+import { Spacing } from '@/constants/theme';
+import { fieldsFor } from '../constants/activityFields';
 import { expertiseLabel } from '../constants/expertise';
-import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
+import { errorMessage } from '../services/http';
+import { createWorkoutLog } from '../services/workoutService';
+import type { RootStackParamList } from '../types/navigation';
+import type { SessionMetrics } from '../types/workout';
+import { newClientId } from '../utils/ids';
+import { relativeDayLabel } from '../utils/date';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LogSession'>;
 
-function toISODate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-export default function LogSessionScreen({
-  route,
-  navigation,
-}: Props): React.JSX.Element {
-  const { traineeId, selectedDate, activityType } = route.params;
-  const { token } = useContext(AuthContext);
-  const [saving, setSaving] = useState(false);
-  const [durationMin, setDurationMin] = useState('');
-  const [distanceKm, setDistanceKm] = useState('');
-  const [distanceM, setDistanceM] = useState('');
-  const [laps, setLaps] = useState('');
-  const [stroke, setStroke] = useState('');
-  const [intensity, setIntensity] = useState('');
-  const [style, setStyle] = useState('');
-  const [gamesWon, setGamesWon] = useState('');
-  const [gamesLost, setGamesLost] = useState('');
-  const [rounds, setRounds] = useState('');
-  const [sessionKind, setSessionKind] = useState('');
-  const [title, setTitle] = useState('');
-  const [roleNote, setRoleNote] = useState('');
+/** Quick log for a non-gym session (swim, run, badminton...). */
+export default function LogSessionScreen({ route, navigation }: Props): React.JSX.Element {
+  const { traineeId, date, activityType } = route.params;
+  const fields = fieldsFor(activityType);
+  const label = expertiseLabel(activityType);
+  const [values, setValues] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // One idempotency key per screen: retrying after a timeout never logs the session twice.
+  const clientId = useRef(newClientId()).current;
 
-  const label = useMemo(() => expertiseLabel(activityType), [activityType]);
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: `Log ${label.toLowerCase()}` });
+  }, [navigation, label]);
 
   const onSave = async (): Promise<void> => {
-    if (!token) {
+    const metrics: SessionMetrics = {};
+    for (const f of fields) {
+      const raw = (values[f.key] ?? '').trim();
+      if (!raw) continue;
+      if (f.kind === 'number') {
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n < 0) {
+          setError(`${f.label} must be a positive number`);
+          return;
+        }
+        (metrics as Record<string, number>)[f.key] = f.integer ? Math.round(n) : n;
+      } else {
+        (metrics as Record<string, string>)[f.key] = raw;
+      }
+    }
+    if (!metrics.duration_min) {
+      setError('Enter how many minutes you trained.');
       return;
     }
-    const metrics: Record<string, unknown> = {};
-    const dur = Number(durationMin);
-    if (Number.isFinite(dur) && dur > 0) {
-      metrics.duration_min = dur;
-    }
-
-    switch (activityType) {
-      case 'swimming':
-        if (distanceM) metrics.distance_m = Number(distanceM);
-        if (laps) metrics.laps = Number(laps);
-        if (stroke) metrics.stroke = stroke.trim();
-        break;
-      case 'running':
-        if (distanceKm) metrics.distance_km = Number(distanceKm);
-        break;
-      case 'badminton':
-        if (gamesWon) metrics.games_won = Number(gamesWon);
-        if (gamesLost) metrics.games_lost = Number(gamesLost);
-        if (intensity) metrics.intensity = intensity.trim();
-        break;
-      case 'yoga':
-        if (style) metrics.style = style.trim();
-        if (intensity) metrics.intensity = intensity.trim();
-        break;
-      case 'cricket':
-        if (sessionKind) metrics.session_kind = sessionKind.trim();
-        if (roleNote) metrics.role_note = roleNote.trim();
-        break;
-      case 'boxing':
-      case 'mma':
-        if (rounds) metrics.rounds = Number(rounds);
-        if (intensity) metrics.intensity = intensity.trim();
-        break;
-      default:
-        if (title) metrics.title = title.trim();
-        break;
-    }
-
-    if (!metrics.duration_min && activityType !== 'gym') {
-      Toast.show({
-        type: 'error',
-        text1: 'Duration needed',
-        text2: 'Enter how many minutes you trained.',
-      });
-      return;
-    }
-
+    setError(null);
     setSaving(true);
     try {
-      const response = await apiFetch(
-        '/workout_logs',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            trainee_id: traineeId,
-            date: toISODate(selectedDate),
-            activity_type: activityType,
-            metrics,
-            notes: notes.trim(),
-            workouts: [],
-          }),
-        },
-        token
-      );
-      if (!response.ok) {
-        throw new Error(await parseApiError(response));
-      }
+      await createWorkoutLog({
+        trainee_id: traineeId,
+        date,
+        activity_type: activityType,
+        metrics,
+        notes: notes.trim(),
+        client_id: clientId,
+      });
       Toast.show({ type: 'success', text1: 'Logged', text2: `${label} session saved.` });
       navigation.goBack();
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Could not save session';
-      Toast.show({ type: 'error', text1: 'Log failed', text2: message });
-    } finally {
+    } catch (e: unknown) {
+      setError(errorMessage(e));
       setSaving(false);
     }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>{label}</Text>
-      <Text style={styles.hint}>Quick log — only what you actually track.</Text>
-
-      <Text style={styles.label}>Duration (min)</Text>
-      <TextInput
-        style={styles.input}
-        value={durationMin}
-        onChangeText={setDurationMin}
-        keyboardType="decimal-pad"
-        placeholder="45"
-        placeholderTextColor={Colors.textSecondary}
-      />
-
-      {activityType === 'swimming' && (
-        <>
-          <Text style={styles.label}>Distance (m)</Text>
-          <TextInput
-            style={styles.input}
-            value={distanceM}
-            onChangeText={setDistanceM}
-            keyboardType="decimal-pad"
-            placeholder="1000"
-            placeholderTextColor={Colors.textSecondary}
-          />
-          <Text style={styles.label}>Laps</Text>
-          <TextInput
-            style={styles.input}
-            value={laps}
-            onChangeText={setLaps}
-            keyboardType="number-pad"
-            placeholder="40"
-            placeholderTextColor={Colors.textSecondary}
-          />
-          <Text style={styles.label}>Stroke</Text>
-          <TextInput
-            style={styles.input}
-            value={stroke}
-            onChangeText={setStroke}
-            placeholder="Freestyle"
-            placeholderTextColor={Colors.textSecondary}
-          />
-        </>
-      )}
-
-      {activityType === 'running' && (
-        <>
-          <Text style={styles.label}>Distance (km)</Text>
-          <TextInput
-            style={styles.input}
-            value={distanceKm}
-            onChangeText={setDistanceKm}
-            keyboardType="decimal-pad"
-            placeholder="5"
-            placeholderTextColor={Colors.textSecondary}
-          />
-        </>
-      )}
-
-      {activityType === 'badminton' && (
-        <>
-          <Text style={styles.label}>Games won</Text>
-          <TextInput
-            style={styles.input}
-            value={gamesWon}
-            onChangeText={setGamesWon}
-            keyboardType="number-pad"
-            placeholder="2"
-            placeholderTextColor={Colors.textSecondary}
-          />
-          <Text style={styles.label}>Games lost</Text>
-          <TextInput
-            style={styles.input}
-            value={gamesLost}
-            onChangeText={setGamesLost}
-            keyboardType="number-pad"
-            placeholder="1"
-            placeholderTextColor={Colors.textSecondary}
-          />
-          <Text style={styles.label}>Intensity</Text>
-          <TextInput
-            style={styles.input}
-            value={intensity}
-            onChangeText={setIntensity}
-            placeholder="Easy / Moderate / Hard"
-            placeholderTextColor={Colors.textSecondary}
-          />
-        </>
-      )}
-
-      {activityType === 'yoga' && (
-        <>
-          <Text style={styles.label}>Style</Text>
-          <TextInput
-            style={styles.input}
-            value={style}
-            onChangeText={setStyle}
-            placeholder="Hatha, Vinyasa…"
-            placeholderTextColor={Colors.textSecondary}
-          />
-          <Text style={styles.label}>Intensity</Text>
-          <TextInput
-            style={styles.input}
-            value={intensity}
-            onChangeText={setIntensity}
-            placeholder="Gentle / Strong"
-            placeholderTextColor={Colors.textSecondary}
-          />
-        </>
-      )}
-
-      {activityType === 'cricket' && (
-        <>
-          <Text style={styles.label}>Session type</Text>
-          <TextInput
-            style={styles.input}
-            value={sessionKind}
-            onChangeText={setSessionKind}
-            placeholder="Nets / Match / Practice"
-            placeholderTextColor={Colors.textSecondary}
-          />
-          <Text style={styles.label}>Role note</Text>
-          <TextInput
-            style={styles.input}
-            value={roleNote}
-            onChangeText={setRoleNote}
-            placeholder="Batting, bowling…"
-            placeholderTextColor={Colors.textSecondary}
-          />
-        </>
-      )}
-
-      {(activityType === 'boxing' || activityType === 'mma') && (
-        <>
-          <Text style={styles.label}>Rounds</Text>
-          <TextInput
-            style={styles.input}
-            value={rounds}
-            onChangeText={setRounds}
-            keyboardType="number-pad"
-            placeholder="6"
-            placeholderTextColor={Colors.textSecondary}
-          />
-          <Text style={styles.label}>Intensity</Text>
-          <TextInput
-            style={styles.input}
-            value={intensity}
-            onChangeText={setIntensity}
-            placeholder="Light / Sparring / Hard"
-            placeholderTextColor={Colors.textSecondary}
-          />
-        </>
-      )}
-
-      {activityType === 'other' && (
-        <>
-          <Text style={styles.label}>Title</Text>
-          <TextInput
-            style={styles.input}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="What did you train?"
-            placeholderTextColor={Colors.textSecondary}
-          />
-        </>
-      )}
-
-      <Text style={styles.label}>Notes (optional)</Text>
-      <TextInput
-        style={[styles.input, styles.multiline]}
-        value={notes}
-        onChangeText={setNotes}
-        multiline
-        placeholder="Anything to remember"
-        placeholderTextColor={Colors.textSecondary}
-      />
-
-      <TouchableOpacity
-        style={styles.cta}
-        onPress={() => void onSave()}
-        disabled={saving}
-      >
-        {saving ? (
-          <ActivityIndicator color={Colors.textOnPrimary} />
-        ) : (
-          <Text style={styles.ctaText}>Save session</Text>
-        )}
-      </TouchableOpacity>
-    </ScrollView>
+    <Screen footer={<Button title="Save session" onPress={() => void onSave()} loading={saving} />}>
+      <AppText tone="secondary" style={{ marginBottom: Spacing.medium }}>
+        {relativeDayLabel(date)} · only fill in what you track.
+      </AppText>
+      {fields.map((f) => (
+        <TextField
+          key={f.key}
+          label={f.kind === 'number' && f.unit ? `${f.label} (${f.unit})` : f.label}
+          value={values[f.key] ?? ''}
+          onChangeText={(v) => setValues((prev) => ({ ...prev, [f.key]: v }))}
+          keyboardType={f.kind === 'number' ? (f.integer ? 'number-pad' : 'decimal-pad') : 'default'}
+          placeholder={f.placeholder}
+          maxLength={f.kind === 'number' ? 7 : 120}
+        />
+      ))}
+      <TextField label="Notes" value={notes} onChangeText={setNotes} multiline maxLength={2000} />
+      {error ? (
+        <AppText tone="error" accessibilityRole="alert">
+          {error}
+        </AppText>
+      ) : null}
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.large, paddingBottom: Spacing.xl * 2 },
-  heading: {
-    fontFamily: Fonts.display,
-    fontSize: 26,
-    color: Colors.textPrimary,
-  },
-  hint: {
-    color: Colors.textSecondary,
-    marginBottom: Spacing.large,
-    marginTop: Spacing.small,
-  },
-  label: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-    marginBottom: 4,
-    marginTop: Spacing.small,
-  },
-  input: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radii.md,
-    paddingHorizontal: Spacing.medium,
-    paddingVertical: 12,
-    color: Colors.textPrimary,
-  },
-  multiline: { minHeight: 80, textAlignVertical: 'top' },
-  cta: {
-    marginTop: Spacing.large,
-    backgroundColor: Colors.primary,
-    borderRadius: Radii.md,
-    paddingVertical: Spacing.medium,
-    alignItems: 'center',
-  },
-  ctaText: { color: Colors.textOnPrimary, fontWeight: '700', fontSize: 16 },
-});

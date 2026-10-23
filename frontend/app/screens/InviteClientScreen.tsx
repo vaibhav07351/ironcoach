@@ -1,151 +1,110 @@
-import React, { useContext, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  Share,
-} from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useState } from 'react';
+import { Share, StyleSheet, View } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Toast from 'react-native-toast-message';
-import { RootStackParamList } from '../types/navigation';
-import { AuthContext } from '../contexts/AuthContext';
+
+import { AppText } from '@/components/AppText';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { Screen } from '@/components/Screen';
+import { Colors, Spacing } from '@/constants/theme';
+import { config } from '../config';
+import { errorMessage } from '../services/http';
 import { createInvite } from '../services/inviteService';
-import { Invite } from '../types/auth';
-import { Colors, Radii, Spacing } from '@/constants/theme';
+import type { Invite } from '../types/auth';
+import type { RootStackParamList } from '../types/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InviteClient'>;
 
-export default function InviteClientScreen({ route }: Props) {
+function inviteMessage(invite: Invite, trainerName: string): string {
+  return (
+    `Hi! ${trainerName} invited you to TrainerNearMe to track your workouts, meals and progress.\n\n` +
+    `1. Install the app: ${config.playStoreUrl}\n` +
+    `2. Sign in with Google and choose "I'm training with a coach"\n` +
+    `3. Enter code ${invite.code}\n\n` +
+    'The code works once and expires in 7 days.'
+  );
+}
+
+/** Creates a single-use invite code for a client and shares it (WhatsApp or any app). */
+export default function InviteClientScreen({ route }: Props): React.JSX.Element {
   const { traineeId, traineeName } = route.params;
-  const { token } = useContext(AuthContext);
   const [invite, setInvite] = useState<Invite | null>(null);
   const [loading, setLoading] = useState(false);
 
   const generate = async (): Promise<void> => {
-    if (!token) {
-      return;
-    }
     setLoading(true);
     try {
-      const created = await createInvite(token, traineeId);
-      setInvite(created);
+      setInvite(await createInvite(traineeId));
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Could not create invite';
-      Toast.show({ type: 'error', text1: 'Invite', text2: message });
+      Toast.show({ type: 'error', text1: 'Could not create invite', text2: errorMessage(error) });
     } finally {
       setLoading(false);
     }
   };
 
-  const share = async (): Promise<void> => {
-    if (!invite) {
-      return;
+  const share = async (current: Invite): Promise<void> => {
+    try {
+      await Share.share({ message: inviteMessage(current, 'Your coach') });
+    } catch {
+      Toast.show({ type: 'error', text1: 'Could not open sharing', text2: `Send the code ${current.code} yourself.` });
     }
-    await Share.share({
-      message: `Join me on TrainerNearMe with code ${invite.code}. Open the app, sign in with Google as a client, and enter this code.`,
-    });
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Invite {traineeName}</Text>
-      <Text style={styles.subtitle}>
-        Generate a one-time code. Your client signs in with Google and enters it
-        to unlock their training hub.
-      </Text>
+    <Screen>
+      <AppText variant="heading">Invite {traineeName}</AppText>
+      <AppText tone="secondary" style={styles.subtitle}>
+        Create a one-time code and send it on WhatsApp. When {traineeName.split(' ')[0]} joins, their logs
+        appear here automatically.
+      </AppText>
 
       {invite ? (
-        <View style={styles.codeBox}>
-          <Text style={styles.code}>{invite.code}</Text>
-          <Text style={styles.expires}>
-            Expires {new Date(invite.expires_at).toLocaleDateString()}
-          </Text>
-        </View>
+        <>
+          <Card style={styles.codeCard}>
+            <AppText variant="caption" tone="secondary" center>
+              Invite code
+            </AppText>
+            <AppText style={styles.code} center selectable accessibilityLabel={`Invite code ${invite.code.split('').join(' ')}`}>
+              {invite.code}
+            </AppText>
+            <AppText variant="caption" tone="muted" center>
+              Works once · expires {new Date(invite.expires_at).toLocaleDateString('en-IN')}
+            </AppText>
+          </Card>
+          <Button title="Share invite" icon="share-social-outline" onPress={() => void share(invite)} />
+          <View style={styles.gap}>
+            <Button title="Create a new code" variant="ghost" onPress={() => void generate()} loading={loading} />
+            <AppText variant="caption" tone="muted" center>
+              A new code replaces this one.
+            </AppText>
+          </View>
+        </>
       ) : (
-        <TouchableOpacity
-          style={styles.btn}
-          onPress={() => {
-            void generate();
-          }}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={Colors.textOnPrimary} />
-          ) : (
-            <Text style={styles.btnText}>Generate invite code</Text>
-          )}
-        </TouchableOpacity>
+        <Button title="Create invite code" onPress={() => void generate()} loading={loading} />
       )}
-
-      {invite && (
-        <TouchableOpacity
-          style={[styles.btn, styles.secondary]}
-          onPress={() => {
-            void share();
-          }}
-        >
-          <Text style={[styles.btnText, styles.secondaryText]}>Share code</Text>
-        </TouchableOpacity>
-      )}
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    padding: Spacing.large,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: Colors.primary,
-    marginBottom: Spacing.small,
-  },
   subtitle: {
-    color: Colors.textSecondary,
-    lineHeight: 20,
+    marginTop: Spacing.small,
     marginBottom: Spacing.large,
   },
-  codeBox: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radii.lg,
-    padding: Spacing.xl,
-    alignItems: 'center',
+  codeCard: {
     marginBottom: Spacing.medium,
+    paddingVertical: Spacing.large,
   },
   code: {
-    fontSize: 40,
+    fontSize: 36,
+    lineHeight: 44,
+    fontWeight: '800',
     letterSpacing: 6,
-    fontWeight: '700',
-    color: Colors.textOnPrimary,
-  },
-  expires: {
-    marginTop: Spacing.small,
-    color: Colors.accentSoft,
-  },
-  btn: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: Radii.md,
-    alignItems: 'center',
-    marginBottom: Spacing.small,
-  },
-  btnText: {
-    color: Colors.textOnPrimary,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  secondary: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  secondaryText: {
     color: Colors.primary,
+    marginVertical: Spacing.small,
+  },
+  gap: {
+    marginTop: Spacing.medium,
   },
 });

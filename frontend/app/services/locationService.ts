@@ -31,7 +31,7 @@ type NominatimResult = {
   address?: NominatimAddress;
 };
 
-function pick(...values: Array<string | null | undefined>): string {
+function pick(...values: (string | null | undefined)[]): string {
   for (const value of values) {
     const trimmed = value?.trim();
     if (trimmed) {

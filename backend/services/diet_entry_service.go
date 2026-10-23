@@ -1,62 +1,186 @@
 package services
 
 import (
+	"errors"
+	"fmt"
 	"ironcoach/models"
 	"ironcoach/repositories"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+const (
+	maxMealsPerEntry = 12
+	maxFoodsPerMeal  = 40
 )
 
 type DietEntryService struct {
 	repository *repositories.DietEntryRepository
+	access     *AccessService
 }
 
 // Constructor for DietEntryService
 func NewDietEntryService() *DietEntryService {
 	return &DietEntryService{
 		repository: repositories.NewDietEntryRepository(),
+		access:     NewAccessService(),
 	}
 }
 
-// Add a new diet entry
-func (s *DietEntryService) AddDietEntry(entry models.DietEntry) error {
-	entry.CreatedAt = time.Now()
-	entry.UpdatedAt = time.Now()
+// AddDietEntry creates the day's entry for a trainee the caller may access.
+func (s *DietEntryService) AddDietEntry(p Principal, in models.DietEntryInput) (string, error) {
+	if err := validateDate("date", in.Date); err != nil {
+		return "", err
+	}
+	if err := validateNotFuture("date", in.Date, p.Location(), time.Now()); err != nil {
+		return "", err
+	}
+	if err := validateMeals(in.Meals); err != nil {
+		return "", err
+	}
+	if err := validateText("notes", in.Notes, false, 2000); err != nil {
+		return "", err
+	}
+	if _, err := s.access.AuthorizeTrainee(p, in.TraineeID); err != nil {
+		return "", err
+	}
 
-	// Calculate calories and proteins for each meal
-    calculateMealStats(&entry)
+	now := time.Now().UTC()
+	entry := models.DietEntry{
+		TraineeID: in.TraineeID,
+		Date:      in.Date,
+		Meals:     in.Meals,
+		Notes:     in.Notes,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	calculateMealStats(&entry)
 
-	return s.repository.CreateDietEntry(entry)
+	id, err := s.repository.CreateDietEntry(entry)
+	if errors.Is(err, repositories.ErrDuplicate) {
+		return "", ErrConflict("entry_exists", "a diet entry for this date already exists, edit it instead")
+	}
+	return id, err
 }
 
-// Get all diet entries for a trainee
-func (s *DietEntryService) GetDietEntriesByTrainee(traineeID string, date string) ([]models.DietEntry, error) {
-	return s.repository.GetDietEntriesByTrainee(traineeID, date)
+// GetDietEntriesByTrainee lists entries (access is enforced by the route middleware).
+func (s *DietEntryService) GetDietEntriesByTrainee(traineeID, date string, page Pagination) ([]models.DietEntry, error) {
+	if date != "" {
+		if err := validateDate("date", date); err != nil {
+			return nil, err
+		}
+	}
+	return s.repository.GetDietEntriesByTrainee(traineeID, date, page.Limit, page.Offset)
 }
 
-// Get diet entry by ID
-func (s *DietEntryService) GetDietEntryByID(entryID string) (models.DietEntry, error) {
-	return s.repository.GetDietEntryByID(entryID)
+// GetDietEntryByID returns an entry the caller may access.
+func (s *DietEntryService) GetDietEntryByID(p Principal, entryID string) (models.DietEntry, error) {
+	entry, err := s.repository.GetDietEntryByID(entryID)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return entry, ErrNotFound("diet entry")
+		}
+		return entry, err
+	}
+	if _, err := s.access.AuthorizeTrainee(p, entry.TraineeID); err != nil {
+		return models.DietEntry{}, err
+	}
+	return entry, nil
 }
 
-// Update a diet entry
-func (s *DietEntryService) UpdateDietEntry(entryID string, updateData models.DietEntry) error {
+// UpdateDietEntry replaces the meals and/or notes of an entry and recomputes totals.
+// trainee_id, date and created_at can no longer be overwritten by the client.
+func (s *DietEntryService) UpdateDietEntry(p Principal, entryID string, in models.DietEntryUpdate) error {
+	existing, err := s.GetDietEntryByID(p, entryID)
+	if err != nil {
+		return err
+	}
 
-	// Calculate calories and proteins for each meal
-    calculateMealStats(&updateData)
+	if in.Meals == nil && in.Notes == nil {
+		return ErrValidation("nothing to update")
+	}
+	if in.Meals != nil {
+		if err := validateMeals(*in.Meals); err != nil {
+			return err
+		}
+		existing.Meals = *in.Meals
+	}
+	if in.Notes != nil {
+		if err := validateText("notes", *in.Notes, false, 2000); err != nil {
+			return err
+		}
+		existing.Notes = *in.Notes
+	}
+	calculateMealStats(&existing)
 
-	updateData.UpdatedAt = time.Now()
-
-    // Call the repository to update the entry
-    return s.repository.UpdateDietEntry(entryID, updateData)
+	found, err := s.repository.UpdateFields(entryID, bson.M{
+		"meals":          existing.Meals,
+		"notes":          existing.Notes,
+		"total_calories": existing.TotalCalories,
+		"total_proteins": existing.TotalProteins,
+		"total_carbs":    existing.TotalCarbs,
+		"total_fats":     existing.TotalFats,
+		"updated_at":     time.Now().UTC(),
+	})
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrNotFound("diet entry")
+	}
+	return nil
 }
 
-// Delete a diet entry
-func (s *DietEntryService) DeleteDietEntry(entryID string) error {
-	return s.repository.DeleteDietEntry(entryID)
+// DeleteDietEntry removes an entry the caller may access.
+func (s *DietEntryService) DeleteDietEntry(p Principal, entryID string) error {
+	if _, err := s.GetDietEntryByID(p, entryID); err != nil {
+		return err
+	}
+	found, err := s.repository.DeleteDietEntry(entryID)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrNotFound("diet entry")
+	}
+	return nil
 }
 
+func validateMeals(meals []models.Meal) error {
+	if len(meals) > maxMealsPerEntry {
+		return ErrValidation(fmt.Sprintf("a day can have at most %d meals", maxMealsPerEntry))
+	}
+	for i, meal := range meals {
+		label := fmt.Sprintf("meal %d", i+1)
+		if err := validateText(label+" name", meal.Name, true, 60); err != nil {
+			return err
+		}
+		if len(meal.Foods) > maxFoodsPerMeal {
+			return ErrValidation(fmt.Sprintf("%s can have at most %d foods", label, maxFoodsPerMeal))
+		}
+		for j, f := range meal.Foods {
+			fl := fmt.Sprintf("%s food %d", label, j+1)
+			if err := validateText(fl+" name", f.Name, true, 120); err != nil {
+				return err
+			}
+			if err := validateText(fl+" units", f.Units, false, 30); err != nil {
+				return err
+			}
+			for field, v := range map[string]float64{
+				"quantity": f.Quantity, "calories": f.Calories, "proteins": f.Proteins, "carbs": f.Carbs, "fats": f.Fats,
+			} {
+				if err := validateNumber(fl+" "+field, v, 0, 10000); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
 
-// Helper function to calculate meal and total stats
+// calculateMealStats recomputes per-meal and daily totals from the foods.
 func calculateMealStats(entry *models.DietEntry) {
 	entry.TotalCalories = 0
 	entry.TotalProteins = 0

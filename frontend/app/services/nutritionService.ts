@@ -1,4 +1,4 @@
-import { apiFetch, parseApiError } from './api';
+import { http } from './http';
 
 export type NutritionFood = {
   external_id: string;
@@ -12,19 +12,8 @@ export type NutritionFood = {
   per_100g: boolean;
 };
 
-export async function searchNutrition(
-  token: string,
-  query: string
-): Promise<NutritionFood[]> {
-  const params = new URLSearchParams({ q: query, pageSize: '10' });
-  const response = await apiFetch(
-    `/nutrition/search?${params.toString()}`,
-    { method: 'GET' },
-    token
-  );
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-  const body = (await response.json()) as { foods: NutritionFood[] };
-  return body.foods ?? [];
+/** Searches the food database (values per 100 g when `per_100g`). */
+export async function searchNutrition(query: string): Promise<NutritionFood[]> {
+  const res = await http.get<{ foods: NutritionFood[] }>('/nutrition/search', { query: { q: query, pageSize: 10 } });
+  return res.foods ?? [];
 }

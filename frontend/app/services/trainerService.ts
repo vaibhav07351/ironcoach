@@ -1,160 +1,51 @@
-import { apiFetch, parseApiError } from './api';
+import type { CoachRequest, DiscoverTrainer, TrainerProfile, TrainerProfileUpdate } from '../types/coach';
+import { http } from './http';
 
-export type TrainerDetails = {
-  name: string;
-  email: string;
-  image_url?: string;
-  bio?: string;
-  speciality?: string;
-  expertises?: string[];
-  experience?: number;
-  hourly_rate?: number;
-  phone_number?: string;
-  address?: string;
-  headline?: string;
-  city?: string;
-  area?: string;
-  pincode?: string;
-  latitude?: number;
-  longitude?: number;
-  discovery_visible?: boolean;
-  trainer_type?: string;
-  availability?: string;
-  social_handle?: string;
-  rating?: number;
-  rating_count?: number;
-};
-
-export type DiscoverTrainer = {
-  name: string;
-  email: string;
-  image_url?: string;
-  headline?: string;
-  bio?: string;
-  speciality?: string;
-  expertises?: string[];
-  experience: number;
-  hourly_rate: number;
-  trainer_type?: string;
-  city?: string;
-  area?: string;
-  latitude?: number;
-  longitude?: number;
-  distance_km: number;
-  rating: number;
-  rating_count?: number;
-  match_tier?: 'match' | 'nearby';
-};
-
-export type CoachRequest = {
-  id: string;
-  client_user_id: string;
-  client_name?: string;
-  client_email?: string;
-  trainer_email: string;
-  status: string;
-  created_at: string;
-};
-
-export async function fetchTrainerDetails(token: string): Promise<TrainerDetails> {
-  const response = await apiFetch('/getTrainerDetails', { method: 'GET' }, token);
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-  return (await response.json()) as TrainerDetails;
+/** The signed-in trainer's own profile. */
+export function fetchTrainerProfile(): Promise<TrainerProfile> {
+  return http.get<TrainerProfile>('/getTrainerDetails');
 }
 
-export async function updateTrainerDiscovery(
-  token: string,
-  body: Partial<TrainerDetails>
-): Promise<TrainerDetails> {
-  const response = await apiFetch(
-    '/trainers/me/discovery',
-    { method: 'PUT', body: JSON.stringify(body) },
-    token
-  );
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-  return (await response.json()) as TrainerDetails;
+/** Updates only the provided profile fields and returns the saved profile. */
+export function updateTrainerProfile(update: TrainerProfileUpdate): Promise<TrainerProfile> {
+  return http.put<TrainerProfile>('/trainers/me/discovery', update);
 }
 
-export async function discoverTrainers(
-  token: string,
-  lat?: number,
-  lng?: number
-): Promise<DiscoverTrainer[]> {
-  const params = new URLSearchParams();
-  if (lat !== undefined) params.set('lat', String(lat));
-  if (lng !== undefined) params.set('lng', String(lng));
-  params.set('limit', '50');
-  const response = await apiFetch(
-    `/trainers/discover?${params.toString()}`,
-    { method: 'GET' },
-    token
-  );
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-  return (await response.json()) as DiscoverTrainer[];
+/** Coaches for a client; interest matches first, then nearby. */
+export function discoverTrainers(lat?: number, lng?: number): Promise<DiscoverTrainer[]> {
+  return http.get<DiscoverTrainer[]>('/trainers/discover', { query: { lat, lng, limit: 50 } });
 }
 
-export async function createCoachRequest(
-  token: string,
-  trainerEmail: string
-): Promise<CoachRequest> {
-  const response = await apiFetch(
-    '/coach_requests',
-    { method: 'POST', body: JSON.stringify({ trainer_email: trainerEmail }) },
-    token
-  );
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-  return (await response.json()) as CoachRequest;
+// Coaching requests.
+
+/** Client asks a coach to take them on. `shareConsent` must be true. */
+export function createCoachRequest(trainerId: string, shareConsent: boolean): Promise<CoachRequest> {
+  return http.post<CoachRequest>('/coach_requests', { trainer_id: trainerId, share_consent: shareConsent });
 }
 
-export async function listCoachRequests(token: string): Promise<CoachRequest[]> {
-  const response = await apiFetch('/coach_requests', { method: 'GET' }, token);
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-  return (await response.json()) as CoachRequest[];
+/** The client's own requests with their status. */
+export function listMyCoachRequests(): Promise<CoachRequest[]> {
+  return http.get<CoachRequest[]>('/coach_requests/mine');
 }
 
-export async function countCoachRequests(token: string): Promise<number> {
-  const response = await apiFetch('/coach_requests/count', { method: 'GET' }, token);
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-  const body = (await response.json()) as { count: number };
-  return body.count;
+export function cancelCoachRequest(id: string): Promise<void> {
+  return http.post<void>(`/coach_requests/${encodeURIComponent(id)}/cancel`);
 }
 
-export async function acceptCoachRequest(
-  token: string,
-  id: string
-): Promise<void> {
-  const response = await apiFetch(
-    `/coach_requests/${id}/accept`,
-    { method: 'POST' },
-    token
-  );
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
+/** Open requests for the trainer. */
+export function listCoachRequests(): Promise<CoachRequest[]> {
+  return http.get<CoachRequest[]>('/coach_requests');
 }
 
-export async function rejectCoachRequest(
-  token: string,
-  id: string
-): Promise<void> {
-  const response = await apiFetch(
-    `/coach_requests/${id}/reject`,
-    { method: 'POST' },
-    token
-  );
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
+export async function countCoachRequests(): Promise<number> {
+  const res = await http.get<{ count: number }>('/coach_requests/count');
+  return res.count;
+}
+
+export function acceptCoachRequest(id: string): Promise<void> {
+  return http.post<void>(`/coach_requests/${encodeURIComponent(id)}/accept`);
+}
+
+export function rejectCoachRequest(id: string): Promise<void> {
+  return http.post<void>(`/coach_requests/${encodeURIComponent(id)}/reject`);
 }

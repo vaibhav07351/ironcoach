@@ -1,453 +1,156 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-    View,
-    Text,
-    TextInput,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    ActivityIndicator,
-    FlatList,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
-import { Dimensions } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Trainee } from '../types/trainee';
+import React, { useCallback, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import Constants from 'expo-constants';
-import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
+import { LineChart } from 'react-native-chart-kit';
+import Toast from 'react-native-toast-message';
 
-const screenWidth = Dimensions.get('window').width;
+import { AppText } from '@/components/AppText';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { ErrorState } from '@/components/ErrorState';
+import { LoadingState } from '@/components/LoadingState';
+import { TextField } from '@/components/TextField';
+import { Colors, Spacing } from '@/constants/theme';
+import { useTraineeRecord } from '../contexts/TraineeRecordContext';
+import { errorMessage } from '../services/http';
+import { getProgress, logWeight } from '../services/progressService';
+import type { Progress } from '../types/progress';
+import { relativeDayLabel, todayLocal } from '../utils/date';
 
-type Props = {
-    route: { params: { trainee: Trainee } };
-    navigation: any;
-    trainee: Trainee
-};
+const CHART_POINTS = 12;
 
-type WeightBMIProgress = {
-    date: string;
-    weight: number;
-    bmi: number;
-    bodyFat?: number;
-};
+/** Weight trend, today's weigh-in and best lifts for the current client record. */
+export default function ProgressScreen(): React.JSX.Element {
+  const record = useTraineeRecord();
+  const { width } = useWindowDimensions();
+  const [data, setData] = useState<Progress | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [weight, setWeight] = useState('');
+  const [saving, setSaving] = useState(false);
 
-type ExerciseRecord = {
-    date: string;
-    weight: number;
-    reps: number;
-};
-
-type ExerciseProgress = {
-    exercise: string;
-    maxWeight: number;
-    avgWeight: number;
-    records: ExerciseRecord[];
-};
-
-type ProgressData = {
-    weight_bmi: WeightBMIProgress[];
-    exercises: ExerciseProgress[];
-};
-
-export default function ProgressScreen({ route, navigation, trainee }: Props) {
-    // const { trainee } = route.params;
-
-    const [progressData, setProgressData] = useState<ProgressData | null>(null);
-    const [weight, setWeight] = useState<string>('');
-    const [selectedCategory, setSelectedCategory] = useState<string>('Overview');
-    const [isLoading, setIsLoading] = useState(false);
-    const [tooltipData, setTooltipData] = useState<{x: number;y: number;data: WeightBMIProgress | null;} | null>(null);
-    
-    const fetchProgressData = async () => {
-        setIsLoading(true);
-        const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-        try {
-            const token = await AsyncStorage.getItem('token');
-            if (!token) throw new Error('User not authenticated');
-
-            const response = await fetch(`${backendUrl}/progress/${trainee.id}`, {
-                headers: { Authorization: `${token}` },
-            });
-
-            if (!response.ok) throw new Error('Failed to fetch progress data');
-
-            const data: ProgressData = await response.json();
-            setProgressData(data);
-        } catch (error) {
-            console.error('Error fetching progress data:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleSaveWeight = async () => {
-        if (!weight) {
-            alert('Please enter weight');
-            return;
-        }
-
-        try {
-            const token = await AsyncStorage.getItem('token');
-            if (!token) throw new Error('User not authenticated');
-
-            const payload = {
-                trainee_id: trainee.id,
-                date: new Date().toISOString().split('T')[0],
-                weight: parseFloat(weight),
-            };
-            
-            const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-            const response = await fetch(`${backendUrl}/progress`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `${token}`,
-                },
-                body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) throw new Error('Failed to save weight');
-
-            // alert('Weight saved successfully');
-            setWeight('');
-            fetchProgressData(); // Refresh progress data
-        } catch (error) {
-            console.error('Error saving weight:', error);
-        }
-    };
-
-    // useEffect(() => {
-    //     fetchProgressData();
-    // }, []);
-
-    useFocusEffect(
-        useCallback(() => {
-            fetchProgressData();
-        }, [])
-    );
-
-    const renderOverview = () => {
-        // Get the latest weight entry from the weight_bmi array
-        const latestEntry =
-            progressData?.weight_bmi && progressData.weight_bmi.length > 0
-                ? progressData.weight_bmi[progressData.weight_bmi.length - 1] // Access the last item
-                : null;
-    
-        return (
-            <View>
-                <Text style={styles.sectionTitle}>Overview</Text>
-                <View style={styles.summaryCard}>
-                    <Text style={styles.summaryText}>
-                        Latest Weight: {latestEntry?.weight || 'N/A'} kg
-                    </Text>
-                    <Text style={styles.summaryText}>
-                        BMI: {latestEntry?.bmi ? latestEntry.bmi.toFixed(2) : 'N/A'}
-                    </Text>
-                    <Text style={styles.summaryText}>
-                        Body Fat: {latestEntry?.bodyFat || 'N/A'} %
-                    </Text>
-                </View>
-            </View>
-        );
-    };
-    
-
-    const renderWeightInput = () => (
-        <View style={styles.inputSection}>
-            <Text style={styles.sectionTitle}>Log Weight</Text>
-            <View style={styles.weightInput}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter weight (kg)"
-                    keyboardType="numeric"
-                    value={weight}
-                    onChangeText={setWeight}
-                />
-                <TouchableOpacity onPress={handleSaveWeight} style={styles.saveButton}>
-                    <Text style={styles.saveButtonText}>Save</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
-
-    const chartConfig = {
-        backgroundColor: Colors.surface,
-        backgroundGradientFrom: Colors.backgroundAlt,
-        backgroundGradientTo: Colors.surface,
-        decimalPlaces: 1,
-        color: (opacity = 1) => {
-            const hex = Colors.primary.replace('#', '');
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-        },
-        labelColor: (opacity = 1) => {
-            const hex = Colors.textSecondary.replace('#', '');
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-        },
-        propsForDots: {
-            r: '6',
-            strokeWidth: '2',
-            stroke: Colors.accent,
-        },
-    };
-
-    const formatXLabels = (labels: string[]) => {
-        // Show a maximum of 5 dates, evenly spaced
-        const step = Math.ceil(labels.length / 5);
-        return labels.map((label, index) => (index % step === 0 ? label : ''));
-    };
-
-    const renderWeightProgress = () => (
-    
-        <View>
-            <Text style={styles.sectionTitle}>Log Weight</Text>
-            <View style={styles.weightInput}>
-            <TextInput
-                style={styles.input}
-                placeholder="Enter weight (kg)"
-                keyboardType="numeric"
-                value={weight}
-                onChangeText={(text) => {
-                    const numericValue = text.replace(/[^0-9.]/g, ''); // Allow only numbers and decimals
-                    if (!isNaN(Number(numericValue)) && Number(numericValue) > 0) {
-                        setWeight(numericValue); // Update state only for values greater than 0
-                    } else if (numericValue === '') {
-                        setWeight(''); // Allow clearing the input
-                    }
-                }}
-            />
-                <TouchableOpacity onPress={handleSaveWeight} style={styles.saveButton}>
-                    <Text style={styles.saveButtonText}>Save</Text>
-                </TouchableOpacity>
-            </View>
-
-
-            <Text style={styles.sectionTitle}>Weight Progress</Text>
-        {progressData?.weight_bmi && progressData.weight_bmi.length > 0 ? (
-            <View>
-                <LineChart
-                    data={{
-                        labels: formatXLabels(
-                            progressData.weight_bmi.map((entry) =>
-                                new Date(entry.date).toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric',
-                                })
-                            )
-                        ),
-                        datasets: [
-                            {
-                                data: progressData.weight_bmi.map((entry) => entry.weight),
-                            },
-                        ],
-                    }}
-                    width={screenWidth - 32}
-                    height={220}
-                    yAxisSuffix=" kg"
-                    chartConfig={chartConfig}
-                    style={styles.chart}
-                    bezier
-                    withInnerLines={false}
-                    verticalLabelRotation={0}
-                    onDataPointClick={(data) => {
-                        const { index, x, y } = data;
-                        const weightData = progressData.weight_bmi[index];
-                        setTooltipData({ x, y, data: weightData });
-                        
-                        // Hide the tooltip after a short delay
-                        setTimeout(() => {
-                            setTooltipData(null);
-                        }, 3000); // Adjust delay as needed
-                    }}
-                />
-                {/* Render Tooltip */}
-                {tooltipData && tooltipData.data && (
-                    <View
-                        style={[
-                            styles.tooltip,
-                            {
-                                position: 'absolute',
-                                top: tooltipData.y - 30,
-                                left: tooltipData.x - 85, // Adjust positioning as needed
-                            },
-                        ]}
-                    >
-                        <Text style={styles.tooltipText}>
-                            Date: {tooltipData.data.date}
-                        </Text>
-                        <Text style={styles.tooltipText}>
-                            Weight: {tooltipData.data.weight} kg
-                        </Text>
-                    </View>
-                )}
-            </View>
-            ) : (
-                <Text style={styles.emptyText}>No weight data available.</Text>
-            )}
-        </View>
-    );
-
-    const renderExerciseProgress = () => (
-        <View>
-            <Text style={styles.sectionTitle}>Exercise Progress</Text>
-            {progressData?.exercises && progressData.exercises.length > 0 ? (
-                progressData.exercises.map((exercise) => (
-                    <View style={styles.exerciseCard} key={exercise.exercise}>
-                        <Text style={styles.exerciseTitle}>{exercise.exercise}</Text>
-                        <Text style={styles.exerciseStats}>
-                            Max Weight: {exercise.maxWeight} kg | Avg Weight: {exercise.avgWeight} kg
-                        </Text>
-                        {exercise.records.map((record, index) => (
-                            <View style={styles.recordItem} key={index}>
-                                <Text style={styles.recordText}>
-                                    {record.date}: {record.weight} kg x {record.reps} reps
-                                </Text>
-                            </View>
-                        ))}
-                    </View>
-                ))
-            ) : (
-                <Text style={styles.emptyText}>No exercise progress data available.</Text>
-            )}
-        </View>
-    );
-
-    const renderContent = () => {
-        switch (selectedCategory) {
-            case 'Overview':
-                return renderOverview();
-            case 'Weight Progress':
-                return renderWeightProgress();
-            case 'Exercise Progress':
-                return renderExerciseProgress();
-            default:
-                return null;
-        }
-    };
-
-    if (isLoading) {
-        return <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />;
+  const load = useCallback(async () => {
+    try {
+      setData(await getProgress(record.id));
+      setLoadError(null);
+    } catch (e: unknown) {
+      setLoadError(errorMessage(e));
+    } finally {
+      setRefreshing(false);
     }
+  }, [record.id]);
 
-    return (
-        <ScrollView style={styles.container}>
-            {/* Category Selection */}
-            <View style={styles.categoryTabs}>
-                {['Overview', 'Weight Progress', 'Exercise Progress'].map((category) => (
-                    <TouchableOpacity
-                        key={category}
-                        style={[
-                            styles.tab,
-                            selectedCategory === category && styles.activeTab,
-                        ]}
-                        onPress={() => setSelectedCategory(category)}
-                    >
-                        <Text
-                            style={[
-                                styles.tabText,
-                                selectedCategory === category && styles.activeTabText,
-                            ]}
-                        >
-                            {category}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
+
+  const onLogWeight = async (): Promise<void> => {
+    const kg = Number(weight);
+    if (!Number.isFinite(kg) || kg < 20 || kg > 400) {
+      Toast.show({ type: 'error', text1: 'Enter weight in kg', text2: 'Between 20 and 400' });
+      return;
+    }
+    setSaving(true);
+    try {
+      await logWeight({ trainee_id: record.id, date: todayLocal(), weight: kg });
+      setWeight('');
+      await load();
+    } catch (e: unknown) {
+      Toast.show({ type: 'error', text1: 'Not saved', text2: errorMessage(e) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!data) return loadError ? <ErrorState message={loadError} onRetry={() => void load()} /> : <LoadingState />;
+
+  const weights = (data.weight_bmi ?? []).slice(-CHART_POINTS);
+  const latest = weights[weights.length - 1];
+  const exercises = [...(data.exercises ?? [])].sort((a, b) => b.max_weight - a.max_weight);
+
+  return (
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => {
+            setRefreshing(true);
+            void load();
+          }}
+          tintColor={Colors.primary}
+        />
+      }
+    >
+      <Card style={styles.card}>
+        <AppText variant="subheading">Weight</AppText>
+        {latest ? (
+          <AppText tone="secondary">
+            {latest.weight} kg on {relativeDayLabel(latest.date)}
+            {latest.bmi ? ` · BMI ${latest.bmi.toFixed(1)}` : ''}
+          </AppText>
+        ) : (
+          <AppText tone="secondary">No weigh-ins yet.</AppText>
+        )}
+        {weights.length >= 2 ? (
+          <LineChart
+            data={{ labels: weights.map((w) => w.date.slice(5)), datasets: [{ data: weights.map((w) => w.weight) }] }}
+            width={width - Spacing.medium * 4}
+            height={180}
+            yAxisSuffix=""
+            withInnerLines={false}
+            chartConfig={{
+              backgroundGradientFrom: Colors.surface,
+              backgroundGradientTo: Colors.surface,
+              decimalPlaces: 1,
+              color: () => Colors.primary,
+              labelColor: () => Colors.textSecondary,
+              propsForDots: { r: '3' },
+            }}
+            bezier
+            style={styles.chart}
+          />
+        ) : null}
+        <View style={styles.weighIn}>
+          <View style={styles.flex}>
+            <TextField label="Today's weight (kg)" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" maxLength={6} />
+          </View>
+          <Button title="Save" onPress={() => void onLogWeight()} loading={saving} style={styles.save} />
+        </View>
+      </Card>
+
+      <Card style={styles.card}>
+        <AppText variant="subheading">Best lifts</AppText>
+        {exercises.length === 0 ? (
+          <AppText tone="secondary">Logged gym exercises show their best weight here.</AppText>
+        ) : (
+          exercises.map((e) => (
+            <View key={e.exercise} style={styles.lift}>
+              <AppText style={styles.flex}>{e.exercise}</AppText>
+              <AppText variant="label">{e.max_weight} kg</AppText>
+              <AppText variant="caption" tone="muted" style={styles.avg}>
+                avg {Math.round(e.avg_weight)}
+              </AppText>
             </View>
-
-            {/* Dynamic Content */}
-            {renderContent()}
-        </ScrollView>
-    );
+          ))
+        )}
+      </Card>
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: Spacing.medium, backgroundColor: Colors.background },
-    sectionTitle: {
-        fontSize: 20,
-        fontFamily: Fonts.display,
-        fontWeight: '600',
-        marginBottom: Spacing.small,
-        color: Colors.textPrimary,
-    },
-    chart: { borderRadius: Radii.sm, marginVertical: Spacing.medium },
-    summaryCard: {
-        padding: Spacing.medium,
-        backgroundColor: Colors.surface,
-        borderRadius: Radii.sm,
-        marginBottom: Spacing.medium,
-        borderWidth: 1,
-        borderColor: Colors.border,
-    },
-    summaryText: { fontSize: 16, marginBottom: 4, color: Colors.textPrimary },
-    exerciseCard: {
-        padding: Spacing.medium,
-        backgroundColor: Colors.surface,
-        borderRadius: Radii.sm,
-        marginBottom: Spacing.medium,
-        borderWidth: 1,
-        borderColor: Colors.border,
-    },
-    exerciseTitle: { fontSize: 18, fontWeight: '600', color: Colors.textPrimary },
-    exerciseStats: { fontSize: 16, color: Colors.textSecondary, marginBottom: Spacing.small },
-    recordItem: { marginBottom: 4 },
-    recordText: { fontSize: 14, color: Colors.textSecondary },
-    categoryTabs: {
-        flexDirection: 'row',
-        marginBottom: Spacing.medium,
-        backgroundColor: Colors.surface,
-        borderRadius: Radii.sm,
-        borderWidth: 1,
-        borderColor: Colors.border,
-        overflow: 'hidden',
-    },
-    tab: {
-        flex: 1,
-        padding: Spacing.medium,
-        alignItems: 'center',
-        borderBottomWidth: 2,
-        borderColor: 'transparent',
-    },
-    activeTab: { borderBottomWidth: 2, borderColor: Colors.primary },
-    tabText: { fontSize: 14, color: Colors.textSecondary },
-    activeTabText: { fontWeight: '600', color: Colors.primary },
-    emptyText: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center', marginTop: Spacing.medium },
-    loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-    inputSection: { marginBottom: Spacing.medium },
-    weightInput: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.medium },
-    input: {
-        flex: 1,
-        borderWidth: 1,
-        borderColor: Colors.border,
-        borderRadius: Radii.sm,
-        padding: Spacing.small,
-        marginRight: Spacing.small,
-        backgroundColor: Colors.surface,
-        color: Colors.textPrimary,
-    },
-    saveButton: {
-        backgroundColor: Colors.primary,
-        borderRadius: Radii.sm,
-        padding: Spacing.small,
-        paddingHorizontal: Spacing.medium,
-    },
-    saveButtonText: { color: Colors.textOnPrimary, fontWeight: '600' },
-    tooltip: {
-        backgroundColor: Colors.primary,
-        padding: Spacing.small / 2,
-        borderRadius: Radii.sm,
-        marginTop: Spacing.small,
-        width: 170,
-    },
-    tooltipText: {
-        color: Colors.textOnPrimary,
-        fontSize: 12,
-        textAlign: 'center',
-    },
+  root: { flex: 1, backgroundColor: Colors.background },
+  content: { padding: Spacing.medium, paddingBottom: Spacing.xl },
+  card: { marginBottom: Spacing.medium },
+  chart: { marginTop: Spacing.small, marginLeft: -Spacing.medium },
+  weighIn: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.small, marginTop: Spacing.medium },
+  save: { marginBottom: Spacing.medium },
+  flex: { flex: 1, minWidth: 0 },
+  lift: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.xs },
+  avg: { width: 64, textAlign: 'right' },
 });

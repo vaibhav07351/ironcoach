@@ -1,132 +1,164 @@
-import React, {
-  createContext,
-  useState,
-  useEffect,
-  ReactNode,
-  useCallback,
-} from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PublicUser, UserRole } from '../types/auth';
-import { fetchMe } from '../services/authService';
 
-const TOKEN_KEY = 'token';
-const USER_KEY = 'user';
+import { fetchMe, updateSettings } from '../services/authService';
+import { ApiError, setUnauthorizedHandler } from '../services/http';
+import { clearToken, getToken, setToken } from '../services/tokenStore';
+import { googleSignOut } from '../hooks/useGoogleSignIn';
+import type { AuthResponse, PublicUser } from '../types/auth';
+import { deviceTimeZone } from '../utils/date';
 
-type AuthState =
+// The profile is not secret; it is cached so the app can open offline.
+const USER_CACHE_KEY = 'ironcoach.user';
+
+export type AuthState =
   | { status: 'loading' }
-  | { status: 'signedOut' }
-  | {
-      status: 'signedIn';
-      token: string;
-      user: PublicUser;
-    };
+  | { status: 'signedOut'; reason?: 'expired' }
+  | { status: 'signedIn'; user: PublicUser };
 
-type AuthContextType = {
+type AuthContextValue = {
   state: AuthState;
-  isAuthenticated: boolean;
-  role: UserRole | null;
   user: PublicUser | null;
-  token: string | null;
-  login: (token: string, user: PublicUser) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  /** Stores the session from a sign-in or invite redeem. */
+  signIn: (auth: AuthResponse) => Promise<void>;
+  signOut: () => Promise<void>;
+  /** Re-reads the profile from the server (after linking, onboarding steps). */
+  refreshUser: () => Promise<PublicUser | null>;
+  /** Replaces the cached profile with one returned by an API call. */
+  setUser: (user: PublicUser) => Promise<void>;
 };
 
-type AuthProviderProps = {
-  children: ReactNode;
-};
+const AuthContext = createContext<AuthContextValue | null>(null);
 
-export const AuthContext = createContext<AuthContextType>({
-  state: { status: 'loading' },
-  isAuthenticated: false,
-  role: null,
-  user: null,
-  token: null,
-  login: async () => {},
-  logout: async () => {},
-  refreshUser: async () => {},
-});
+export function useAuth(): AuthContextValue {
+  const value = useContext(AuthContext);
+  if (!value) {
+    throw new Error('useAuth must be used inside AuthProvider');
+  }
+  return value;
+}
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+async function cacheUser(user: PublicUser): Promise<void> {
+  await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+}
+
+async function readCachedUser(): Promise<PublicUser | null> {
+  const raw = await AsyncStorage.getItem(USER_CACHE_KEY);
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as PublicUser;
+  } catch {
+    return null;
+  }
+}
+
+/** Keeps the server's time zone in step with the device (best-effort). */
+async function syncTimeZone(user: PublicUser): Promise<PublicUser> {
+  const zone = deviceTimeZone();
+  if (!zone || zone === user.timezone) {
+    return user;
+  }
+  try {
+    return await updateSettings(zone);
+  } catch {
+    return user;
+  }
+}
+
+export function AuthProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [state, setState] = useState<AuthState>({ status: 'loading' });
+  const signingOut = useRef(false);
 
-  const hydrate = useCallback(async () => {
+  const signOut = useCallback(async (reason?: 'expired'): Promise<void> => {
+    if (signingOut.current) {
+      return;
+    }
+    signingOut.current = true;
     try {
-      const [token, userJson] = await Promise.all([
-        AsyncStorage.getItem(TOKEN_KEY),
-        AsyncStorage.getItem(USER_KEY),
-      ]);
-
-      if (!token) {
-        setState({ status: 'signedOut' });
-        return;
-      }
-
-      if (userJson) {
-        const user = JSON.parse(userJson) as PublicUser;
-        setState({ status: 'signedIn', token, user });
-        try {
-          const fresh = await fetchMe(token);
-          await AsyncStorage.setItem(USER_KEY, JSON.stringify(fresh));
-          setState({ status: 'signedIn', token, user: fresh });
-        } catch {
-          // keep cached user if /me fails (offline)
-        }
-        return;
-      }
-
-      const fresh = await fetchMe(token);
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(fresh));
-      setState({ status: 'signedIn', token, user: fresh });
-    } catch {
-      await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
-      setState({ status: 'signedOut' });
+      await Promise.all([clearToken(), AsyncStorage.removeItem(USER_CACHE_KEY), googleSignOut()]);
+    } finally {
+      setState({ status: 'signedOut', reason });
+      signingOut.current = false;
     }
   }, []);
 
+  // Any 401 from the API means the session is gone (expired, account deleted): sign out.
   useEffect(() => {
-    void hydrate();
-  }, [hydrate]);
+    setUnauthorizedHandler(() => {
+      void signOut('expired');
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [signOut]);
 
-  const login = async (token: string, user: PublicUser): Promise<void> => {
-    await AsyncStorage.setItem(TOKEN_KEY, token);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
-    setState({ status: 'signedIn', token, user });
-  };
+  // Restore the session on launch.
+  useEffect(() => {
+    let cancelled = false;
+    const restore = async (): Promise<void> => {
+      const token = await getToken();
+      if (!token) {
+        if (!cancelled) setState({ status: 'signedOut' });
+        return;
+      }
+      const cached = await readCachedUser();
+      if (cached && !cancelled) {
+        setState({ status: 'signedIn', user: cached });
+      }
+      try {
+        const fresh = await syncTimeZone(await fetchMe());
+        await cacheUser(fresh);
+        if (!cancelled) setState({ status: 'signedIn', user: fresh });
+      } catch (error: unknown) {
+        // Offline: keep the cached profile. Without one there is nothing to show.
+        if (error instanceof ApiError && error.isNetwork && cached) {
+          return;
+        }
+        if (!(error instanceof ApiError && error.status === 401)) {
+          // 401 is already handled by the unauthorized handler.
+          await signOut();
+        }
+      }
+    };
+    void restore();
+    return () => {
+      cancelled = true;
+    };
+  }, [signOut]);
 
-  const logout = async (): Promise<void> => {
-    await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
-    setState({ status: 'signedOut' });
-  };
+  const signIn = useCallback(async (auth: AuthResponse): Promise<void> => {
+    await setToken(auth.token);
+    const user = await syncTimeZone(auth.user);
+    await cacheUser(user);
+    setState({ status: 'signedIn', user });
+  }, []);
 
-  const refreshUser = async (): Promise<void> => {
-    if (state.status !== 'signedIn') {
-      return;
+  const setUser = useCallback(async (user: PublicUser): Promise<void> => {
+    await cacheUser(user);
+    setState({ status: 'signedIn', user });
+  }, []);
+
+  const refreshUser = useCallback(async (): Promise<PublicUser | null> => {
+    try {
+      const fresh = await fetchMe();
+      await setUser(fresh);
+      return fresh;
+    } catch {
+      return null;
     }
-    const fresh = await fetchMe(state.token);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(fresh));
-    setState({ status: 'signedIn', token: state.token, user: fresh });
-  };
+  }, [setUser]);
 
-  const isAuthenticated = state.status === 'signedIn';
-  const user = state.status === 'signedIn' ? state.user : null;
-  const token = state.status === 'signedIn' ? state.token : null;
-  const role = user?.role ?? null;
-
-  return (
-    <AuthContext.Provider
-      value={{
-        state,
-        isAuthenticated,
-        role,
-        user,
-        token,
-        login,
-        logout,
-        refreshUser,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      state,
+      user: state.status === 'signedIn' ? state.user : null,
+      signIn,
+      signOut: () => signOut(),
+      refreshUser,
+      setUser,
+    }),
+    [state, signIn, signOut, refreshUser, setUser]
   );
-};
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}

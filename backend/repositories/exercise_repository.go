@@ -20,7 +20,7 @@ type ExerciseRepository struct {
 
 // Constructor for ExerciseRepository
 func NewExerciseRepository() *ExerciseRepository {
-	db := database.DB.Database("ironcoach")
+	db := database.Database()
 	return &ExerciseRepository{
 		collection: db.Collection("exercises"),
 	}
@@ -227,7 +227,7 @@ func (r *ExerciseRepository) MigrateWorkoutLogs() {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()
 
-	db := database.DB.Database("ironcoach")
+	db := database.Database()
 	workoutLogs := db.Collection("workout_logs")
 	exercises := db.Collection("exercises")
 
@@ -270,4 +270,34 @@ func (r *ExerciseRepository) MigrateWorkoutLogs() {
 		}
 	}
 	log.Println("Migration completed successfully!")
+}
+
+// DeleteByCategoryIDs removes all exercises in the given categories. Unlike
+// DeleteExercisesByCategoryID it does not touch workout logs; used when the logs are being
+// deleted as well.
+func (r *ExerciseRepository) DeleteByCategoryIDs(categoryIDs []primitive.ObjectID) error {
+	if len(categoryIDs) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	_, err := r.collection.DeleteMany(ctx, bson.M{"category_id": bson.M{"$in": categoryIDs}})
+	return err
+}
+
+// AddMany inserts several exercises in one round trip.
+func (r *ExerciseRepository) AddMany(exercises []models.Exercise) error {
+	if len(exercises) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	docs := make([]interface{}, len(exercises))
+	for i := range exercises {
+		docs[i] = exercises[i]
+	}
+	_, err := r.collection.InsertMany(ctx, docs, options.InsertMany().SetOrdered(false))
+	return err
 }

@@ -63,6 +63,10 @@ func LoadEnv() {
 func ConnectDB() {
 	LoadEnv()
 
+	if name := os.Getenv("MONGODB_DB"); name != "" {
+		DBName = name
+	}
+
 	mongoURI := os.Getenv("MONGODB_URI")
 	if mongoURI == "" {
 		log.Fatal("MONGODB_URI is not set in the environment variables")
@@ -83,5 +87,30 @@ func ConnectDB() {
 	}
 
 	DB = client
-	fmt.Println("Connected to MongoDB!")
+	log.Println("connected to MongoDB")
+}
+
+// Ping checks the database connection (used by the health check).
+func Ping(ctx context.Context) error {
+	if DB == nil {
+		return fmt.Errorf("database not connected")
+	}
+	return DB.Ping(ctx, nil)
+}
+
+// Disconnect closes the database connection on shutdown.
+func Disconnect(ctx context.Context) error {
+	if DB == nil {
+		return nil
+	}
+	return DB.Disconnect(ctx)
+}
+
+// DBName is the database used by all repositories. Defaults to "ironcoach"; MONGODB_DB
+// overrides it (tests use a separate database per package).
+var DBName = "ironcoach"
+
+// Database returns the application database handle.
+func Database() *mongo.Database {
+	return DB.Database(DBName)
 }

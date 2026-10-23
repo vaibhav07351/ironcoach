@@ -17,19 +17,9 @@ type RatingRepository struct {
 }
 
 func NewRatingRepository() *RatingRepository {
-	db := database.DB.Database("ironcoach")
-	coll := db.Collection("ratings")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	_, _ = coll.Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys: bson.D{
-			{Key: "from_user_id", Value: 1},
-			{Key: "to_kind", Value: 1},
-			{Key: "to_id", Value: 1},
-		},
-		Options: options.Index().SetUnique(true),
-	})
-	return &RatingRepository{collection: coll}
+	// The unique (from_user_id, to_kind, to_id) index is created at startup by EnsureIndexes.
+	db := database.Database()
+	return &RatingRepository{collection: db.Collection("ratings")}
 }
 
 func (r *RatingRepository) Upsert(rating models.Rating) (models.Rating, error) {
@@ -116,4 +106,44 @@ func (r *RatingRepository) AverageForTarget(toKind, toID string) (avg float64, c
 		return 0, 0, nil
 	}
 	return rows[0].Avg, rows[0].Count, nil
+}
+
+// DeleteForTargets removes ratings given to the listed targets of one kind.
+func (r *RatingRepository) DeleteForTargets(toKind string, toIDs []string) error {
+	if len(toIDs) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := r.collection.DeleteMany(ctx, bson.M{"to_kind": toKind, "to_id": bson.M{"$in": toIDs}})
+	return err
+}
+
+// DeleteFromUser removes every rating a user gave and returns the trainer targets they had
+// rated, so those averages can be recomputed.
+func (r *RatingRepository) DeleteFromUser(userID string) (trainerTargets []string, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cursor, err := r.collection.Find(ctx,
+		bson.M{"from_user_id": userID, "to_kind": models.RatingToTrainer},
+		options.Find().SetProjection(bson.M{"to_id": 1}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		ToID string `bson:"to_id"`
+	}
+	if err := cursor.All(ctx, &rows); err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		trainerTargets = append(trainerTargets, row.ToID)
+	}
+	if _, err := r.collection.DeleteMany(ctx, bson.M{"from_user_id": userID}); err != nil {
+		return nil, err
+	}
+	return trainerTargets, nil
 }

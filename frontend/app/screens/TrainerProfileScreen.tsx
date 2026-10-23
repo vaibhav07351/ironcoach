@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,15 @@ import {
   Switch,
   Linking,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Location from 'expo-location';
 import Toast from 'react-native-toast-message';
-import { RootStackParamList } from '../types/navigation';
-import { AuthContext } from '../contexts/AuthContext';
+import { ErrorState } from '@/components/ErrorState';
+import { LoadingState } from '@/components/LoadingState';
+import { errorMessage } from '../services/http';
+import type { TrainerProfile } from '../types/coach';
 import {
-  fetchTrainerDetails,
-  updateTrainerDiscovery,
-  type TrainerDetails,
+  fetchTrainerProfile,
+  updateTrainerProfile,
 } from '../services/trainerService';
 import {
   resolvePlaceFromCoords,
@@ -29,11 +29,10 @@ import { Colors, Radii, Spacing } from '@/constants/theme';
 import { StarRating } from '@/components/StarRating';
 import { EXPERTISE_OPTIONS } from '../constants/expertise';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'TrainerProfile'>;
-
-export default function TrainerProfileScreen({ navigation }: Props) {
-  const { token, logout } = useContext(AuthContext);
-  const [trainer, setTrainer] = useState<TrainerDetails | null>(null);
+/** The trainer's own coach profile: photo, bio, categories, area and rate. */
+export default function TrainerProfileScreen(): React.JSX.Element {
+  const [trainer, setTrainer] = useState<TrainerProfile | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -52,12 +51,9 @@ export default function TrainerProfileScreen({ navigation }: Props) {
   const [longitude, setLongitude] = useState<number | undefined>();
 
   const load = useCallback(async () => {
-    if (!token) {
-      navigation.replace('Login');
-      return;
-    }
     try {
-      const data = await fetchTrainerDetails(token);
+      const data = await fetchTrainerProfile();
+      setLoadError(null);
       setTrainer(data);
       setHeadline(data.headline || '');
       setBio(data.bio || '');
@@ -73,18 +69,16 @@ export default function TrainerProfileScreen({ navigation }: Props) {
       setDiscoveryVisible(data.discovery_visible !== false);
       setLatitude(data.latitude);
       setLongitude(data.longitude);
-    } catch {
-      Toast.show({
-        type: 'error',
-        text1: 'Profile',
-        text2: 'Failed to load profile.',
-      });
+    } catch (e: unknown) {
+      setLoadError(errorMessage(e));
     } finally {
       setIsLoading(false);
     }
-  }, [token, navigation]);
+  }, []);
 
+  // Initial load on mount; load() only sets state after the awaited request resolves.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
@@ -114,7 +108,7 @@ export default function TrainerProfileScreen({ navigation }: Props) {
     setDiscoveryVisible(true);
   };
 
-  const useCurrentLocation = async (): Promise<void> => {
+  const fillFromLocation = async (): Promise<void> => {
     setLocating(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -142,7 +136,7 @@ export default function TrainerProfileScreen({ navigation }: Props) {
         text1: filled.length > 0 ? 'Location filled' : 'GPS saved',
         text2:
           filled.length > 0
-            ? filled.join(' · ') + ' — tap Save.'
+            ? filled.join(' · ') + ': tap Save.'
             : 'Could not resolve address. Enter city or PIN manually.',
       });
     } catch {
@@ -183,7 +177,7 @@ export default function TrainerProfileScreen({ navigation }: Props) {
         text1: 'PIN looked up',
         text2:
           [place.area, place.city].filter(Boolean).join(', ') ||
-          'Coordinates set — tap Save.',
+          'Coordinates set: tap Save.',
       });
     } catch {
       Toast.show({
@@ -197,13 +191,10 @@ export default function TrainerProfileScreen({ navigation }: Props) {
   };
 
   const onSave = async (): Promise<void> => {
-    if (!token) {
-      return;
-    }
     setSaving(true);
     try {
       const rate = hourlyRate.trim() === '' ? undefined : Number(hourlyRate);
-      const updated = await updateTrainerDiscovery(token, {
+      const updated = await updateTrainerProfile({
         headline: headline.trim(),
         bio: bio.trim(),
         speciality: speciality.trim(),
@@ -220,37 +211,25 @@ export default function TrainerProfileScreen({ navigation }: Props) {
       setTrainer(updated);
       Toast.show({ type: 'success', text1: 'Saved', text2: 'Profile updated.' });
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Could not save profile';
-      Toast.show({ type: 'error', text1: 'Save failed', text2: message });
+      Toast.show({ type: 'error', text1: 'Save failed', text2: errorMessage(error) });
     } finally {
       setSaving(false);
     }
   };
 
   if (isLoading) {
-    return (
-      <ActivityIndicator
-        size="large"
-        color={Colors.primary}
-        style={{ marginTop: 280 }}
-      />
-    );
+    return <LoadingState />;
   }
 
   if (!trainer) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Trainer details not found.</Text>
-      </View>
-    );
+    return <ErrorState message={loadError ?? 'Profile not found.'} onRetry={() => void load()} />;
   }
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <Image
         source={{
-          uri: imageUrl || trainer.image_url || 'https://via.placeholder.com/150',
+          uri: imageUrl || trainer.image_url || undefined,
         }}
         style={styles.profileImage}
       />
@@ -335,7 +314,7 @@ export default function TrainerProfileScreen({ navigation }: Props) {
         style={styles.input}
         value={speciality}
         onChangeText={setSpeciality}
-        placeholder="Hypertrophy, rehab, …"
+        placeholder="Hypertrophy, rehab, ..."
         placeholderTextColor={Colors.textSecondary}
       />
 
@@ -355,13 +334,13 @@ export default function TrainerProfileScreen({ navigation }: Props) {
         value={imageUrl}
         onChangeText={setImageUrl}
         autoCapitalize="none"
-        placeholder="https://…"
+        placeholder="https://..."
         placeholderTextColor={Colors.textSecondary}
       />
 
       <Text style={styles.section}>Location</Text>
       <Text style={styles.hint}>
-        Enter your PIN and tap Autofill — city, area, and map position fill in
+        Enter your PIN and tap Autofill: city, area, and map position fill in
         below. Or use GPS instead.
       </Text>
 
@@ -411,7 +390,7 @@ export default function TrainerProfileScreen({ navigation }: Props) {
 
       <TouchableOpacity
         style={styles.secondaryBtn}
-        onPress={() => void useCurrentLocation()}
+        onPress={() => void fillFromLocation()}
         disabled={locating}
       >
         {locating ? (
@@ -466,14 +445,6 @@ export default function TrainerProfileScreen({ navigation }: Props) {
         </TouchableOpacity>
       ) : null}
 
-      <TouchableOpacity
-        style={styles.signOut}
-        onPress={() => {
-          void logout().then(() => navigation.replace('Login'));
-        }}
-      >
-        <Text style={styles.signOutText}>Sign out</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }

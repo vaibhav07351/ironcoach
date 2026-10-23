@@ -1,51 +1,38 @@
-import React, { useCallback, useContext, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useCallback, useState } from 'react';
+import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
-import { RootStackParamList } from '../types/navigation';
-import { AuthContext } from '../contexts/AuthContext';
-import {
-  acceptCoachRequest,
-  listCoachRequests,
-  rejectCoachRequest,
-  type CoachRequest,
-} from '../services/trainerService';
-import { Colors, Radii, Spacing } from '@/constants/theme';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'CoachRequests'>;
+import { AppText } from '@/components/AppText';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { LoadingState } from '@/components/LoadingState';
+import { Colors, Spacing } from '@/constants/theme';
+import { errorMessage } from '../services/http';
+import { acceptCoachRequest, listCoachRequests, rejectCoachRequest } from '../services/trainerService';
+import type { CoachRequest } from '../types/coach';
 
-export default function CoachRequestsScreen({ navigation }: Props) {
-  const { token } = useContext(AuthContext);
+/** Pending coaching requests for the trainer: accept (creates a linked client) or decline. */
+export default function CoachRequestsScreen(): React.JSX.Element {
   const [items, setItems] = useState<CoachRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actingId, setActingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [acting, setActing] = useState<{ id: string; action: 'accept' | 'reject' } | null>(null);
 
   const load = useCallback(async () => {
-    if (!token) {
-      navigation.replace('Login');
-      return;
-    }
-    setLoading(true);
     try {
-      const data = await listCoachRequests(token);
-      setItems(data);
+      setItems(await listCoachRequests());
+      setLoadError(null);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to load requests';
-      Toast.show({ type: 'error', text1: 'Requests', text2: message });
+      setLoadError(errorMessage(error));
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [token, navigation]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -53,133 +40,110 @@ export default function CoachRequestsScreen({ navigation }: Props) {
     }, [load])
   );
 
-  const onAccept = async (id: string): Promise<void> => {
-    if (!token) {
-      return;
-    }
-    setActingId(id);
+  const resolve = async (item: CoachRequest, action: 'accept' | 'reject'): Promise<void> => {
+    setActing({ id: item.id, action });
     try {
-      await acceptCoachRequest(token, id);
-      Toast.show({
-        type: 'success',
-        text1: 'Accepted',
-        text2: 'Client is now linked to you.',
-      });
-      await load();
-      navigation.navigate('Dashboard');
+      if (action === 'accept') {
+        await acceptCoachRequest(item.id);
+        Toast.show({ type: 'success', text1: 'Client added', text2: `${item.client_name ?? 'Client'} is now linked to you.` });
+      } else {
+        await rejectCoachRequest(item.id);
+        Toast.show({ type: 'success', text1: 'Request declined' });
+      }
+      setItems((prev) => prev.filter((r) => r.id !== item.id));
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Accept failed';
-      Toast.show({ type: 'error', text1: 'Accept', text2: message });
+      Toast.show({ type: 'error', text1: 'Could not update the request', text2: errorMessage(error) });
+      void load();
     } finally {
-      setActingId(null);
+      setActing(null);
     }
   };
 
-  const onReject = async (id: string): Promise<void> => {
-    if (!token) {
-      return;
-    }
-    setActingId(id);
-    try {
-      await rejectCoachRequest(token, id);
-      Toast.show({ type: 'success', text1: 'Rejected' });
-      await load();
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Reject failed';
-      Toast.show({ type: 'error', text1: 'Reject', text2: message });
-    } finally {
-      setActingId(null);
-    }
-  };
-
-  if (loading && items.length === 0) {
+  if (loading) {
+    return <LoadingState />;
+  }
+  if (loadError && items.length === 0) {
     return (
-      <ActivityIndicator
-        size="large"
-        color={Colors.primary}
-        style={{ marginTop: 200 }}
+      <ErrorState
+        message={loadError}
+        onRetry={() => {
+          setLoading(true);
+          void load();
+        }}
       />
     );
   }
 
   return (
     <FlatList
-      style={styles.container}
+      style={styles.list}
       contentContainerStyle={styles.content}
       data={items}
       keyExtractor={(item) => item.id}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => {
+            setRefreshing(true);
+            void load();
+          }}
+          tintColor={Colors.primary}
+        />
       }
       ListEmptyComponent={
-        <Text style={styles.empty}>No pending coaching requests.</Text>
+        <EmptyState icon="mail-open-outline" title="No pending requests" message="New coaching requests show up here." />
       }
       renderItem={({ item }) => (
-        <View style={styles.card}>
-          <Text style={styles.name}>{item.client_name || 'Client'}</Text>
-          <Text style={styles.email}>{item.client_email}</Text>
-          <View style={styles.row}>
-            <TouchableOpacity
-              style={styles.reject}
-              disabled={actingId === item.id}
-              onPress={() => void onReject(item.id)}
-            >
-              <Text style={styles.rejectText}>Reject</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.accept}
-              disabled={actingId === item.id}
-              onPress={() => void onAccept(item.id)}
-            >
-              {actingId === item.id ? (
-                <ActivityIndicator color={Colors.textOnPrimary} />
-              ) : (
-                <Text style={styles.acceptText}>Accept</Text>
-              )}
-            </TouchableOpacity>
+        <Card style={styles.card}>
+          <AppText variant="subheading">{item.client_name || 'New client'}</AppText>
+          {item.client_email ? <AppText tone="secondary">{item.client_email}</AppText> : null}
+          <AppText variant="caption" tone="muted" style={styles.date}>
+            Requested {new Date(item.created_at).toLocaleDateString('en-IN')}
+          </AppText>
+          <View style={styles.actions}>
+            <Button
+              title="Decline"
+              variant="secondary"
+              onPress={() => void resolve(item, 'reject')}
+              loading={acting?.id === item.id && acting.action === 'reject'}
+              disabled={!!acting}
+              style={styles.action}
+            />
+            <Button
+              title="Accept"
+              onPress={() => void resolve(item, 'accept')}
+              loading={acting?.id === item.id && acting.action === 'accept'}
+              disabled={!!acting}
+              style={styles.action}
+            />
           </View>
-        </View>
+        </Card>
       )}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.medium, paddingBottom: 40 },
-  empty: {
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 80,
+  list: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  content: {
+    padding: Spacing.medium,
+    flexGrow: 1,
   },
   card: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.md,
-    padding: Spacing.medium,
-    marginBottom: Spacing.small,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    marginBottom: Spacing.medium,
   },
-  name: { fontWeight: '700', fontSize: 17, color: Colors.textPrimary },
-  email: { color: Colors.textSecondary, marginTop: 2, marginBottom: Spacing.medium },
-  row: { flexDirection: 'row', gap: 10 },
-  reject: {
+  date: {
+    marginTop: Spacing.xs,
+  },
+  actions: {
+    flexDirection: 'row',
+    marginTop: Spacing.medium,
+    gap: Spacing.small,
+  },
+  action: {
     flex: 1,
-    padding: 12,
-    borderRadius: Radii.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
   },
-  rejectText: { fontWeight: '600', color: Colors.textSecondary },
-  accept: {
-    flex: 1,
-    padding: 12,
-    borderRadius: Radii.sm,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-  },
-  acceptText: { fontWeight: '700', color: Colors.textOnPrimary },
 });

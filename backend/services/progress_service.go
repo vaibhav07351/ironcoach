@@ -3,100 +3,111 @@ package services
 import (
 	"ironcoach/models"
 	"ironcoach/repositories"
+	"sort"
 	"time"
 )
 
+// maxWeightEntries bounds the weight history returned for charts (about a year of daily entries).
+const maxWeightEntries = 366
+
 type ProgressService struct {
-	repository        *repositories.ProgressRepository
-	workoutLogRepo    *repositories.WorkoutLogRepository
-	traineeRepo       *repositories.TraineeRepository
+	repository     *repositories.ProgressRepository
+	workoutLogRepo *repositories.WorkoutLogRepository
+	access         *AccessService
 }
 
 func NewProgressService() *ProgressService {
 	return &ProgressService{
-		repository:        repositories.NewProgressRepository(),
-		workoutLogRepo:    repositories.NewWorkoutLogRepository(),
-		traineeRepo:       repositories.NewTraineeRepository(),
+		repository:     repositories.NewProgressRepository(),
+		workoutLogRepo: repositories.NewWorkoutLogRepository(),
+		access:         NewAccessService(),
 	}
 }
 
-// GetProgress fetches the progress data for a trainee
+// GetProgress returns weight history and per-exercise records from recent logs
+// (access is enforced by the route middleware).
 func (s *ProgressService) GetProgress(traineeID string) (*models.Progress, error) {
-	workoutLogs, err := s.workoutLogRepo.GetWorkoutLogsByTrainee(traineeID,"")
+	workoutLogs, err := s.workoutLogRepo.GetWorkoutLogsByTrainee(traineeID, "", progressLogWindow, 0)
 	if err != nil {
 		return nil, err
 	}
-
-	weightBMI, err := s.repository.GetWeightBMIProgress(traineeID)
+	weightBMI, err := s.repository.GetWeightBMIProgress(traineeID, maxWeightEntries)
 	if err != nil {
 		return nil, err
 	}
-
-	exerciseProgress := calculateExerciseProgress(workoutLogs)
-
 	return &models.Progress{
-		TraineeID:  traineeID,
-		WeightBMI:  weightBMI,
-		Exercises:  exerciseProgress,
+		TraineeID: traineeID,
+		WeightBMI: weightBMI,
+		Exercises: calculateExerciseProgress(workoutLogs),
 	}, nil
 }
 
-// AddWeightProgress adds a new weight progress entry
-func (s *ProgressService) AddWeightProgress(weightBMI models.WeightBMIProgress) error {
-	trainee, err := s.traineeRepo.GetTraineeByID(weightBMI.TraineeID)
+// AddWeightProgress records the day's weight for a trainee the caller may access, computing
+// BMI from the trainee's height when known.
+func (s *ProgressService) AddWeightProgress(p Principal, in models.WeightBMIProgress) error {
+	if err := validateDate("date", in.Date); err != nil {
+		return err
+	}
+	if err := validateNotFuture("date", in.Date, p.Location(), time.Now()); err != nil {
+		return err
+	}
+	if err := validateNumber("weight", in.Weight, 1, 500); err != nil {
+		return err
+	}
+	if err := validateNumber("body_fat", in.BodyFat, 0, 80); err != nil {
+		return err
+	}
+	trainee, err := s.access.AuthorizeTrainee(p, in.TraineeID)
 	if err != nil {
 		return err
 	}
 
-	// Calculate BMI if height is available
+	in.BMI = 0
 	if trainee.Height > 0 {
-		weightBMI.BMI = weightBMI.Weight / ((trainee.Height / 100) * (trainee.Height / 100))
+		m := trainee.Height / 100
+		in.BMI = in.Weight / (m * m)
 	}
-
-	weightBMI.CreatedAt = time.Now()
-	weightBMI.UpdatedAt = time.Now()
-
-	return s.repository.AddWeightProgress(weightBMI)
+	return s.repository.UpsertWeightProgress(in)
 }
 
+// calculateExerciseProgress builds per-exercise records, pairing reps and weight only where both
+// exist (legacy logs may have mismatched arrays).
 func calculateExerciseProgress(workoutLogs []models.WorkoutLog) []models.ExerciseProgress {
 	exerciseMap := map[string][]models.ExerciseRecord{}
 	for _, log := range workoutLogs {
 		for _, workout := range log.Workouts {
-			for i, weight := range workout.Weight {
-				record := models.ExerciseRecord{
+			n := len(workout.Weight)
+			if len(workout.Reps) < n {
+				n = len(workout.Reps)
+			}
+			for i := 0; i < n; i++ {
+				exerciseMap[workout.Exercise] = append(exerciseMap[workout.Exercise], models.ExerciseRecord{
 					Date:   log.Date,
-					Weight: weight,
+					Weight: workout.Weight[i],
 					Reps:   workout.Reps[i],
-				}
-				exerciseMap[workout.Exercise] = append(exerciseMap[workout.Exercise], record)
+				})
 			}
 		}
 	}
 
-	var exercises []models.ExerciseProgress
+	exercises := make([]models.ExerciseProgress, 0, len(exerciseMap))
 	for name, records := range exerciseMap {
-		var totalWeight float64
+		// Logs arrive newest first; charts expect oldest first.
+		sort.SliceStable(records, func(i, j int) bool { return records[i].Date < records[j].Date })
+		var total, max float64
 		for _, r := range records {
-			totalWeight += r.Weight
+			total += r.Weight
+			if r.Weight > max {
+				max = r.Weight
+			}
 		}
-
 		exercises = append(exercises, models.ExerciseProgress{
 			Exercise:  name,
-			MaxWeight: maxWeight(records),
-			AvgWeight: totalWeight / float64(len(records)),
+			MaxWeight: max,
+			AvgWeight: total / float64(len(records)),
 			Records:   records,
 		})
 	}
+	sort.Slice(exercises, func(i, j int) bool { return exercises[i].Exercise < exercises[j].Exercise })
 	return exercises
-}
-
-func maxWeight(records []models.ExerciseRecord) float64 {
-	max := 0.0
-	for _, r := range records {
-		if r.Weight > max {
-			max = r.Weight
-		}
-	}
-	return max
 }

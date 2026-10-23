@@ -13,7 +13,7 @@ type Props = {
 };
 
 /**
- * 5-star control with half-star steps (0.5 … 5.0).
+ * 5-star control with half-star steps (0.5 ... 5.0).
  * Tap left half of a star for *.5, right half for full.
  */
 export function StarRating({
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   hitRow: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     flexDirection: 'row',
   },
   hitHalf: {

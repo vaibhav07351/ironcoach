@@ -1,19 +1,19 @@
 package routes
 
 import (
-    "github.com/gin-gonic/gin"
-    "ironcoach/controllers"
-    "ironcoach/middlewares"
+	"github.com/gin-gonic/gin"
+	"ironcoach/controllers"
+	"ironcoach/middlewares"
 )
 
 func RegisterDietEntryRoutes(router *gin.Engine) {
-    dietEntryController := controllers.NewDietEntryController()
+	dietEntryController := controllers.NewDietEntryController()
 
-    protected := router.Group("/diet_entries").Use(middlewares.AuthMiddleware())
+	protected := router.Group("/diet_entries").Use(middlewares.AuthMiddleware())
 
-    protected.POST("", dietEntryController.AddDietEntry)
-    protected.GET("/:trainee_id", middlewares.EnforceTraineeAccess("trainee_id"), dietEntryController.GetDietEntries)
-    protected.GET("/entry/:entry_id", dietEntryController.GetDietEntryByID)
-    protected.PUT("/:entry_id", dietEntryController.UpdateDietEntry)
-    protected.DELETE("/:entry_id", dietEntryController.DeleteDietEntry)
+	protected.POST("", dietEntryController.AddDietEntry)
+	protected.GET("/:trainee_id", middlewares.EnforceTraineeAccess("trainee_id"), dietEntryController.GetDietEntries)
+	protected.GET("/entry/:entry_id", dietEntryController.GetDietEntryByID)
+	protected.PUT("/:entry_id", dietEntryController.UpdateDietEntry)
+	protected.DELETE("/:entry_id", dietEntryController.DeleteDietEntry)
 }

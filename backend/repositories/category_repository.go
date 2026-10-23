@@ -18,7 +18,7 @@ type CategoryRepository struct {
 }
 
 func NewCategoryRepository() *CategoryRepository {
-	db := database.DB.Database("ironcoach")
+	db := database.Database()
 	return &CategoryRepository{
 		collection: db.Collection("categories"),
 	}
@@ -144,11 +144,55 @@ func (r *CategoryRepository) DeleteCategoriesByTrainee(traineeID string) error {
 	return err
 }
 
-// DeleteCategoriesByTrainer removes legacy trainer-scoped categories (pre-client-catalog).
-func (r *CategoryRepository) DeleteCategoriesByTrainer(trainerID string) error {
+// IDsByTrainees returns the ids of all categories owned by the given trainees.
+func (r *CategoryRepository) IDsByTrainees(traineeIDs []string) ([]primitive.ObjectID, error) {
+	if len(traineeIDs) == 0 {
+		return nil, nil
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err := r.collection.DeleteMany(ctx, bson.M{"trainer_id": trainerID})
+	cursor, err := r.collection.Find(ctx, bson.M{"trainee_id": bson.M{"$in": traineeIDs}}, options.Find().SetProjection(bson.M{"_id": 1}))
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		ID primitive.ObjectID `bson:"_id"`
+	}
+	if err := cursor.All(ctx, &rows); err != nil {
+		return nil, err
+	}
+	ids := make([]primitive.ObjectID, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.ID)
+	}
+	return ids, nil
+}
+
+// DeleteByTrainees removes all categories owned by the given trainees.
+func (r *CategoryRepository) DeleteByTrainees(traineeIDs []string) error {
+	if len(traineeIDs) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	_, err := r.collection.DeleteMany(ctx, bson.M{"trainee_id": bson.M{"$in": traineeIDs}})
+	return err
+}
+
+// AddMany inserts several categories in one round trip.
+func (r *CategoryRepository) AddMany(categories []models.Category) error {
+	if len(categories) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	docs := make([]interface{}, len(categories))
+	for i := range categories {
+		docs[i] = categories[i]
+	}
+	_, err := r.collection.InsertMany(ctx, docs, options.InsertMany().SetOrdered(false))
 	return err
 }

@@ -4,6 +4,7 @@ import (
 	"ironcoach/models"
 	"ironcoach/services"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,78 +20,71 @@ func NewWorkoutLogController() *WorkoutLogController {
 	}
 }
 
-// Add a new workout log
+// AddWorkoutLog creates a log. Returns 201 for a new log and 200 when a retried request with
+// the same client_id matched an existing one.
 func (ctrl *WorkoutLogController) AddWorkoutLog(c *gin.Context) {
-	var log models.WorkoutLog
-
-	// Bind JSON request to WorkoutLog model
-	if err := c.ShouldBindJSON(&log); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var in models.WorkoutLogInput
+	if err := c.ShouldBindJSON(&in); err != nil {
+		respondBindError(c, err)
 		return
 	}
 
-	// Call service to add workout log
-	if err := ctrl.service.AddWorkoutLog(log); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "validation_error", "message": err.Error()}})
+	log, created, err := ctrl.service.AddWorkoutLog(principal(c), in)
+	if err != nil {
+		respondError(c, err, "create_failed")
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Workout log added successfully"})
+	status := http.StatusCreated
+	if !created {
+		status = http.StatusOK
+	}
+	c.JSON(status, gin.H{"message": "Workout log added successfully", "log": log})
 }
 
-// Get all workout logs for a trainee
+// GetWorkoutLogs lists a trainee's logs, newest first. Query: date, limit (max 200), offset.
 func (ctrl *WorkoutLogController) GetWorkoutLogs(c *gin.Context) {
-	traineeID := c.Param("trainee_id")
-	date := c.Query("date")
-
-	logs, err := ctrl.service.GetWorkoutLogsByTrainee(traineeID,date)
+	page := pageFromQuery(c, 50, 200)
+	logs, err := ctrl.service.GetWorkoutLogsByTrainee(c.Param("trainee_id"), c.Query("date"), page)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch workout logs"})
+		respondError(c, err, "list_failed")
 		return
 	}
-
 	c.JSON(http.StatusOK, logs)
 }
 
 func (ctrl *WorkoutLogController) UpdateWorkoutLog(c *gin.Context) {
-	logID := c.Param("log_id") // Get log ID from path
-	var update map[string]interface{}
-
-	if err := c.ShouldBindJSON(&update); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var in models.WorkoutLogUpdate
+	if err := c.ShouldBindJSON(&in); err != nil {
+		respondBindError(c, err)
 		return
 	}
-
-	// Call service to update the workout log
-	if err := ctrl.service.UpdateWorkoutLog(logID, update); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := ctrl.service.UpdateWorkoutLog(principal(c), c.Param("log_id"), in); err != nil {
+		respondError(c, err, "update_failed")
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "Workout log updated successfully"})
 }
 
 func (ctrl *WorkoutLogController) DeleteWorkoutLog(c *gin.Context) {
-	logID := c.Param("log_id")
-
-	// Call service to delete the workout log
-	if err := ctrl.service.DeleteWorkoutLog(logID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := ctrl.service.DeleteWorkoutLog(principal(c), c.Param("log_id")); err != nil {
+		respondError(c, err, "delete_failed")
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "Workout log deleted successfully"})
 }
 
-
 func (ctrl *WorkoutLogController) GetTraineeProgress(c *gin.Context) {
-    traineeID := c.Param("trainee_id")
+	progress, err := ctrl.service.GetTraineeProgress(c.Param("trainee_id"))
+	if err != nil {
+		respondError(c, err, "progress_failed")
+		return
+	}
+	c.JSON(http.StatusOK, progress)
+}
 
-    progress, err := ctrl.service.GetTraineeProgress(traineeID)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch progress"})
-        return
-    }
-
-    c.JSON(http.StatusOK, progress)
+// pageFromQuery reads limit/offset query params, clamped to sane bounds.
+func pageFromQuery(c *gin.Context, def, max int) services.Pagination {
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	offset, _ := strconv.Atoi(c.Query("offset"))
+	return services.NewPagination(limit, offset, def, max)
 }

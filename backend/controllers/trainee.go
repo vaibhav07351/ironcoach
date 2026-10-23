@@ -10,105 +10,71 @@ import (
 )
 
 type TraineeController struct {
-    service *services.TraineeService
+	service *services.TraineeService
 }
 
 // Constructor for TraineeController
 func NewTraineeController() *TraineeController {
-    return &TraineeController{
-        service: services.NewTraineeService(),
-    }
+	return &TraineeController{
+		service: services.NewTraineeService(),
+	}
 }
 
-// Add a new trainee
+// AddTrainee creates a client owned by the calling trainer.
 func (ctrl *TraineeController) AddTrainee(c *gin.Context) {
-    var trainee models.Trainee
-	
-    // Get trainer ID from JWT claims
-    trainerID := c.MustGet("email").(string)
-    trainee.TrainerID = trainerID
-
-    // Bind JSON request
-    if err := c.ShouldBindJSON(&trainee); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-        return
-    }
-
-
-    // Add trainee
-    if err := ctrl.service.AddTrainee(trainee); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add trainee"})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{"message": "Trainee added successfully"})
+	var in models.TraineeInput
+	if err := c.ShouldBindJSON(&in); err != nil {
+		respondBindError(c, err)
+		return
+	}
+	id, err := ctrl.service.AddTrainee(principal(c), in)
+	if err != nil {
+		respondError(c, err, "create_failed")
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"message": "Trainee added successfully", "id": id})
 }
 
-// Get trainees for a trainer
+// GetTrainees lists the trainer's clients by name. Query: active_status, limit (max 500), offset.
 func (ctrl *TraineeController) GetTrainees(c *gin.Context) {
-    status := c.Query("active_status") // Get query parameter
-    trainerID := c.MustGet("email").(string)
-
-    trainees, err := ctrl.service.GetTraineesByTrainer(trainerID,status)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch trainees"})
-        return
-    }
-
-    c.JSON(http.StatusOK, trainees)
+	page := pageFromQuery(c, 200, 500)
+	trainees, err := ctrl.service.GetTraineesByTrainer(principal(c), c.Query("active_status"), page)
+	if err != nil {
+		respondError(c, err, "list_failed")
+		return
+	}
+	c.JSON(http.StatusOK, trainees)
 }
 
-// Get trainee of a trainer by ID
+// GetTraineeByID returns one client record the caller may access.
 func (ctrl *TraineeController) GetTraineeByID(c *gin.Context) {
-    traineeID := c.Param("trainee_id") // Get query parameter
-   
-    trainee, err := ctrl.service.GetTraineeByID(traineeID)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch trainees"})
-        return
-    }
-
-    c.JSON(http.StatusOK, trainee)
+	trainee, err := ctrl.service.GetTrainee(principal(c), c.Param("trainee_id"))
+	if err != nil {
+		respondError(c, err, "fetch_failed")
+		return
+	}
+	c.JSON(http.StatusOK, trainee)
 }
 
-
-// Update a trainee
+// UpdateTrainee edits the provided fields of a client record.
 func (ctrl *TraineeController) UpdateTrainee(c *gin.Context) {
-	id := c.Param("id")
-	var update map[string]interface{}
-
-	if err := c.ShouldBindJSON(&update); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var in models.TraineeInput
+	if err := c.ShouldBindJSON(&in); err != nil {
+		respondBindError(c, err)
 		return
 	}
-
-	// Clients may edit their own profile fields, not coach-owned linkage/status.
-	if role, _ := c.Get("role"); role == models.RoleClient {
-		delete(update, "trainer_id")
-		delete(update, "user_id")
-		delete(update, "active_status")
-		delete(update, "membership_type")
-		delete(update, "start_date")
-		delete(update, "rating")
-		delete(update, "rating_count")
-	}
-
-	if err := ctrl.service.UpdateTrainee(id, update); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update trainee"})
+	if err := ctrl.service.UpdateTrainee(principal(c), c.Param("id"), in); err != nil {
+		respondError(c, err, "update_failed")
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "Trainee updated successfully"})
 }
 
-// Delete a trainee
+// DeleteTrainee removes a client and all their data, and unlinks their account.
 func (ctrl *TraineeController) DeleteTrainee(c *gin.Context) {
-    id := c.Param("id")
-
-    if err := ctrl.service.DeleteTrainee(id); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete trainee"})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{"message": "Trainee deleted successfully"})
+	if err := ctrl.service.DeleteTrainee(principal(c), c.Param("id")); err != nil {
+		respondError(c, err, "delete_failed")
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Trainee deleted successfully"})
 }

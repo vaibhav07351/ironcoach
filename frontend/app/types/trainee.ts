@@ -82,7 +82,7 @@ export type Trainee = {
     health_questionnaire?: {
         responses: HealthQuestionnaireResponses;
         comments?: string;
-        date: string;
+        date?: string;
     };
 };
 
@@ -95,28 +95,6 @@ export interface FitnessTestWithUI extends FitnessTest {
     id: number;
     icon: string;
     color: string;
-}
-
-export interface LabTestWithUI extends LabTest {
-    id: number;
-    unit: string;
-    normalRange: string;
-    icon: string;
-    color: string;
-}
-
-export interface TestRecord {
-    date: string;
-    fitnessTests: FitnessTest[];
-    labTests: LabTest[];
-}
-
-export interface CategoryGroup {
-    [key: string]: FitnessTestWithUI[];
-}
-
-export interface LabCategoryGroup {
-    [key: string]: LabTestWithUI[];
 }
 
 export const fitnessTestTemplates: Omit<FitnessTestWithUI, 'date' | 'result1' | 'result2'>[] = [
@@ -171,123 +149,42 @@ export const fitnessTestTemplates: Omit<FitnessTestWithUI, 'date' | 'result1' | 
     },
     { 
         id: 8, 
-        category: 'Body Composition', 
+        category: 'Muscular Endurance', 
         test: 'Push-ups', 
         icon: 'trending-up',
         color: '#8B5CF6'
     }
 ];
 
-    
-export const labTestTemplates: Omit<LabTestWithUI, 'date' | 'value'>[] = [
-    // Complete Blood Count (CBC) - Essential
-    { 
-        id: 1, 
-        category: 'Complete Blood Count (CBC)', 
-        test: 'Hemoglobin', 
-        unit: 'g/dL',
-        normalRange: '12-16',
-        icon: 'opacity',
-        color: '#EA580C'
-    },
-    { 
-        id: 2, 
-        category: 'Complete Blood Count (CBC)', 
-        test: 'White Blood Cells', 
-        unit: '/μL',
-        normalRange: '4000-11000',
-        icon: 'opacity',
-        color: '#EA580C'
-    },
-    
-    // Lipid Profile - Heart Health
-    { 
-        id: 3, 
-        category: 'Lipid Profile', 
-        test: 'Total Cholesterol', 
-        unit: 'mg/dL',
-        normalRange: '<200',
-        icon: 'favorite',
-        color: '#7C3AED'
-    },
-    { 
-        id: 4, 
-        category: 'Lipid Profile', 
-        test: 'HDL Cholesterol', 
-        unit: 'mg/dL',
-        normalRange: '>40',
-        icon: 'favorite',
-        color: '#7C3AED'
-    },
-    { 
-        id: 5, 
-        category: 'Lipid Profile', 
-        test: 'LDL Cholesterol', 
-        unit: 'mg/dL',
-        normalRange: '<100',
-        icon: 'favorite',
-        color: '#7C3AED'
-    },
-    
-    // Kidney Function - Essential
-    { 
-        id: 6, 
-        category: 'Kidney Function Test', 
-        test: 'Creatinine', 
-        unit: 'mg/dL',
-        normalRange: '0.6-1.2',
-        icon: 'healing',
-        color: '#DC2626'
-    },
-    
-    // Liver Function - Essential
-    { 
-        id: 7, 
-        category: 'Liver Function Test', 
-        test: 'ALT (SGPT)', 
-        unit: 'U/L',
-        normalRange: '7-56',
-        icon: 'local-hospital',
-        color: '#059669'
-    },
-    
-    // Metabolic - Essential
-    { 
-        id: 8, 
-        category: 'Metabolic Panel', 
-        test: 'Fasting Glucose', 
-        unit: 'mg/dL',
-        normalRange: '70-100',
-        icon: 'psychology',
-        color: '#0891B2'
-    },
-    { 
-        id: 9, 
-        category: 'Metabolic Panel', 
-        test: 'HbA1c', 
-        unit: '%',
-        normalRange: '<5.7',
-        icon: 'psychology',
-        color: '#0891B2'
-    },
-    
-    // Vitamins - Most Important
-    { 
-        id: 10, 
-        category: 'Vitamins', 
-        test: 'Vitamin D', 
-        unit: 'ng/mL',
-        normalRange: '30-100',
-        icon: 'wb-sunny',
-        color: '#CA8A04'
-    },
-    { 
-        id: 11, 
-        category: 'Vitamins', 
-        test: 'Vitamin B12', 
-        unit: 'pg/mL',
-        normalRange: '200-900',
-        icon: 'wb-sunny',
-        color: '#CA8A04'
-    }
-];
+/**
+ * Fields sent when creating or editing a client. Only include fields that changed: the server
+ * writes exactly what it receives. trainer_id, user_id, rating and timestamps are server-owned.
+ * Coach-only fields (notes, active_status, membership_type, start_date, fitness_tests, lab_tests)
+ * are ignored when a client edits their own record.
+ */
+export type TraineeInput = Partial<
+    Pick<
+        Trainee,
+        | 'name'
+        | 'phone_number'
+        | 'email'
+        | 'dob'
+        | 'gender'
+        | 'profession'
+        | 'height'
+        | 'start_date'
+        | 'membership_type'
+        | 'emergency_contact'
+        | 'medical_history'
+        | 'social_handle'
+        | 'goals'
+        | 'notes'
+        | 'active_status'
+        | 'image_url'
+        | 'active_supplements'
+        | 'fitness_tests'
+        | 'lab_tests'
+    >
+> & {
+    health_questionnaire?: { responses: HealthQuestionnaireResponses; comments?: string };
+};
