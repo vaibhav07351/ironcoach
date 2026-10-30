@@ -34,11 +34,11 @@ module.exports = {
     // run on a binary that lacks the native modules it needs.
     runtimeVersion: { policy: 'appVersion' },
     orientation: 'portrait',
-    icon: './assets/images/trainernearme.png',
+    icon: './assets/images/trainernearme-icon.png',
     scheme: 'ironcoach',
     userInterfaceStyle: 'light',
     description: 'Free client manager for personal trainers: clients, workouts, diet and progress.',
-    primaryColor: '#0B3D2E',
+    primaryColor: '#07173D',
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'com.vaibhavbhardwaj.ironcoach',
@@ -46,8 +46,8 @@ module.exports = {
     android: {
       package: ANDROID_PACKAGE,
       adaptiveIcon: {
-        foregroundImage: './assets/images/trainernearme.png',
-        backgroundColor: '#0B3D2E',
+        foregroundImage: './assets/images/trainernearme-icon.png',
+        backgroundColor: '#07173D',
       },
       softwareKeyboardLayoutMode: 'resize',
       permissions: ['ACCESS_COARSE_LOCATION'],
@@ -60,16 +60,16 @@ module.exports = {
     },
     web: {
       bundler: 'metro',
-      favicon: './assets/images/trainernearme.png',
+      favicon: './assets/images/trainernearme-icon.png',
     },
     plugins: [
       [
         'expo-splash-screen',
         {
-          image: './assets/images/trainernearme.png',
-          imageWidth: 200,
+          image: './assets/images/trainernearme-logo.png',
+          imageWidth: 240,
           resizeMode: 'contain',
-          backgroundColor: '#F3F0E8',
+          backgroundColor: '#07173D',
         },
       ],
       [

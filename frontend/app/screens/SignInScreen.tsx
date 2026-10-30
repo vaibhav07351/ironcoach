@@ -93,7 +93,7 @@ export default function SignInScreen(): React.JSX.Element {
   return (
     <Screen noHeader>
       <View style={styles.brand}>
-        <Image source={require('../../assets/images/trainernearme.png')} style={styles.logo} resizeMode="contain" />
+        <Image source={require('../../assets/images/trainernearme-icon.png')} style={styles.logo} resizeMode="contain" />
         <AppText variant="title" center>
           TrainerNearMe
         </AppText>

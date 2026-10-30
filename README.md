@@ -1,6 +1,6 @@
 <h1>
   🏋️‍♂️ TrainerNearMe
-  <img src="./frontend/assets/images/trainernearme.png" alt="TrainerNearMe Banner" width="40" style="margin-left: 10px;" />
+  <img src="./frontend/assets/images/trainernearme-icon.png" alt="TrainerNearMe Banner" width="40" style="margin-left: 10px;" />
 </h1>
 
 > **Find coaches near you** — accountability-first coaching for gym, swimming, badminton, yoga, running, cricket, boxing, MMA, and more.

@@ -117,7 +117,7 @@ export async function hasCompletedFirstRunHints(
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(20, 32, 27, 0.55)',
+    backgroundColor: 'rgba(20, 26, 38, 0.55)',
     justifyContent: 'flex-end',
     padding: Spacing.large,
   },

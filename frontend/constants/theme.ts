@@ -2,17 +2,17 @@ import { Platform } from 'react-native';
 
 /** Design tokens. Light theme only for v1. */
 export const Colors = {
-  primary: '#0B3D2E',
-  primaryMuted: '#1A5C45',
-  primarySoft: '#DCEBE3',
-  accent: '#E8A838',
-  accentSoft: '#F5D59A',
+  primary: '#07173D',
+  primaryMuted: '#2B3F6B',
+  primarySoft: '#DDE3EF',
+  accent: '#FDBF27',
+  accentSoft: '#FEE7A6',
   background: '#F3F0E8',
   backgroundAlt: '#E8E4D9',
   surface: '#FFFFFF',
-  textPrimary: '#14201B',
-  textSecondary: '#5C6B64',
-  textMuted: '#8A958F',
+  textPrimary: '#141A26',
+  textSecondary: '#5C6372',
+  textMuted: '#8A909C',
   textOnPrimary: '#F7F4EC',
   error: '#B42318',
   errorSoft: '#FDECEA',
@@ -22,7 +22,7 @@ export const Colors = {
   border: '#D6D0C4',
   activeCard: '#D8F0E3',
   inactiveCard: '#F8E0DC',
-  overlay: 'rgba(20, 32, 27, 0.4)',
+  overlay: 'rgba(20, 26, 38, 0.4)',
 };
 
 export const Fonts = {
