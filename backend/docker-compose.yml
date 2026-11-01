@@ -11,7 +11,11 @@ services:
     expose:
       - "8080"
     networks:
-      - ironcoach
+      ironcoach:
+        # Caddy proxies to this alias, not to "api": other apps on this network may also have a
+        # service called "api" (see Caddyfile).
+        aliases:
+          - ironcoach-api
 
   caddy:
     image: caddy:2-alpine

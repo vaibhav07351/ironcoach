@@ -175,12 +175,16 @@ jobs:
             exit 1
           fi
 
-          # /healthz alone can stay "ok" while every real route 404s; check the routes too.
-          root_status="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "$API/")"
-          if [[ "$root_status" != "200" ]]; then
-            echo "smoke: GET / returned $root_status, routes are not being served" >&2
-            exit 1
-          fi
+          # /healthz alone can stay "ok" while every real route 404s, and another app on the VM's
+          # Docker network once answered some requests (its /healthz also says "ok"). Check that
+          # GET / is IronCoach's own answer, several times, so a split upstream is caught too.
+          for i in 1 2 3 4 5 6; do
+            root_body="$(curl -sS --max-time 20 "$API/" || true)"
+            if [[ "$root_body" != *"TrainerNearMe"* ]]; then
+              echo "smoke: GET / attempt $i was not answered by the IronCoach API: ${root_body:0:120}" >&2
+              exit 1
+            fi
+          done
 
           # The web app's sign-in starts with a CORS preflight; without the allow-origin header
           # the browser blocks it and users see "No connection".

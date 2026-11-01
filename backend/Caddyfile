@@ -1,4 +1,19 @@
+# Upstreams use names unique to each app. Other apps on this VM (Snookit) join this Docker
+# network, and a compose service name such as "api" is a DNS alias on every network the service
+# joins, so a shared name like "api:8080" can resolve to another app's container.
 ironcoach.duckdns.org {
 	encode gzip
-	reverse_proxy api:8080
+	reverse_proxy ironcoach-api:8080
+}
+
+# Snookit (separate repo, its own compose project) has no proxy of its own and is served from this
+# Caddy. Keep this block here: every IronCoach deploy syncs this file to the VM and recreates Caddy
+# when it changes, so a block added by hand on the VM would be dropped.
+snookit.duckdns.org {
+	encode gzip
+	reverse_proxy snookit-api:8080 {
+		# Replace any client-supplied X-Forwarded-For with the real peer address, which is
+		# what the API trusts for rate limiting.
+		header_up X-Forwarded-For {remote_host}
+	}
 }

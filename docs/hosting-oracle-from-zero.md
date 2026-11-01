@@ -298,12 +298,12 @@ We did **not** move the database to Oracle. Atlas stays; only the API moved.
 | Container | Role |
 |-----------|------|
 | `api` | Built from our Go code; port **8080 inside** the Docker network |
-| `caddy` | Public **80/443**; proxies to `api:8080` |
+| `caddy` | Public **80/443**; proxies to `ironcoach-api:8080` |
 
 ```mermaid
 flowchart LR
   Client[Client HTTPS] -->|443| Caddy
-  Caddy -->|HTTP inside private docker network| API[api:8080]
+  Caddy -->|HTTP inside private docker network| API[ironcoach-api:8080]
 ```
 
 **Compose** (`docker-compose.yml`): one file that starts both, restart policy, env file, volumes for Caddy certificates.
@@ -329,11 +329,11 @@ flowchart LR
 
 ```text
 ironcoach.duckdns.org {
-    reverse_proxy api:8080
+    reverse_proxy ironcoach-api:8080
 }
 ```
 
-`api` is the **Docker service name** (DNS inside the compose network), not the public hostname.
+`ironcoach-api` is a **network alias** of the `api` service (DNS inside the compose network), not the public hostname. Caddy must not use the plain service name `api`: Snookit's API also joins this network, a compose service name is an alias on every network the service joins, and Snookit's service is also called `api`, so `api` resolved to both apps and some IronCoach requests got Snookit's 404s.
 
 **Certificates:** stored in Docker volume `caddy_data` so they survive container restarts.
 

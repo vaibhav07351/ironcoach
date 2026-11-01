@@ -163,3 +163,22 @@ below needs a real phone.
   `assets/images/trainernearme-logo.png` has the navy background baked into the image. For a
   light splash, export the logo with a transparent background (dark "Trainer" text), save it as
   `assets/images/trainernearme-logo-light.png`, and ask Claude to wire it up (needs a new build).
+
+## 8. Server collision with Snookit, and web back button (2026-11-02)
+
+- [ ] **Push the backend change** (Caddyfile, docker-compose.yml, deploy workflow). The deploy
+  recreates Caddy with the new Caddyfile, which now also holds Snookit's route. Afterwards check
+  both, in PowerShell 5.1:
+  ```powershell
+  curl.exe -s https://ironcoach.duckdns.org/
+  curl.exe -s https://snookit.duckdns.org/healthz
+  ```
+  The first must say "Hello, TrainerNearMe!", the second "ok".
+- [ ] **Redeploy the web app** so the back button fix reaches ironcoach.expo.app (same way you
+  deployed it last time).
+- [ ] **On the phone (web):** open a client, press the phone's back button: you should land on the
+  Clients list, not leave the site. Back on the first screen still leaves the site (nothing to go
+  back to).
+- [ ] **(Optional, Snookit repo) Rename Snookit's compose service from `api` to `snookit-api`**
+  (and the `docker compose ... api` commands in its deploy workflow). Not needed for the fix, but
+  it stops the name `api` from pointing at two apps on IronCoach's network.

@@ -1,5 +1,6 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useMemo, useState } from 'react';
+import { Platform } from 'react-native';
 import { DarkTheme, DefaultTheme, NavigationContainer, type Theme as NavTheme } from '@react-navigation/native';
 // Per-weight imports: the package index would bundle all 14 weights.
 import { PlusJakartaSans_600SemiBold } from '@expo-google-fonts/plus-jakarta-sans/600SemiBold';
@@ -16,6 +17,7 @@ import { AuthProvider } from './app/contexts/AuthContext';
 import { ThemeProvider, useTheme } from './app/contexts/ThemeContext';
 import { useWantsLightStatusBar } from './app/hooks/useLightStatusBar';
 import { RootNavigator } from './app/navigation/RootNavigator';
+import { webLinking } from './app/navigation/webLinking';
 import { loadThemePreference } from './app/services/themePreferenceStore';
 import type { ThemePreference } from '@/constants/theme';
 
@@ -87,7 +89,8 @@ function ThemedApp(): React.JSX.Element {
 
   return (
     <>
-      <NavigationContainer theme={navigationTheme}>
+      {/* Web only: native back is handled by the OS, and native deep links are not configured. */}
+      <NavigationContainer theme={navigationTheme} linking={Platform.OS === 'web' ? webLinking : undefined}>
         <StatusBar style={heroOnTop || scheme === 'dark' ? 'light' : 'dark'} animated />
         <RootNavigator />
       </NavigationContainer>
