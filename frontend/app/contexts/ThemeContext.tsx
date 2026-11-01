@@ -14,6 +14,7 @@ import {
   type TypeScale,
 } from '@/constants/theme';
 import { saveThemePreference } from '../services/themePreferenceStore';
+import { applyWebColorScheme } from '../utils/webColorScheme';
 
 export type Theme = {
   scheme: ColorScheme;
@@ -88,6 +89,10 @@ export function ThemeProvider({ children, brandFont, initialPreference }: Props)
       Appearance.setColorScheme(preference === 'system' ? 'unspecified' : preference);
     }
   }, [preference]);
+
+  useEffect(() => {
+    applyWebColorScheme(scheme, theme.colors.bg);
+  }, [scheme, theme]);
 
   useEffect(() => {
     // Root view color shows behind screens during transitions and under the Android nav bar.
