@@ -60,12 +60,57 @@ describe('http client', () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  it('reports network failures as status 0', async () => {
-    fetchMock.mockRejectedValue(new TypeError('Network request failed'));
-    const error = await http.get('/x').catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(ApiError);
-    expect((error as ApiError).isNetwork).toBe(true);
-    expect(errorMessage(error)).toMatch(/No connection/);
+  describe('requests that get no response', () => {
+    let warn: jest.SpyInstance;
+    const realNavigator = global.navigator;
+    const setOnline = (onLine: boolean | undefined): void => {
+      Object.defineProperty(global, 'navigator', { value: { onLine }, configurable: true });
+    };
+
+    beforeEach(() => {
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    });
+    afterEach(() => {
+      warn.mockRestore();
+      Object.defineProperty(global, 'navigator', { value: realNavigator, configurable: true });
+      jest.useRealTimers();
+    });
+
+    it('reports network failures as status 0 and logs the real cause', async () => {
+      setOnline(undefined);
+      fetchMock.mockRejectedValue(new TypeError('Network request failed'));
+      const error = await http.get('/x', { query: { secret: 'q' } }).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).isNetwork).toBe(true);
+      expect((error as ApiError).code).toBe('network');
+      expect(errorMessage(error)).toMatch(/No connection/);
+      expect(warn).toHaveBeenCalledWith('api request failed', 'GET', '/x', 'Network request failed');
+      expect(JSON.stringify(warn.mock.calls)).not.toMatch(/tok123|secret/);
+    });
+
+    it('blames the server, not the internet, when the device is online', async () => {
+      setOnline(true);
+      fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+      const error = await http.post('/auth/google', {}, { anonymous: true }).catch((e: unknown) => e);
+      expect(errorMessage(error)).toMatch(/Can't reach the TrainerNearMe server/);
+    });
+
+    it('reports a timeout separately, still as no response', async () => {
+      jest.useFakeTimers();
+      fetchMock.mockImplementation(
+        (_url: string, init: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () => reject(new Error('Aborted')));
+          })
+      );
+      const pending = http.get('/slow', { timeoutMs: 1000 }).catch((e: unknown) => e);
+      await jest.advanceTimersByTimeAsync(1000);
+      const error = await pending;
+      expect((error as ApiError).code).toBe('timeout');
+      expect((error as ApiError).isNetwork).toBe(true);
+      expect(errorMessage(error)).toMatch(/took too long/);
+      expect(warn).toHaveBeenCalledWith('api request failed', 'GET', '/slow', 'timeout after 1000ms');
+    });
   });
 
   it('handles 204 and empty bodies', async () => {

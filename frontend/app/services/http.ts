@@ -23,12 +23,29 @@ export class ApiError extends Error {
   }
 }
 
-/** Returns a user-facing message for any thrown value. */
+/** True when the platform positively reports a working connection (browsers; native leaves it unset). */
+function deviceSaysOnline(): boolean {
+  return typeof navigator !== 'undefined' && (navigator as { onLine?: boolean }).onLine === true;
+}
+
+/**
+ * Returns a user-facing message for any thrown value. "No response" failures are told apart:
+ * a timeout, a server that cannot be reached while the device is online (down, blocked, or on web
+ * a response without CORS headers), and a device that is offline.
+ */
 export function errorMessage(error: unknown, fallback = 'Something went wrong. Please try again.'): string {
-  if (error instanceof ApiError) {
-    return error.isNetwork ? 'No connection. Check your internet and try again.' : error.message;
+  if (!(error instanceof ApiError)) {
+    return fallback;
   }
-  return fallback;
+  if (error.code === 'timeout') {
+    return 'The server took too long to answer. Please try again.';
+  }
+  if (error.isNetwork) {
+    return deviceSaysOnline()
+      ? "Can't reach the TrainerNearMe server right now. Please try again in a minute."
+      : 'No connection. Check your internet and try again.';
+  }
+  return error.message;
 }
 
 type UnauthorizedHandler = () => void;
@@ -102,8 +119,13 @@ export async function request<T>(method: string, path: string, options: RequestO
     }
   }
 
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
   let response: Response;
   try {
     response = await fetch(buildUrl(path, options.query), {
@@ -112,8 +134,12 @@ export async function request<T>(method: string, path: string, options: RequestO
       body,
       signal: controller.signal,
     });
-  } catch {
-    throw new ApiError(0, 'network', 'No connection. Check your internet and try again.');
+  } catch (e: unknown) {
+    // Never log the URL query or headers: they can carry ids and the session token.
+    console.warn('api request failed', method, path, timedOut ? `timeout after ${timeoutMs}ms` : e instanceof Error ? e.message : String(e));
+    throw timedOut
+      ? new ApiError(0, 'timeout', 'The server took too long to answer.')
+      : new ApiError(0, 'network', 'The request did not reach the server.');
   } finally {
     clearTimeout(timer);
   }

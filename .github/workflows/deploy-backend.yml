@@ -156,14 +156,42 @@ jobs:
             "chmod +x ~/ironcoach-backend/deploy/apply.sh && ~/ironcoach-backend/deploy/apply.sh"
 
       - name: Smoke test
+        env:
+          API: https://ironcoach.duckdns.org
+          # Must match CORS_ALLOWED_ORIGINS on the server (its default).
+          WEB_ORIGIN: https://ironcoach.expo.app
         run: |
           set -euo pipefail
+          healthy=0
           for i in 1 2 3 4 5; do
-            if curl -fsS --max-time 20 https://ironcoach.duckdns.org/healthz | grep -q '"ok"'; then
-              echo "smoke: ok"
-              exit 0
+            if curl -fsS --max-time 20 "$API/healthz" | grep -q '"ok"'; then
+              healthy=1
+              break
             fi
             sleep 5
           done
-          echo "smoke: failed" >&2
-          exit 1
+          if [[ "$healthy" -ne 1 ]]; then
+            echo "smoke: /healthz never reported ok" >&2
+            exit 1
+          fi
+
+          # /healthz alone can stay "ok" while every real route 404s; check the routes too.
+          root_status="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "$API/")"
+          if [[ "$root_status" != "200" ]]; then
+            echo "smoke: GET / returned $root_status, routes are not being served" >&2
+            exit 1
+          fi
+
+          # The web app's sign-in starts with a CORS preflight; without the allow-origin header
+          # the browser blocks it and users see "No connection".
+          allow_origin="$(curl -sS --max-time 20 -o /dev/null -D - -X OPTIONS "$API/auth/google" \
+            -H "Origin: $WEB_ORIGIN" \
+            -H "Access-Control-Request-Method: POST" \
+            -H "Access-Control-Request-Headers: content-type" \
+            | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-origin" {print $2}')"
+          if [[ "$allow_origin" != "$WEB_ORIGIN" ]]; then
+            echo "smoke: sign-in preflight from $WEB_ORIGIN not allowed (got '${allow_origin}')" >&2
+            exit 1
+          fi
+
+          echo "smoke: ok (health, routes, web sign-in CORS)"
