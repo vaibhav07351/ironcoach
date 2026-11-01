@@ -1,15 +1,23 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
+import { AppText } from '@/components/AppText';
+import { Avatar } from '@/components/Avatar';
+import { Badge } from '@/components/Badge';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
 import { ErrorState } from '@/components/ErrorState';
+import { IconButton } from '@/components/IconButton';
 import { LoadingState } from '@/components/LoadingState';
+import { SectionHeader } from '@/components/SectionHeader';
 import { StarRating } from '@/components/StarRating';
-import { Colors, Fonts, Radii, Spacing } from '@/constants/theme';
+import { Radii, Spacing, webScrollFix } from '@/constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme, useThemedStyles, type Theme } from '../contexts/ThemeContext';
 import { useTraineeRecord } from '../contexts/TraineeRecordContext';
 import { errorMessage } from '../services/http';
 import { fetchMyRating, upsertRating } from '../services/ratingService';
@@ -19,31 +27,43 @@ import type { Trainee } from '../types/trainee';
 
 type DetailRow = { label: string; value: string };
 
-const dash = (v?: string | null): string => (v && v.trim() ? v : '-');
+const filled = (v?: string | null): string => (v && v.trim() ? v.trim() : '');
 
 /** Profile of the current client record. Trainers can edit, invite and rate the client. */
 export default function AboutDetailsScreen(): React.JSX.Element {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const record = useTraineeRecord();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const isTrainer = user?.role === 'trainer';
   const [trainee, setTrainee] = useState<Trainee | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [myScore, setMyScore] = useState(0);
   const [savingRating, setSavingRating] = useState(false);
 
+  const loadMyRating = useCallback(async () => {
+    try {
+      const mine = await fetchMyRating('client', record.id);
+      setMyScore(mine.score ?? 0);
+    } catch (e: unknown) {
+      // The profile is still useful without it; the stars just start empty.
+      console.warn('client rating not loaded', record.id, errorMessage(e));
+    }
+  }, [record.id]);
+
   const load = useCallback(async () => {
     try {
       setTrainee(await getTrainee(record.id));
       setLoadError(null);
-      if (isTrainer) {
-        const mine = await fetchMyRating('client', record.id);
-        setMyScore(mine.score ?? 0);
-      }
     } catch (e: unknown) {
       setLoadError(errorMessage(e));
+      return;
     }
-  }, [record.id, isTrainer]);
+    if (isTrainer) {
+      await loadMyRating();
+    }
+  }, [record.id, isTrainer, loadMyRating]);
 
   useFocusEffect(
     useCallback(() => {
@@ -76,272 +96,167 @@ export default function AboutDetailsScreen(): React.JSX.Element {
   const heightIn = Math.round((heightCm / 2.54) % 12);
 
   const rows: DetailRow[] = [
-    { label: 'Name', value: dash(trainee.name) },
-    { label: 'Phone', value: dash(trainee.phone_number) },
-    { label: 'Goals', value: dash(trainee.goals) },
-    ...(isTrainer ? [{ label: 'Notes (only you see these)', value: dash(trainee.notes) }] : []),
-    { label: 'Supplements', value: dash(trainee.active_supplements) },
-    { label: 'Gender', value: dash(trainee.gender) },
-    { label: 'Date of birth', value: dash(trainee.dob) },
-    { label: 'Height', value: heightCm ? `${heightCm} cm (${heightFt}'${heightIn}")` : '-' },
-    { label: 'Profession', value: dash(trainee.profession) },
-    { label: 'Start date', value: dash(trainee.start_date) },
-    { label: 'Membership', value: dash(trainee.membership_type) },
-    { label: 'Emergency contact', value: dash(trainee.emergency_contact) },
-    { label: 'Social', value: dash(trainee.social_handle) },
-    { label: 'Status', value: trainee.active_status ? 'Active' : 'Inactive' },
+    { label: 'Phone', value: filled(trainee.phone_number) },
+    { label: 'Goals', value: filled(trainee.goals) },
+    ...(isTrainer ? [{ label: 'Notes (only you see these)', value: filled(trainee.notes) }] : []),
+    { label: 'Supplements', value: filled(trainee.active_supplements) },
+    { label: 'Gender', value: filled(trainee.gender) },
+    { label: 'Date of birth', value: filled(trainee.dob) },
+    { label: 'Height', value: heightCm ? `${heightCm} cm (${heightFt}'${heightIn}")` : '' },
+    { label: 'Profession', value: filled(trainee.profession) },
+    { label: 'Start date', value: filled(trainee.start_date) },
+    { label: 'Membership', value: filled(trainee.membership_type) },
+    { label: 'Emergency contact', value: filled(trainee.emergency_contact) },
+    { label: 'Social', value: filled(trainee.social_handle) },
   ];
+  const missing = rows.filter((r) => !r.value).length;
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.hero}>
-        {trainee.image_url ? (
-          <Image source={{ uri: trainee.image_url }} style={styles.image} resizeMode="cover" />
-        ) : (
-          <View style={[styles.image, styles.imageFallback]}>
-            <Text style={styles.initial}>{(trainee.name || 'C').charAt(0).toUpperCase()}</Text>
-          </View>
-        )}
+    <ScrollView style={[webScrollFix, styles.scroll]} contentContainerStyle={styles.container}>
+      <Card style={styles.hero}>
+        <Avatar name={trainee.name} uri={trainee.image_url} size={72} />
         <View style={styles.heroText}>
-          <Text style={styles.title}>{isTrainer ? 'Client profile' : 'My profile'}</Text>
-          <Text style={styles.name}>{trainee.name}</Text>
-          <View style={[styles.statusPill, trainee.active_status ? styles.statusActive : styles.statusInactive]}>
-            <Text
-              style={[styles.statusText, trainee.active_status ? styles.statusTextActive : styles.statusTextInactive]}
-            >
-              {trainee.active_status ? 'Active' : 'Inactive'}
-            </Text>
+          <AppText variant="heading" numberOfLines={2}>
+            {trainee.name}
+          </AppText>
+          <View style={styles.badges}>
+            <Badge label={trainee.active_status ? 'Active' : 'Inactive'} tone={trainee.active_status ? 'success' : 'warning'} />
+            {isTrainer ? (
+              <Badge label={trainee.user_id ? 'On app' : 'Not on app yet'} tone={trainee.user_id ? 'brand' : 'neutral'} />
+            ) : null}
           </View>
         </View>
         {isTrainer ? (
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => navigation.navigate('TraineeForm', { traineeId: trainee.id })}
-            accessibilityRole="button"
+          <IconButton
+            icon="create-outline"
             accessibilityLabel="Edit client"
-          >
-            <MaterialCommunityIcons name="pencil-outline" size={18} color={Colors.textOnPrimary} />
-          </TouchableOpacity>
+            onPress={() => navigation.navigate('TraineeForm', { traineeId: trainee.id })}
+          />
         ) : null}
-      </View>
+      </Card>
 
       {isTrainer ? (
         trainee.user_id ? (
           <View style={styles.linkedBanner}>
-            <MaterialCommunityIcons name="check-circle-outline" size={18} color={Colors.primary} />
-            <Text style={styles.linkedText}>On the app: their logs show up here</Text>
+            <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+            <AppText variant="label" style={styles.linkedText}>
+              On the app: their logs show up here
+            </AppText>
           </View>
         ) : (
-          <TouchableOpacity
-            style={styles.inviteButton}
+          <Button
+            title="Invite client to the app"
+            icon="logo-whatsapp"
             onPress={() => navigation.navigate('InviteClient', { traineeId: trainee.id, traineeName: trainee.name })}
-            activeOpacity={0.88}
-            accessibilityRole="button"
-          >
-            <MaterialCommunityIcons name="whatsapp" size={18} color={Colors.textPrimary} />
-            <Text style={styles.inviteButtonText}>Invite client to the app</Text>
-          </TouchableOpacity>
+            style={styles.invite}
+          />
         )
       ) : null}
 
       {isTrainer ? (
-        <View style={styles.ratingBlock}>
-          <Text style={styles.ratingTitle}>Your rating for this client</Text>
-          <StarRating value={myScore} onChange={(score) => void onRateClient(score)} size={30} />
-          {savingRating ? (
-            <ActivityIndicator color={Colors.primary} style={styles.ratingSpinner} />
-          ) : (
-            <Text style={styles.ratingHint}>Tap the left or right half of a star for half ratings</Text>
-          )}
-        </View>
+        <Card style={styles.ratingBlock}>
+          <AppText variant="subheading">Your rating for this client</AppText>
+          <View style={styles.stars}>
+            <StarRating value={myScore} onChange={(score) => void onRateClient(score)} size={30} />
+            {savingRating ? <ActivityIndicator color={colors.tint} style={styles.ratingSpinner} /> : null}
+          </View>
+          <AppText variant="caption" tone="secondary">
+            Tap the left or right half of a star for half ratings
+          </AppText>
+        </Card>
       ) : (trainee.rating_count ?? 0) > 0 ? (
-        <View style={styles.ratingBlock}>
-          <Text style={styles.ratingTitle}>Your coach&apos;s rating of you</Text>
-          <StarRating value={trainee.rating ?? 0} readonly size={22} showValue />
-        </View>
+        <Card style={styles.ratingBlock}>
+          <AppText variant="subheading">Your coach&apos;s rating of you</AppText>
+          <View style={styles.stars}>
+            <StarRating value={trainee.rating ?? 0} readonly size={22} showValue />
+          </View>
+        </Card>
       ) : null}
 
-      <Text style={styles.sectionLabel}>Details</Text>
-      <View style={styles.card}>
+      <SectionHeader
+        title="Details"
+        right={isTrainer && missing > 0 ? <Badge label={`${missing} not filled`} tone="neutral" /> : null}
+      />
+      <Card style={styles.card}>
         {rows.map((row, index) => (
-          <View key={row.label} style={[styles.row, index === rows.length - 1 ? styles.rowLast : null]}>
-            <Text style={styles.label}>{row.label}</Text>
-            <Text style={styles.value}>{row.value}</Text>
+          <View key={row.label} style={[styles.row, index > 0 ? styles.rowDivider : null]}>
+            <AppText variant="caption" tone="secondary">
+              {row.label}
+            </AppText>
+            <AppText tone={row.value ? 'primary' : 'muted'} style={styles.value}>
+              {row.value || 'Not added'}
+            </AppText>
           </View>
         ))}
-      </View>
+      </Card>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  container: {
-    padding: Spacing.medium,
-    paddingBottom: Spacing.xl,
-  },
-  hero: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.lg,
-    padding: Spacing.medium,
-    marginBottom: Spacing.medium,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: Spacing.medium,
-  },
-  image: {
-    width: 88,
-    height: 88,
-    borderRadius: Radii.lg,
-    backgroundColor: Colors.backgroundAlt,
-  },
-  imageFallback: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primarySoft,
-  },
-  initial: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  heroText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  title: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginBottom: 2,
-  },
-  name: {
-    fontFamily: Fonts.display,
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.primary,
-    marginBottom: Spacing.small,
-  },
-  statusPill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radii.sm,
-  },
-  statusActive: {
-    backgroundColor: Colors.activeCard,
-  },
-  statusInactive: {
-    backgroundColor: Colors.inactiveCard,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  statusTextActive: {
-    color: Colors.success,
-  },
-  statusTextInactive: {
-    color: Colors.atRisk,
-  },
-  editButton: {
-    backgroundColor: Colors.primary,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  inviteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.accent,
-    paddingVertical: 14,
-    borderRadius: Radii.md,
-    marginBottom: Spacing.medium,
-  },
-  inviteButtonText: {
-    color: Colors.textPrimary,
-    fontWeight: '800',
-    fontSize: 15,
-  },
-  linkedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.activeCard,
-    paddingVertical: 12,
-    borderRadius: Radii.md,
-    marginBottom: Spacing.medium,
-  },
-  linkedText: {
-    color: Colors.primary,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  ratingBlock: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.md,
-    padding: Spacing.medium,
-    marginBottom: Spacing.medium,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  ratingTitle: {
-    fontWeight: '700',
-    fontSize: 15,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.small,
-  },
-  ratingSpinner: {
-    marginTop: Spacing.small,
-  },
-  ratingHint: {
-    color: Colors.textSecondary,
-    fontSize: 12,
-    marginTop: Spacing.small,
-  },
-  sectionLabel: {
-    fontFamily: Fonts.display,
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.primary,
-    marginBottom: Spacing.small,
-  },
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-  },
-  row: {
-    paddingHorizontal: Spacing.medium,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  rowLast: {
-    borderBottomWidth: 0,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  value: {
-    fontSize: 16,
-    color: Colors.textPrimary,
-    lineHeight: 22,
-  },
-});
+const makeStyles = ({ colors }: Theme) =>
+  StyleSheet.create({
+    scroll: {
+      backgroundColor: colors.bg,
+    },
+    container: {
+      padding: Spacing.medium,
+      paddingBottom: Spacing.xxl,
+    },
+    hero: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.medium,
+      marginBottom: Spacing.medium,
+    },
+    heroText: {
+      flex: 1,
+      minWidth: 0,
+    },
+    badges: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: Spacing.xs + 2,
+      marginTop: Spacing.small - 2,
+    },
+    invite: {
+      marginBottom: Spacing.medium,
+    },
+    linkedBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.small,
+      backgroundColor: colors.successSoft,
+      paddingVertical: Spacing.small + 4,
+      paddingHorizontal: Spacing.medium,
+      borderRadius: Radii.md,
+      marginBottom: Spacing.medium,
+    },
+    linkedText: {
+      color: colors.text,
+    },
+    ratingBlock: {
+      marginBottom: Spacing.small,
+    },
+    stars: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: Spacing.small,
+    },
+    ratingSpinner: {
+      marginLeft: Spacing.small + 4,
+    },
+    card: {
+      paddingVertical: Spacing.xs,
+    },
+    row: {
+      paddingVertical: Spacing.small + 4,
+    },
+    rowDivider: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.separator,
+    },
+    value: {
+      marginTop: 2,
+    },
+  });

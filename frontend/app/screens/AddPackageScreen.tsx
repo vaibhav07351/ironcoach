@@ -14,7 +14,7 @@ import { addPackage } from '../services/feesService';
 import { errorMessage } from '../services/http';
 import type { PackageInput, PackageKind } from '../types/fees';
 import type { RootStackParamList } from '../types/navigation';
-import { packageEndDate, todayLocal } from '../utils/date';
+import { longDateLabel, packageEndDate, todayLocal } from '../utils/date';
 import { newClientId } from '../utils/ids';
 import { parseRupeesToPaise } from '../utils/money';
 
@@ -107,7 +107,7 @@ export default function AddPackageScreen({ route, navigation }: Props): React.JS
             ))}
           </View>
           <AppText variant="caption" tone="secondary" style={styles.helper}>
-            Runs from {startDate} to {packageEndDate(startDate, months)}.
+            Runs from {longDateLabel(startDate)} to {longDateLabel(packageEndDate(startDate, months))}.
           </AppText>
         </>
       )}

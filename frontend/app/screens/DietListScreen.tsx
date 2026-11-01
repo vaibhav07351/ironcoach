@@ -1,8 +1,7 @@
 import React, { useCallback, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
 import { AppText } from '@/components/AppText';
@@ -10,8 +9,11 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { DayNavigator } from '@/components/DayNavigator';
 import { ErrorState } from '@/components/ErrorState';
+import { IconButton } from '@/components/IconButton';
 import { LoadingState } from '@/components/LoadingState';
-import { Colors, Spacing } from '@/constants/theme';
+import { StatTile } from '@/components/StatTile';
+import { Spacing, webScrollFix } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '../contexts/ThemeContext';
 import { useTraineeRecord } from '../contexts/TraineeRecordContext';
 import { getDietForDay, removeFoodFromDay } from '../services/dietService';
 import { errorMessage } from '../services/http';
@@ -27,6 +29,8 @@ const round = (n: number): number => Math.round(n);
 export default function DietListScreen(): React.JSX.Element {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const record = useTraineeRecord();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [date, setDate] = useState(todayLocal());
   const [entry, setEntry] = useState<DietEntry | null | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -67,7 +71,7 @@ export default function DietListScreen(): React.JSX.Element {
 
   return (
     <ScrollView
-      style={styles.root}
+      style={[webScrollFix, styles.root]}
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl
@@ -76,7 +80,9 @@ export default function DietListScreen(): React.JSX.Element {
             setRefreshing(true);
             void load();
           }}
-          tintColor={Colors.primary}
+          tintColor={colors.tint}
+          colors={[colors.tint]}
+          progressBackgroundColor={colors.surface}
         />
       }
     >
@@ -89,68 +95,57 @@ export default function DietListScreen(): React.JSX.Element {
       />
 
       {entry === undefined ? (
-        loadError ? <ErrorState message={loadError} onRetry={() => void load()} /> : <LoadingState />
+        loadError ? (
+          <ErrorState message={loadError} onRetry={() => void load()} />
+        ) : (
+          <LoadingState />
+        )
       ) : (
         <>
           <View style={styles.totals}>
-            {[
-              ['Calories', round(entry?.total_calories ?? 0), 'kcal'],
-              ['Protein', round(entry?.total_proteins ?? 0), 'g'],
-              ['Carbs', round(entry?.total_carbs ?? 0), 'g'],
-              ['Fat', round(entry?.total_fats ?? 0), 'g'],
-            ].map(([label, value, unit]) => (
-              <Card key={String(label)} style={styles.total}>
-                <AppText variant="heading" tone="brand" center>
-                  {value}
-                </AppText>
-                <AppText variant="caption" tone="secondary" center>
-                  {label} ({unit})
-                </AppText>
-              </Card>
-            ))}
+            <StatTile value={round(entry?.total_calories ?? 0)} label="kcal" />
+            <StatTile value={round(entry?.total_proteins ?? 0)} label="protein g" />
+            <StatTile value={round(entry?.total_carbs ?? 0)} label="carbs g" />
+            <StatTile value={round(entry?.total_fats ?? 0)} label="fat g" />
           </View>
 
           {mealNames.map((name) => {
             const meal = entry?.meals.find((m) => m.name === name);
+            const foods = meal?.foods ?? [];
             return (
               <Card key={name} style={styles.meal}>
                 <View style={styles.mealHeader}>
                   <View style={styles.flex}>
                     <AppText variant="subheading">{name}</AppText>
-                    {meal ? (
-                      <AppText variant="caption" tone="secondary">
-                        {round(meal.calories)} kcal · {round(meal.proteins)} g protein
-                      </AppText>
-                    ) : null}
+                    <AppText variant="caption" tone={meal ? 'secondary' : 'muted'}>
+                      {meal ? `${round(meal.calories)} kcal, ${round(meal.proteins)} g protein` : 'Nothing logged'}
+                    </AppText>
                   </View>
                   <Button
                     title="Add"
-                    variant="ghost"
+                    variant="secondary"
+                    size="small"
                     icon="add"
                     disabled={busy}
                     onPress={() =>
-                      navigation.navigate('AddFood', { traineeId: record.id, date, mealName: name, existingFoods: meal?.foods ?? [] })
+                      navigation.navigate('AddFood', { traineeId: record.id, date, mealName: name, existingFoods: foods })
                     }
                   />
                 </View>
-                {(meal?.foods ?? []).map((f, i) => (
+                {foods.map((f, i) => (
                   <View key={`${f.name}-${i}`} style={styles.food}>
                     <View style={styles.flex}>
-                      <AppText>{f.name}</AppText>
-                      <AppText variant="caption" tone="muted">
-                        {f.quantity} {f.units} · {round(f.calories)} kcal · {round(f.proteins)} g protein
+                      <AppText numberOfLines={2}>{f.name}</AppText>
+                      <AppText variant="caption" tone="secondary">
+                        {f.quantity} {f.units}, {round(f.calories)} kcal, {round(f.proteins)} g protein
                       </AppText>
                     </View>
-                    <Pressable
-                      onPress={() => void onRemove(name, i)}
-                      disabled={busy}
-                      accessibilityRole="button"
+                    <IconButton
+                      icon="close-circle-outline"
                       accessibilityLabel={`Remove ${f.name}`}
-                      hitSlop={8}
-                      style={styles.remove}
-                    >
-                      <Ionicons name="close-circle-outline" size={22} color={Colors.textMuted} />
-                    </Pressable>
+                      disabled={busy}
+                      onPress={() => void onRemove(name, i)}
+                    />
                   </View>
                 ))}
               </Card>
@@ -162,14 +157,20 @@ export default function DietListScreen(): React.JSX.Element {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.medium, paddingBottom: Spacing.xl },
-  flex: { flex: 1, minWidth: 0 },
-  totals: { flexDirection: 'row', gap: Spacing.small, marginBottom: Spacing.medium },
-  total: { flex: 1, paddingHorizontal: Spacing.xs },
-  meal: { marginBottom: Spacing.small },
-  mealHeader: { flexDirection: 'row', alignItems: 'center' },
-  food: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.xs },
-  remove: { width: 40, alignItems: 'center' },
-});
+const makeStyles = ({ colors }: Theme) =>
+  StyleSheet.create({
+    root: { backgroundColor: colors.bg },
+    content: { padding: Spacing.medium, paddingBottom: Spacing.xxl },
+    flex: { flex: 1, minWidth: 0 },
+    totals: { flexDirection: 'row', gap: Spacing.small, marginBottom: Spacing.medium },
+    meal: { marginBottom: Spacing.small + 4 },
+    mealHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.small },
+    food: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingTop: Spacing.small + 2,
+      marginTop: Spacing.small + 2,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.separator,
+    },
+  });

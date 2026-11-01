@@ -61,6 +61,19 @@ export function longDateLabel(value: string): string {
   return date ? date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : value;
 }
 
+/** Weekday with the date, e.g. "Sunday, 1 November". */
+export function weekdayDateLabel(value: string): string {
+  const date = parseLocalDate(value);
+  return date ? date.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }) : value;
+}
+
+/** "Good morning" (5-11), "Good afternoon" (12-16) or "Good evening". */
+export function greetingForHour(hour: number): string {
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 /** True if the date is after today (no future logging). */
 export function isFuture(value: string, now: Date = new Date()): boolean {
   return value > todayLocal(now);

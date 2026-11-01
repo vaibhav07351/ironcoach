@@ -13,6 +13,8 @@ export default function ClientInterestsScreen(): React.JSX.Element {
     <OnboardingStep
       title="What are you training for?"
       subtitle="Pick one or more. Your coach sees this when you join."
+      icon="flame"
+      step={{ current: 1, total: 2 }}
       initial={user?.interests}
       onSave={async (codes) => {
         try {

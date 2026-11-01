@@ -1,9 +1,9 @@
-import React, { type ReactNode } from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React, { useMemo, type ReactNode } from 'react';
+import { createNativeStackNavigator, type NativeStackNavigationOptions } from '@react-navigation/native-stack';
 
 import { ScreenKeyboardAvoiding } from '@/components/ScreenKeyboardAvoiding';
-import { Colors } from '@/constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useUpdateRequired } from '../hooks/useUpdateGate';
 import ClientInterestsScreen from '../screens/ClientInterestsScreen';
 import DeleteAccountScreen from '../screens/DeleteAccountScreen';
@@ -58,6 +58,18 @@ const lazy = {
 export function RootNavigator(): React.JSX.Element {
   const { state, user } = useAuth();
   const updateRequired = useUpdateRequired();
+  const { colors, type } = useTheme();
+  const screenOptions = useMemo<NativeStackNavigationOptions>(
+    () => ({
+      headerStyle: { backgroundColor: colors.bg },
+      headerTintColor: colors.tint,
+      headerTitleStyle: { fontFamily: type.heading.fontFamily, fontWeight: type.heading.fontWeight, fontSize: 18, color: colors.text },
+      headerShadowVisible: false,
+      headerBackButtonDisplayMode: 'minimal',
+      contentStyle: { backgroundColor: colors.bg },
+    }),
+    [colors, type]
+  );
 
   const screens = ((): React.JSX.Element => {
     if (updateRequired) {
@@ -127,16 +139,7 @@ export function RootNavigator(): React.JSX.Element {
   })();
 
   return (
-    <Stack.Navigator
-      screenLayout={keyboardSafe}
-      screenOptions={{
-        headerStyle: { backgroundColor: Colors.background },
-        headerTintColor: Colors.primary,
-        headerTitleStyle: { color: Colors.textPrimary },
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: Colors.background },
-      }}
-    >
+    <Stack.Navigator screenLayout={keyboardSafe} screenOptions={screenOptions}>
       {screens}
     </Stack.Navigator>
   );

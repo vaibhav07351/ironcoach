@@ -1,17 +1,23 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
 
 import { AppText } from '@/components/AppText';
+import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
+import { SectionHeader } from '@/components/SectionHeader';
+import { SwitchRow } from '@/components/SwitchRow';
 import { TextField } from '@/components/TextField';
-import { Colors, Spacing } from '@/constants/theme';
+import { Radii, Spacing } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '../contexts/ThemeContext';
 import { errorMessage } from '../services/http';
 import { createTrainee, deleteTrainee, getTrainee, updateTrainee } from '../services/traineeService';
 import { uploadImage } from '../services/uploadService';
@@ -98,6 +104,8 @@ function toInput(f: Form, original?: Form): TraineeInput {
 /** Add or edit a client (trainer only). */
 export default function TraineeFormScreen({ navigation, route }: Props): React.JSX.Element {
   const traineeId = route.params?.traineeId;
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [original, setOriginal] = useState<Form | undefined>(undefined);
   const [form, setForm] = useState<Form>(toForm());
   const [loading, setLoading] = useState(!!traineeId);
@@ -126,12 +134,19 @@ export default function TraineeFormScreen({ navigation, route }: Props): React.J
   const errors = touched ? validate(form) : {};
 
   const pickPhoto = async (): Promise<void> => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+    } catch (e: unknown) {
+      console.warn('photo picker failed', e instanceof Error ? e.message : String(e));
+      Toast.show({ type: 'error', text1: 'Could not open photos', text2: errorMessage(e) });
+      return;
+    }
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
     setUploading(true);
@@ -146,7 +161,10 @@ export default function TraineeFormScreen({ navigation, route }: Props): React.J
 
   const onSave = async (): Promise<void> => {
     setTouched(true);
-    if (Object.keys(validate(form)).length > 0) return;
+    if (Object.keys(validate(form)).length > 0) {
+      Toast.show({ type: 'error', text1: 'Check the highlighted fields' });
+      return;
+    }
     setSaving(true);
     try {
       if (traineeId) {
@@ -193,21 +211,45 @@ export default function TraineeFormScreen({ navigation, route }: Props): React.J
   );
 
   return (
-    <Screen footer={<Button title={traineeId ? 'Save changes' : 'Add client'} onPress={() => void onSave()} loading={saving} disabled={uploading} />}>
-      <Pressable onPress={() => void pickPhoto()} style={styles.photoWrap} accessibilityRole="button" accessibilityLabel="Choose photo">
-        {form.image_url ? (
-          <Image source={{ uri: form.image_url }} style={styles.photo} />
-        ) : (
-          <View style={[styles.photo, styles.photoEmpty]}>
-            <AppText tone="secondary">Add photo</AppText>
+    <Screen
+      footer={
+        <Button
+          title={traineeId ? 'Save changes' : 'Add client'}
+          icon={traineeId ? 'checkmark' : 'person-add'}
+          onPress={() => void onSave()}
+          loading={saving}
+          disabled={uploading}
+        />
+      }
+    >
+      <View style={styles.photoBlock}>
+        <Pressable
+          onPress={() => void pickPhoto()}
+          style={styles.photoWrap}
+          accessibilityRole="button"
+          accessibilityLabel={form.image_url ? 'Change photo' : 'Add photo'}
+        >
+          <Avatar name={form.name || undefined} uri={form.image_url || undefined} size={96} />
+          <View style={styles.camera}>
+            {uploading ? (
+              <ActivityIndicator size="small" color={colors.onAccent} />
+            ) : (
+              <Ionicons name="camera" size={16} color={colors.onAccent} />
+            )}
           </View>
+        </Pressable>
+        {form.image_url ? (
+          <Button title="Remove photo" variant="ghost" size="small" onPress={() => set('image_url', '')} />
+        ) : (
+          <AppText variant="caption" tone="secondary" style={styles.photoHint}>
+            Tap to add a photo
+          </AppText>
         )}
-        {uploading ? <ActivityIndicator style={styles.photoSpinner} color={Colors.primary} /> : null}
-      </Pressable>
-      {form.image_url ? <Button title="Remove photo" variant="ghost" onPress={() => set('image_url', '')} /> : null}
+      </View>
 
-      {field('name', 'Full name *', { autoCapitalize: 'words' })}
-      {field('phone_number', 'Phone', { keyboardType: 'phone-pad' })}
+      <SectionHeader title="Basics" style={styles.firstSection} />
+      {field('name', 'Full name *', { autoCapitalize: 'words', placeholder: 'e.g. Rahul Sharma' })}
+      {field('phone_number', 'Phone', { keyboardType: 'phone-pad', hint: 'Used for WhatsApp fee reminders' })}
       <AppText variant="label" tone="secondary" style={styles.label}>
         Gender
       </AppText>
@@ -216,33 +258,71 @@ export default function TraineeFormScreen({ navigation, route }: Props): React.J
           <Chip key={g} label={g} selected={form.gender.toLowerCase() === g.toLowerCase()} onPress={() => set('gender', g.toLowerCase())} />
         ))}
       </View>
-      {field('dob', 'Date of birth', { placeholder: 'DD/MM/YYYY' })}
-      {field('height', 'Height (cm)', { keyboardType: 'decimal-pad' })}
-      {field('goals', 'Goals', { multiline: true })}
-      {field('profession', 'Profession')}
-      {field('start_date', 'Start date', { placeholder: 'YYYY-MM-DD' })}
-      {field('membership_type', 'Membership / plan', { placeholder: 'e.g. Monthly, 12 sessions' })}
-      {field('emergency_contact', 'Emergency contact')}
-      {field('active_supplements', 'Supplements')}
-      {field('notes', 'Private notes (only you see these)', { multiline: true })}
-      <View style={styles.switchRow}>
-        <AppText style={styles.flex}>Active client</AppText>
-        <Switch value={form.active_status} onValueChange={(v) => set('active_status', v)} accessibilityLabel="Active client" />
+      <View style={styles.row}>
+        <View style={styles.flex}>{field('dob', 'Date of birth', { placeholder: 'DD/MM/YYYY' })}</View>
+        <View style={styles.flex}>{field('height', 'Height (cm)', { keyboardType: 'decimal-pad' })}</View>
       </View>
+      {field('profession', 'Profession')}
 
-      {traineeId ? <Button title="Delete client" variant="ghost" onPress={() => void onDelete()} disabled={saving} style={styles.delete} /> : null}
+      <SectionHeader title="Training" />
+      {field('goals', 'Goals', { multiline: true, placeholder: 'e.g. Lose 5 kg, run a 10K' })}
+      <View style={styles.row}>
+        <View style={styles.flex}>{field('start_date', 'Start date', { placeholder: 'YYYY-MM-DD' })}</View>
+        <View style={styles.flex}>{field('membership_type', 'Plan', { placeholder: 'e.g. Monthly' })}</View>
+      </View>
+      {field('active_supplements', 'Supplements')}
+      <Card style={styles.switchCard}>
+        <SwitchRow
+          label="Active client"
+          value={form.active_status}
+          onValueChange={(v) => set('active_status', v)}
+        />
+      </Card>
+
+      <SectionHeader title="Private" />
+      {field('emergency_contact', 'Emergency contact')}
+      {field('notes', 'Notes (only you see these)', { multiline: true })}
+
+      {traineeId ? (
+        <Pressable
+          onPress={() => void onDelete()}
+          disabled={saving}
+          accessibilityRole="button"
+          style={styles.delete}
+          hitSlop={8}
+        >
+          <AppText variant="label" tone="error" center>
+            Delete client
+          </AppText>
+        </Pressable>
+      ) : null}
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  photoWrap: { alignSelf: 'center', marginBottom: Spacing.small },
-  photo: { width: 96, height: 96, borderRadius: 48, backgroundColor: Colors.backgroundAlt },
-  photoEmpty: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' },
-  photoSpinner: { position: 'absolute', top: 38, left: 38 },
-  label: { marginBottom: Spacing.xs },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: Spacing.small },
-  switchRow: { flexDirection: 'row', alignItems: 'center', minHeight: 48, marginBottom: Spacing.medium },
-  delete: { marginTop: Spacing.large },
-});
+const makeStyles = ({ colors }: Theme) =>
+  StyleSheet.create({
+    flex: { flex: 1, minWidth: 0 },
+    row: { flexDirection: 'row', gap: Spacing.small },
+    photoBlock: { alignItems: 'center', marginBottom: Spacing.small },
+    photoWrap: { alignSelf: 'center' },
+    camera: {
+      position: 'absolute',
+      right: 0,
+      bottom: 0,
+      width: 32,
+      height: 32,
+      borderRadius: Radii.pill,
+      backgroundColor: colors.accent,
+      borderWidth: 3,
+      borderColor: colors.bg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    photoHint: { marginTop: Spacing.small },
+    firstSection: { marginTop: Spacing.small },
+    label: { marginBottom: Spacing.small - 2 },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: Spacing.small },
+    switchCard: { paddingVertical: 0, marginBottom: Spacing.medium },
+    delete: { minHeight: 48, justifyContent: 'center', marginTop: Spacing.large },
+  });

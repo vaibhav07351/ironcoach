@@ -1,35 +1,26 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
 
-import { Colors } from '@/constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 import AccountScreen from '../screens/AccountScreen';
 import ClientTodayScreen from '../screens/ClientTodayScreen';
 import type { ClientTabParamList } from '../types/navigation';
+import { tabListeners, tabScreenOptions, type TabIcon } from './tabOptions';
 
 const Tab = createBottomTabNavigator<ClientTabParamList>();
 
-const icons: Record<keyof ClientTabParamList, keyof typeof Ionicons.glyphMap> = {
-  Home: 'home-outline',
-  Account: 'person-circle-outline',
+const icons: Record<keyof ClientTabParamList, TabIcon> = {
+  Home: 'today',
+  Account: 'person-circle',
 };
 
 /** Client Today and account. */
 export function ClientTabs(): React.JSX.Element {
+  const theme = useTheme();
+  const screenOptions = useMemo(() => tabScreenOptions<ClientTabParamList>(theme, icons), [theme]);
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerStyle: { backgroundColor: Colors.background },
-        headerShadowVisible: false,
-        headerTitleStyle: { color: Colors.textPrimary },
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
-        tabBarStyle: { backgroundColor: Colors.surface, borderTopColor: Colors.border },
-        tabBarIcon: ({ color, size }) => <Ionicons name={icons[route.name]} size={size} color={color} />,
-        sceneStyle: { backgroundColor: Colors.background },
-      })}
-    >
-      <Tab.Screen name="Home" component={ClientTodayScreen} options={{ title: 'Today' }} />
+    <Tab.Navigator screenOptions={screenOptions} screenListeners={tabListeners}>
+      <Tab.Screen name="Home" component={ClientTodayScreen} options={{ title: 'Today', headerShown: false }} />
       <Tab.Screen name="Account" component={AccountScreen} options={{ title: 'Account' }} />
     </Tab.Navigator>
   );

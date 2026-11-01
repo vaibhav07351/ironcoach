@@ -4,27 +4,27 @@ Things only you can do (accounts, secrets, consoles, commits). Do them all at th
 order. Each item says why it matters and exactly what to run or click. Claude keeps this file
 up to date as phases finish.
 
-Last updated: 2026-10-24 (after Phase 5).
+Last updated: 2026-11-01 (UI redesign section added).
 
 ---
 
 ## 1. Git (do first)
 
-- [ ] **Untrack the committed binaries** (optional but recommended). They are build output and
+- [x] **Untrack the committed binaries** (optional but recommended). They are build output and
   bloat the repo; the new `.gitignore` keeps them out from now on. The files stay on disk.
   ```bash
   cd "/d/Project Apps/ironcoach/ironcoach"
   git rm --cached backend/bin/ironcoach.exe backend/main.exe
   ```
-- [ ] **Commit** the work (suggested messages are at the end of each phase in
+- [x] **Commit** the work (suggested messages are at the end of each phase in
   `docs/relaunch-plan.md`).
-- [ ] **Normalize line endings once**, right after committing, so git stores Go files with LF
+- [x] **Normalize line endings once**, right after committing, so git stores Go files with LF
   (the CI formatting check expects it), then commit that separately:
   ```bash
   git add --renormalize .
   git commit -m "Normalize line endings (LF for Go files)"
   ```
-- [ ] **Push.** The deploy workflow now runs tests first and only deploys if they pass.
+- [x] **Push.** The deploy workflow now runs tests first and only deploys if they pass.
 
 ## 2. GitHub repository settings
 
@@ -97,7 +97,7 @@ These come up in Phase 4/5; listed here so nothing is forgotten.
 
 ## 6. Phase 5 (v1 screens, fees and attendance): things only you can do
 
-- [ ] **Delete the three replaced screens** (Claude did not delete them without your OK; nothing
+- [x] **Delete the three replaced screens** (Claude did not delete them without your OK; nothing
   imports them any more). They are tracked in git, but their Phase 4 edits are not committed yet,
   so commit first if you want the Phase 4 versions in history. In PowerShell 5.1:
   ```powershell
@@ -121,3 +121,35 @@ These come up in Phase 4/5; listed here so nothing is forgotten.
 - [ ] **Backend deploy**: the backend adds three MongoDB collections (`packages`, `payments`,
   `attendance`) and their indexes; they are created automatically at startup. No env vars changed.
 
+
+---
+
+## 7. UI redesign (navy and gold, dark mode): things only you can do
+
+Plan: `docs/ui-redesign-plan.md`. Type-check, lint, 84 tests and the web build all pass; what is
+below needs a real phone.
+
+- [ ] **Dark mode needs a new build.** `userInterfaceStyle` changed from `light` to `automatic` in
+  `app.config.js`; that is native config, so an over-the-air update alone keeps the app light.
+  Everything else (fonts, colors, animations, haptics) works over the air on the current build.
+  From `ironcoach/frontend` in PowerShell 5.1:
+  ```powershell
+  npm install
+  npx eas-cli build --profile development --platform android
+  ```
+- [ ] **Look at it on the phone** (20 minutes), in light AND dark (phone Settings, Display):
+  1. Sign in screen: navy, gold "NearMe", button at the bottom, status bar icons white.
+  2. Trainer Today: navy header with your Google photo, three stat tiles, Slipping / Fees due /
+     Trained today with avatars; pull down to refresh (no white gap above the navy).
+  3. Tap around: buttons and cards shrink slightly on press; selecting chips and tabs gives a
+     soft vibration. With Settings, Accessibility, "Remove animations" on, things fade instead.
+  4. Open a client: the sliding pill tabs, Fees (big amount, progress bar), Attendance calendar,
+     Workouts (set chips), Diet, Weight chart, Profile.
+  5. Phone text size at the largest setting: nothing should overlap or cut off.
+  6. Clients tab, Account, Coach profile (PIN Autofill and "Use my current location").
+- [ ] **Delete `frontend/components/TodayRow.tsx`** if you agree: nothing uses it any more
+  (replaced by `ListRow`). It is tracked in git, so it can be recovered. In PowerShell 5.1:
+  ```powershell
+  Remove-Item "D:\Project Apps\ironcoach\ironcoach\frontend\components\TodayRow.tsx"
+  ```
+- [ ] **New store screenshots** once you like it on the phone: the old ones show the cream design.

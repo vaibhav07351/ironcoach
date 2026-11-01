@@ -7,7 +7,7 @@ import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
-import { rowsToWorkout, SetEditor, workoutToRows, type SetRow } from '@/components/SetEditor';
+import { SetEditor } from '@/components/SetEditor';
 import { TextField } from '@/components/TextField';
 import { Spacing } from '@/constants/theme';
 import { errorMessage } from '../services/http';
@@ -15,6 +15,7 @@ import { updateWorkoutLog } from '../services/workoutService';
 import type { RootStackParamList } from '../types/navigation';
 import type { Workout } from '../types/workout';
 import { relativeDayLabel } from '../utils/date';
+import { rowsToWorkout, workoutToRows, type SetRow } from '../utils/sets';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutLogForm'>;
 

@@ -13,6 +13,7 @@ export default function TrainerExpertiseScreen(): React.JSX.Element {
     <OnboardingStep
       title="What do you coach?"
       subtitle="Pick everything that applies. You can change this later in your profile."
+      icon="barbell"
       onSave={async (codes) => {
         try {
           await setUser(await completeTrainerExpertise(codes));

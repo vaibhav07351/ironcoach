@@ -34,7 +34,7 @@ export function QuickLogChips({ traineeId, codes }: Props): React.JSX.Element {
   return (
     <View style={styles.row}>
       {list.map((code) => (
-        <Chip key={code} label={expertiseLabel(code)} onPress={() => start(code)} />
+        <Chip key={code} label={expertiseLabel(code)} icon="add" onPress={() => start(code)} />
       ))}
     </View>
   );

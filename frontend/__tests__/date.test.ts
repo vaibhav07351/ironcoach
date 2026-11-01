@@ -1,4 +1,14 @@
-import { addDays, isFuture, packageEndDate, parseLocalDate, relativeDayLabel, toLocalDate, todayLocal } from '../app/utils/date';
+import {
+  addDays,
+  greetingForHour,
+  isFuture,
+  packageEndDate,
+  parseLocalDate,
+  relativeDayLabel,
+  toLocalDate,
+  todayLocal,
+  weekdayDateLabel,
+} from '../app/utils/date';
 
 describe('date utils', () => {
   it('formats local calendar dates, not UTC', () => {
@@ -52,5 +62,20 @@ describe('packageEndDate', () => {
 
   it('rejects an invalid start date', () => {
     expect(() => packageEndDate('nope', 1)).toThrow();
+  });
+
+  it('greets by time of day at the boundaries', () => {
+    expect(greetingForHour(4)).toBe('Good evening');
+    expect(greetingForHour(5)).toBe('Good morning');
+    expect(greetingForHour(11)).toBe('Good morning');
+    expect(greetingForHour(12)).toBe('Good afternoon');
+    expect(greetingForHour(16)).toBe('Good afternoon');
+    expect(greetingForHour(17)).toBe('Good evening');
+  });
+
+  it('labels a date with its weekday and falls back to the raw value', () => {
+    expect(weekdayDateLabel('2026-11-01')).toMatch(/Sunday/);
+    expect(weekdayDateLabel('2026-11-01')).toMatch(/November/);
+    expect(weekdayDateLabel('not-a-date')).toBe('not-a-date');
   });
 });

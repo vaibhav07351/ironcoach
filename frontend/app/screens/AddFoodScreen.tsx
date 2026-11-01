@@ -1,14 +1,16 @@
 import React, { useLayoutEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Toast from 'react-native-toast-message';
 
 import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
+import { SectionHeader } from '@/components/SectionHeader';
 import { TextField } from '@/components/TextField';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { addFoodToDay } from '../services/dietService';
 import { errorMessage } from '../services/http';
 import { searchNutrition, type NutritionFood } from '../services/nutritionService';
@@ -21,6 +23,14 @@ type Draft = { name: string; quantity: string; units: string; calories: string; 
 
 const empty: Draft = { name: '', quantity: '', units: 'g', calories: '', proteins: '', carbs: '', fats: '' };
 const r1 = (n: number): string => String(Math.round(n * 10) / 10);
+
+const NUMERIC_LABELS = {
+  quantity: 'Quantity',
+  calories: 'Calories',
+  proteins: 'Protein',
+  carbs: 'Carbs',
+  fats: 'Fat',
+} as const;
 
 /** Add one food to a meal: search the food database (values scale with grams) or type macros. */
 export default function AddFoodScreen({ route, navigation }: Props): React.JSX.Element {
@@ -85,7 +95,7 @@ export default function AddFoodScreen({ route, navigation }: Props): React.JSX.E
     for (const k of nums) {
       const n = draft[k].trim() === '' ? 0 : Number(draft[k]);
       if (!Number.isFinite(n) || n < 0) {
-        setError(`${k} must be a positive number`);
+        setError(`${NUMERIC_LABELS[k]} must be a positive number`);
         return;
       }
       parsed[k] = n;
@@ -116,39 +126,52 @@ export default function AddFoodScreen({ route, navigation }: Props): React.JSX.E
   };
 
   const field = (key: keyof Draft, label: string, numeric = true): React.JSX.Element => (
-    <TextField
-      label={label}
-      value={draft[key]}
-      onChangeText={key === 'quantity' ? setQuantity : (v) => setDraft({ ...draft, [key]: v })}
-      keyboardType={numeric ? 'decimal-pad' : 'default'}
-      style={styles.half}
-    />
+    <View style={styles.half}>
+      <TextField
+        label={label}
+        value={draft[key]}
+        onChangeText={key === 'quantity' ? setQuantity : (v) => setDraft({ ...draft, [key]: v })}
+        keyboardType={numeric ? 'decimal-pad' : 'default'}
+      />
+    </View>
   );
 
   return (
-    <Screen footer={<Button title="Add food" onPress={() => void onSave()} loading={saving} />}>
-      <TextField
-        label="Search foods"
-        value={query}
-        onChangeText={setQuery}
-        onSubmitEditing={() => void runSearch()}
-        returnKeyType="search"
-        placeholder="e.g. paneer, banana, oats"
-      />
-      <Button title="Search" variant="secondary" onPress={() => void runSearch()} loading={searching} />
+    <Screen footer={<Button title="Add food" icon="checkmark" onPress={() => void onSave()} loading={saving} />}>
+      <View style={styles.searchRow}>
+        <View style={styles.half}>
+          <TextField
+            label="Search foods"
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={() => void runSearch()}
+            returnKeyType="search"
+            placeholder="e.g. paneer, banana, oats"
+          />
+        </View>
+        <Button
+          title="Search"
+          icon="search"
+          variant="secondary"
+          onPress={() => void runSearch()}
+          loading={searching}
+          disabled={query.trim().length < 2}
+          style={styles.searchButton}
+        />
+      </View>
       {hits.map((h) => (
-        <Pressable key={h.external_id} onPress={() => pick(h)} accessibilityRole="button" style={styles.hit}>
-          <AppText>{h.name}</AppText>
-          <AppText variant="caption" tone="muted">
-            {h.brand ? `${h.brand} · ` : ''}
-            {Math.round(h.calories)} kcal · {Math.round(h.proteins)} g protein {h.per_100g ? 'per 100 g' : h.serving_desc ?? ''}
-          </AppText>
-        </Pressable>
+        <ListRow
+          key={h.external_id}
+          title={h.name}
+          subtitle={`${h.brand ? `${h.brand}, ` : ''}${Math.round(h.calories)} kcal, ${Math.round(h.proteins)} g protein ${
+            h.per_100g ? 'per 100 g' : (h.serving_desc ?? '')
+          }`}
+          onPress={() => pick(h)}
+          accessibilityLabel={`Use ${h.name}`}
+        />
       ))}
 
-      <AppText variant="label" tone="secondary" style={styles.section}>
-        Food details
-      </AppText>
+      <SectionHeader title="Food details" />
       <TextField label="Name" value={draft.name} onChangeText={(v) => setDraft({ ...draft, name: v })} maxLength={120} />
       <View style={styles.row}>
         {field('quantity', 'Quantity')}
@@ -162,16 +185,20 @@ export default function AddFoodScreen({ route, navigation }: Props): React.JSX.E
         {field('carbs', 'Carbs (g)')}
         {field('fats', 'Fat (g)')}
       </View>
-      {error ? <AppText tone="error">{error}</AppText> : null}
+      {error ? (
+        <AppText tone="error" accessibilityRole="alert">
+          {error}
+        </AppText>
+      ) : null}
 
       {existingFoods.length > 0 ? (
-        <Card style={styles.section}>
+        <Card style={styles.existing}>
           <AppText variant="label" tone="secondary">
             Already in {mealName}
           </AppText>
           {existingFoods.map((f, i) => (
-            <AppText key={`${f.name}-${i}`} variant="caption">
-              {f.name} · {f.quantity} {f.units}
+            <AppText key={`${f.name}-${i}`} variant="caption" style={styles.existingItem}>
+              {f.name}, {f.quantity} {f.units}
             </AppText>
           ))}
         </Card>
@@ -181,12 +208,10 @@ export default function AddFoodScreen({ route, navigation }: Props): React.JSX.E
 }
 
 const styles = StyleSheet.create({
-  hit: {
-    paddingVertical: Spacing.small,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-  },
-  section: { marginTop: Spacing.large, marginBottom: Spacing.small },
+  searchRow: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.small },
+  searchButton: { marginBottom: Spacing.medium, minHeight: 52 },
+  existing: { marginTop: Spacing.large },
+  existingItem: { marginTop: Spacing.xs },
   row: { flexDirection: 'row', gap: Spacing.small },
-  half: {},
+  half: { flex: 1, minWidth: 0 },
 });

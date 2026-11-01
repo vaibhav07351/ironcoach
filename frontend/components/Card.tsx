@@ -1,41 +1,44 @@
 import React, { type ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { Colors, Radii, Spacing } from '@/constants/theme';
+import { Radii, Spacing } from '@/constants/theme';
+import { useThemedStyles, type Theme } from '../app/contexts/ThemeContext';
+import { PressableScale } from './PressableScale';
 
 type Props = {
   children: ReactNode;
   onPress?: () => void;
   accessibilityLabel?: string;
+  accessibilityHint?: string;
   style?: StyleProp<ViewStyle>;
 };
 
-/** A surface for grouping content. Pressable when `onPress` is given. */
-export function Card({ children, onPress, accessibilityLabel, style }: Props): React.JSX.Element {
+/** A raised surface for grouping content. Pressable (with press feedback) when `onPress` is given. */
+export function Card({ children, onPress, accessibilityLabel, accessibilityHint, style }: Props): React.JSX.Element {
+  const styles = useThemedStyles(makeStyles);
   if (onPress) {
     return (
-      <Pressable
+      <PressableScale
         onPress={onPress}
+        scaleTo={0.985}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        style={({ pressed }) => [styles.card, pressed ? styles.pressed : null, style]}
+        accessibilityHint={accessibilityHint}
+        style={[styles.card, style]}
       >
         {children}
-      </Pressable>
+      </PressableScale>
     );
   }
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
-    padding: Spacing.medium,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-});
+const makeStyles = ({ colors, elevation }: Theme) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: Radii.lg,
+      padding: Spacing.medium,
+      ...elevation(1),
+    },
+  });

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { Platform, StyleSheet, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -8,12 +8,14 @@ import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
+import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
-import { Colors, Radii, Spacing } from '@/constants/theme';
+import { MaxFontScale, Radii, Spacing } from '@/constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme, useThemedStyles, type Theme } from '../contexts/ThemeContext';
 import { useTraineeRecord } from '../contexts/TraineeRecordContext';
 import { errorMessage } from '../services/http';
 import { getTrainee, updateTrainee } from '../services/traineeService';
@@ -41,6 +43,8 @@ function resultsFor(tests: FitnessTest[], date: string): Results {
 export default function FitnessTestScreen(): React.JSX.Element {
   const record = useTraineeRecord();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const isTrainer = user?.role === 'trainer';
   const [tests, setTests] = useState<FitnessTest[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -129,6 +133,7 @@ export default function FitnessTestScreen(): React.JSX.Element {
               <Button title="Cancel" variant="secondary" onPress={() => setEditing(false)} style={styles.flex} />
               <Button
                 title="Save"
+                icon="checkmark"
                 onPress={() => void onSave()}
                 loading={saving}
                 disabled={!!draftDateError}
@@ -137,8 +142,14 @@ export default function FitnessTestScreen(): React.JSX.Element {
             </View>
           ) : (
             <View style={styles.footerRow}>
-              <Button title="New assessment" variant="secondary" onPress={() => startEdit(todayLocal())} style={styles.flex} />
-              {hasData ? <Button title="Edit" onPress={() => startEdit(date)} style={styles.flex} /> : null}
+              <Button
+                title="New assessment"
+                icon="add"
+                variant={hasData ? 'secondary' : 'primary'}
+                onPress={() => startEdit(todayLocal())}
+                style={styles.flex}
+              />
+              {hasData ? <Button title="Edit" icon="create-outline" onPress={() => startEdit(date)} style={styles.flex} /> : null}
             </View>
           )
         ) : undefined
@@ -165,11 +176,15 @@ export default function FitnessTestScreen(): React.JSX.Element {
           </View>
         </View>
       ) : (
-        <AppText tone="secondary" style={styles.empty}>
-          {isTrainer
-            ? 'No assessments yet. Tap New assessment to record the first one.'
-            : 'Your coach has not recorded an assessment yet.'}
-        </AppText>
+        <EmptyState
+          icon="stopwatch-outline"
+          title="No assessments yet"
+          message={
+            isTrainer
+              ? 'Tap New assessment to record the first one.'
+              : 'Your coach has not recorded an assessment yet.'
+          }
+        />
       )}
 
       {(editing || hasData) &&
@@ -178,17 +193,21 @@ export default function FitnessTestScreen(): React.JSX.Element {
           return (
             <Card key={category} style={styles.category}>
               <View style={styles.categoryHeader}>
-                <MaterialIcons
-                  name={items[0].icon as keyof typeof MaterialIcons.glyphMap}
-                  size={18}
-                  color={items[0].color}
-                />
-                <AppText variant="subheading" style={styles.categoryTitle}>
+                <View style={styles.categoryIcon}>
+                  <MaterialIcons name={items[0].icon as keyof typeof MaterialIcons.glyphMap} size={18} color={colors.tint} />
+                </View>
+                <AppText variant="subheading" style={styles.categoryTitle} numberOfLines={1}>
                   {category}
                 </AppText>
+                <AppText variant="caption" tone="muted" style={styles.colHead}>
+                  Try 1
+                </AppText>
+                <AppText variant="caption" tone="muted" style={styles.colHead}>
+                  Try 2
+                </AppText>
               </View>
-              {items.map((t) => (
-                <View key={t.test} style={styles.testRow}>
+              {items.map((t, i) => (
+                <View key={t.test} style={[styles.testRow, i > 0 ? styles.divider : null]}>
                   <AppText style={styles.testName}>{t.test}</AppText>
                   {(['result1', 'result2'] as const).map((field) =>
                     editing ? (
@@ -196,14 +215,16 @@ export default function FitnessTestScreen(): React.JSX.Element {
                         key={field}
                         value={draft[t.test]?.[field] ?? ''}
                         onChangeText={(v) => setDraft({ ...draft, [t.test]: { ...draft[t.test], [field]: v } })}
-                        placeholder={field === 'result1' ? 'Try 1' : 'Try 2'}
-                        placeholderTextColor={Colors.textMuted}
+                        placeholder="-"
+                        placeholderTextColor={colors.textMuted}
+                        selectionColor={colors.tint}
+                        maxFontSizeMultiplier={MaxFontScale}
                         accessibilityLabel={`${t.test} ${field === 'result1' ? 'try 1' : 'try 2'}`}
                         style={styles.input}
                         maxLength={20}
                       />
                     ) : (
-                      <AppText key={field} style={styles.value}>
+                      <AppText key={field} variant="label" style={styles.value}>
                         {shown[t.test]?.[field] || '-'}
                       </AppText>
                     )
@@ -217,56 +238,74 @@ export default function FitnessTestScreen(): React.JSX.Element {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  footerRow: {
-    flexDirection: 'row',
-    gap: Spacing.small,
-  },
-  dates: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: Spacing.small,
-    marginBottom: Spacing.small,
-  },
-  empty: {
-    marginBottom: Spacing.medium,
-  },
-  category: {
-    marginBottom: Spacing.medium,
-  },
-  categoryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.small,
-  },
-  categoryTitle: {
-    marginLeft: Spacing.small,
-  },
-  testRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.xs,
-    gap: Spacing.small,
-  },
-  testName: {
-    flex: 1,
-    minWidth: 0,
-  },
-  input: {
-    width: 76,
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radii.sm,
-    paddingHorizontal: Spacing.small,
-    fontSize: 16,
-    color: Colors.textPrimary,
-    backgroundColor: Colors.surface,
-    textAlign: 'center',
-  },
-  value: {
-    width: 76,
-    textAlign: 'center',
-  },
-});
+const makeStyles = ({ colors }: Theme) =>
+  StyleSheet.create({
+    flex: { flex: 1 },
+    footerRow: {
+      flexDirection: 'row',
+      gap: Spacing.small,
+    },
+    dates: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: Spacing.small,
+      marginBottom: Spacing.small,
+    },
+    category: {
+      marginBottom: Spacing.small + 4,
+    },
+    categoryHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.small,
+      marginBottom: Spacing.small,
+    },
+    categoryIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: Radii.sm,
+      backgroundColor: colors.tintSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    categoryTitle: {
+      flex: 1,
+      minWidth: 0,
+    },
+    colHead: {
+      width: 76,
+      textAlign: 'center',
+    },
+    testRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: Spacing.small,
+      gap: Spacing.small,
+    },
+    divider: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.separator,
+    },
+    testName: {
+      flex: 1,
+      minWidth: 0,
+    },
+    input: {
+      width: 76,
+      minHeight: 44,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      borderRadius: Radii.sm,
+      paddingHorizontal: Spacing.small,
+      fontSize: 16,
+      color: colors.text,
+      backgroundColor: colors.surface,
+      textAlign: 'center',
+      ...Platform.select({ web: { outlineStyle: 'none' } as object, default: {} }),
+    },
+    value: {
+      width: 76,
+      textAlign: 'center',
+      fontVariant: ['tabular-nums'],
+    },
+  });

@@ -1,9 +1,11 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Colors, Radii, Spacing } from '@/constants/theme';
+import { Radii, Spacing } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '../app/contexts/ThemeContext';
 import { buildMonthCells } from '../app/utils/calendar';
-import { todayLocal } from '../app/utils/date';
+import { longDateLabel, todayLocal } from '../app/utils/date';
+import { haptic } from '../app/utils/haptics';
 import { AppText } from './AppText';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -20,6 +22,8 @@ type Props = {
 
 /** A month calendar with attended days filled in. */
 export function MonthGrid({ year, month, attended, onToggle }: Props): React.JSX.Element {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const cells = buildMonthCells(year, month);
   const today = todayLocal();
   const rows: (typeof cells)[] = [];
@@ -32,7 +36,7 @@ export function MonthGrid({ year, month, attended, onToggle }: Props): React.JSX
       <View style={styles.row}>
         {WEEKDAYS.map((d, i) => (
           <View key={i} style={styles.cell}>
-            <AppText variant="caption" tone="muted">
+            <AppText variant="caption" tone="muted" style={styles.weekday}>
               {d}
             </AppText>
           </View>
@@ -47,25 +51,30 @@ export function MonthGrid({ year, month, attended, onToggle }: Props): React.JSX
             const date = cell.date;
             const isAttended = attended.has(date);
             const isFuture = date > today;
+            const isToday = date === today;
             const tappable = !!onToggle && !isFuture;
             return (
               <View key={c} style={styles.cell}>
                 <Pressable
                   disabled={!tappable}
-                  onPress={() => onToggle?.(date)}
+                  onPress={() => {
+                    haptic(isAttended ? 'select' : 'success');
+                    onToggle?.(date);
+                  }}
                   accessibilityRole="button"
-                  accessibilityLabel={`${date}${isAttended ? ', attended' : ''}`}
+                  accessibilityLabel={`${longDateLabel(date)}${isAttended ? ', attended' : ''}${isToday ? ', today' : ''}`}
                   accessibilityState={{ selected: isAttended, disabled: !tappable }}
-                  style={[
+                  style={({ pressed }) => [
                     styles.day,
                     isAttended ? styles.dayAttended : null,
-                    date === today ? styles.dayToday : null,
+                    isToday ? styles.dayToday : null,
                     isFuture ? styles.dayFuture : null,
+                    pressed ? styles.dayPressed : null,
                   ]}
                 >
                   <AppText
                     variant="label"
-                    style={{ color: isAttended ? Colors.textOnPrimary : isFuture ? Colors.textMuted : Colors.textPrimary }}
+                    style={{ color: isAttended ? colors.onTint : isFuture ? colors.textMuted : colors.text }}
                   >
                     {cell.day}
                   </AppText>
@@ -79,31 +88,39 @@ export function MonthGrid({ year, month, attended, onToggle }: Props): React.JSX
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-  },
-  cell: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.xs,
-  },
-  day: {
-    width: 40,
-    height: 40,
-    borderRadius: Radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayAttended: {
-    backgroundColor: Colors.primary,
-  },
-  dayToday: {
-    borderWidth: 2,
-    borderColor: Colors.accent,
-  },
-  dayFuture: {
-    opacity: 0.5,
-  },
-});
+const makeStyles = ({ colors }: Theme) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+    },
+    cell: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 3,
+    },
+    weekday: {
+      fontWeight: '600',
+      marginBottom: Spacing.xs,
+    },
+    day: {
+      width: 40,
+      height: 40,
+      borderRadius: Radii.pill,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    dayAttended: {
+      backgroundColor: colors.tint,
+    },
+    dayToday: {
+      borderWidth: 2,
+      borderColor: colors.accent,
+    },
+    dayFuture: {
+      opacity: 0.45,
+    },
+    dayPressed: {
+      transform: [{ scale: 0.92 }],
+    },
+  });

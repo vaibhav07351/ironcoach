@@ -9,8 +9,11 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { IconBadge } from '@/components/IconBadge';
+import { IconButton } from '@/components/IconButton';
 import { LoadingState } from '@/components/LoadingState';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing, webScrollFix } from '@/constants/theme';
+import { useThemedStyles, type Theme } from '../contexts/ThemeContext';
 import { errorMessage } from '../services/http';
 import { deleteCategory, listCategories } from '../services/workoutService';
 import type { RootStackParamList } from '../types/navigation';
@@ -22,6 +25,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutCategories'>;
 /** Step 1 of gym logging: pick a muscle group / category. */
 export default function WorkoutCategoriesScreen({ route, navigation }: Props): React.JSX.Element {
   const { traineeId, date } = route.params;
+  const styles = useThemedStyles(makeStyles);
   const [items, setItems] = useState<Category[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -61,10 +65,18 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props): R
   return (
     <View style={styles.root}>
       <FlatList
+        style={webScrollFix}
         data={items}
         keyExtractor={(c) => c.id}
         contentContainerStyle={styles.content}
-        ListEmptyComponent={<EmptyState title="No categories" message="Add one to start logging." />}
+        ListHeaderComponent={
+          items.length > 0 ? (
+            <AppText tone="secondary" style={styles.lead}>
+              Pick what was trained.
+            </AppText>
+          ) : null
+        }
+        ListEmptyComponent={<EmptyState icon="barbell-outline" title="No categories" message="Add one to start logging." />}
         renderItem={({ item }) => (
           <Card
             style={styles.card}
@@ -74,33 +86,53 @@ export default function WorkoutCategoriesScreen({ route, navigation }: Props): R
             }
           >
             <View style={styles.row}>
-              <AppText variant="subheading" style={styles.flex}>
+              <IconBadge name="barbell" size={40} />
+              <AppText variant="subheading" numberOfLines={1} style={styles.flex}>
                 {item.name}
               </AppText>
-              <Button
-                title="Rename"
-                variant="ghost"
+              <IconButton
+                icon="create-outline"
+                accessibilityLabel={`Rename ${item.name}`}
                 onPress={() =>
                   navigation.navigate('AddCustomCategory', { traineeId, categoryId: item.id, currentName: item.name })
                 }
               />
-              <Button title="Delete" variant="ghost" onPress={() => void onDelete(item)} />
+              <IconButton
+                icon="trash-outline"
+                tone="danger"
+                accessibilityLabel={`Delete ${item.name}`}
+                onPress={() => void onDelete(item)}
+              />
             </View>
           </Card>
         )}
       />
       <View style={styles.footer}>
-        <Button title="Add category" icon="add" onPress={() => navigation.navigate('AddCustomCategory', { traineeId })} />
+        <Button
+          title="Add category"
+          variant="secondary"
+          icon="add"
+          onPress={() => navigation.navigate('AddCustomCategory', { traineeId })}
+        />
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.medium, flexGrow: 1 },
-  card: { marginBottom: Spacing.small, paddingVertical: Spacing.small },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  flex: { flex: 1 },
-  footer: { padding: Spacing.medium, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.border },
-});
+const makeStyles = ({ colors }: Theme) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: Spacing.medium, flexGrow: 1 },
+    lead: { marginBottom: Spacing.small + 4 },
+    card: { marginBottom: Spacing.small + 2, paddingVertical: Spacing.small + 2 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.small },
+    flex: { flex: 1, minWidth: 0, marginLeft: Spacing.xs },
+    footer: {
+      paddingHorizontal: Spacing.medium,
+      paddingTop: Spacing.small + 4,
+      paddingBottom: Spacing.medium,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.separator,
+      backgroundColor: colors.bg,
+    },
+  });

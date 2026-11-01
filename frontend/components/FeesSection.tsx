@@ -7,12 +7,18 @@ import Toast from 'react-native-toast-message';
 
 import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
+import { Badge } from '@/components/Badge';
 import { Card } from '@/components/Card';
+import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { IconBadge } from '@/components/IconBadge';
+import { ListRow } from '@/components/ListRow';
 import { LoadingState } from '@/components/LoadingState';
 import { PackageCard } from '@/components/PackageCard';
-import { Colors, Spacing } from '@/constants/theme';
+import { SectionHeader } from '@/components/SectionHeader';
+import { Radii, Spacing, webScrollFix } from '@/constants/theme';
 import { useAuth } from '../app/contexts/AuthContext';
+import { useTheme, useThemedStyles, type Theme } from '../app/contexts/ThemeContext';
 import { useTraineeRecord } from '../app/contexts/TraineeRecordContext';
 import { useFeeReminder } from '../app/hooks/useFeeReminder';
 import { deletePackage, deletePayment, getFees } from '../app/services/feesService';
@@ -34,6 +40,8 @@ export function FeesSection(): React.JSX.Element {
   const record = useTraineeRecord();
   const { user } = useAuth();
   const isTrainer = user?.role === 'trainer';
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { remind, busy } = useFeeReminder();
   const [fees, setFees] = useState<FeeSummary | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -90,9 +98,12 @@ export function FeesSection(): React.JSX.Element {
   }
 
   const hasMoney = fees.packages.length > 0 || fees.payments.length > 0;
+  const inCredit = fees.credit_paise > 0;
+  const paidShare = fees.total_paise > 0 ? Math.min(1, fees.paid_paise / fees.total_paise) : 0;
 
   return (
     <ScrollView
+      style={webScrollFix}
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl
@@ -101,17 +112,32 @@ export function FeesSection(): React.JSX.Element {
             setRefreshing(true);
             void load();
           }}
-          tintColor={Colors.primary}
+          tintColor={colors.tint}
+          colors={[colors.tint]}
+          progressBackgroundColor={colors.surface}
         />
       }
     >
       <Card style={styles.summary}>
         <AppText variant="label" tone="secondary">
-          {fees.credit_paise > 0 ? 'Paid in advance' : 'Amount due'}
+          {inCredit ? 'Paid in advance' : 'Amount due'}
         </AppText>
-        <AppText variant="title" tone={fees.due_paise > 0 ? 'error' : 'success'}>
-          {formatRupees(fees.credit_paise > 0 ? fees.credit_paise : fees.due_paise)}
+        <AppText
+          variant="number"
+          style={[styles.bigAmount, { color: fees.due_paise > 0 ? colors.danger : colors.success }]}
+        >
+          {formatRupees(inCredit ? fees.credit_paise : fees.due_paise)}
         </AppText>
+        {fees.total_paise > 0 ? (
+          <View
+            style={styles.track}
+            accessibilityRole="progressbar"
+            accessibilityLabel="Share of fees paid"
+            accessibilityValue={{ min: 0, max: 100, now: Math.round(paidShare * 100) }}
+          >
+            <View style={[styles.fill, { width: `${paidShare * 100}%` }]} />
+          </View>
+        ) : null}
         <AppText variant="caption" tone="secondary">
           Paid {formatRupees(fees.paid_paise)} of {formatRupees(fees.total_paise)}
         </AppText>
@@ -124,33 +150,33 @@ export function FeesSection(): React.JSX.Element {
             icon="pricetag-outline"
             onPress={() => navigation.navigate('AddPackage', { traineeId: record.id, traineeName: record.name })}
           />
-          <Button
-            title="Record payment"
-            icon="cash-outline"
-            variant="secondary"
-            onPress={() =>
-              navigation.navigate('AddPayment', {
-                traineeId: record.id,
-                traineeName: record.name,
-                duePaise: fees.due_paise,
-              })
-            }
-          />
-          {fees.due_paise > 0 ? (
+          <View style={styles.actionRow}>
             <Button
-              title="Remind on WhatsApp"
-              icon="logo-whatsapp"
+              title="Record payment"
+              icon="cash-outline"
               variant="secondary"
-              loading={busy}
-              onPress={() => void sendReminder(fees.due_paise)}
+              style={styles.flex}
+              onPress={() =>
+                navigation.navigate('AddPayment', {
+                  traineeId: record.id,
+                  traineeName: record.name,
+                  duePaise: fees.due_paise,
+                })
+              }
             />
-          ) : null}
-          <Pressable
-            onPress={() => navigation.navigate('UpiSettings')}
-            accessibilityRole="button"
-            style={styles.link}
-          >
-            <Ionicons name="wallet-outline" size={16} color={Colors.primary} />
+            {fees.due_paise > 0 ? (
+              <Button
+                title="Remind"
+                icon="logo-whatsapp"
+                variant="secondary"
+                loading={busy}
+                style={styles.flex}
+                onPress={() => void sendReminder(fees.due_paise)}
+              />
+            ) : null}
+          </View>
+          <Pressable onPress={() => navigation.navigate('UpiSettings')} accessibilityRole="button" style={styles.link}>
+            <Ionicons name="wallet-outline" size={16} color={colors.tint} />
             <AppText variant="label" tone="brand" style={styles.linkText}>
               My UPI id for reminders
             </AppText>
@@ -159,18 +185,18 @@ export function FeesSection(): React.JSX.Element {
       ) : null}
 
       {!hasMoney ? (
-        <AppText tone="secondary" center style={styles.empty}>
-          {isTrainer
-            ? 'No packages yet. Sell a package to start tracking sessions and fees.'
-            : 'Your coach has not added any packages yet.'}
-        </AppText>
+        <EmptyState
+          icon="pricetags-outline"
+          title="No packages yet"
+          message={
+            isTrainer ? 'Sell a package to start tracking sessions and fees.' : 'Your coach has not added any packages yet.'
+          }
+        />
       ) : null}
 
       {fees.packages.length > 0 ? (
         <>
-          <AppText variant="subheading" style={styles.heading}>
-            Packages
-          </AppText>
+          <SectionHeader title="Packages" right={<Badge label={String(fees.packages.length)} />} />
           {[...fees.packages].reverse().map((pkg) => (
             <PackageCard
               key={pkg.id}
@@ -183,29 +209,26 @@ export function FeesSection(): React.JSX.Element {
 
       {fees.payments.length > 0 ? (
         <>
-          <AppText variant="subheading" style={styles.heading}>
-            Payments
-          </AppText>
+          <SectionHeader title="Payments" right={<Badge label={String(fees.payments.length)} />} />
           {fees.payments.map((pay) => (
-            <Card key={pay.id} style={styles.payment}>
-              <View style={styles.flex}>
-                <AppText variant="subheading">{formatRupees(pay.amount_paise)}</AppText>
-                <AppText variant="caption" tone="secondary">
-                  {longDateLabel(pay.date)}
-                  {pay.note ? `, ${pay.note}` : ''}
-                </AppText>
-              </View>
-              {isTrainer ? (
-                <Pressable
-                  onPress={() => void remove('payment', pay.id, formatRupees(pay.amount_paise))}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Delete payment of ${formatRupees(pay.amount_paise)}`}
-                  hitSlop={10}
-                >
-                  <Ionicons name="trash-outline" size={20} color={Colors.textMuted} />
-                </Pressable>
-              ) : null}
-            </Card>
+            <ListRow
+              key={pay.id}
+              leading={<IconBadge name="cash-outline" tone="success" size={40} />}
+              title={formatRupees(pay.amount_paise)}
+              subtitle={`${longDateLabel(pay.date)}${pay.note ? `, ${pay.note}` : ''}`}
+              right={
+                isTrainer ? (
+                  <Pressable
+                    onPress={() => void remove('payment', pay.id, formatRupees(pay.amount_paise))}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete payment of ${formatRupees(pay.amount_paise)}`}
+                    hitSlop={10}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={colors.textMuted} />
+                  </Pressable>
+                ) : undefined
+              }
+            />
           ))}
         </>
       ) : null}
@@ -213,41 +236,52 @@ export function FeesSection(): React.JSX.Element {
   );
 }
 
-const styles = StyleSheet.create({
-  content: {
-    padding: Spacing.medium,
-    paddingBottom: 120,
-  },
-  summary: {
-    marginBottom: Spacing.medium,
-  },
-  actions: {
-    gap: Spacing.small,
-    marginBottom: Spacing.medium,
-  },
-  link: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 40,
-  },
-  linkText: {
-    marginLeft: Spacing.xs,
-  },
-  heading: {
-    marginTop: Spacing.small,
-    marginBottom: Spacing.small,
-  },
-  empty: {
-    marginVertical: Spacing.large,
-  },
-  payment: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.small,
-  },
-  flex: {
-    flex: 1,
-    minWidth: 0,
-  },
-});
+const makeStyles = ({ colors }: Theme) =>
+  StyleSheet.create({
+    content: {
+      padding: Spacing.medium,
+      paddingBottom: 120,
+    },
+    summary: {
+      marginBottom: Spacing.medium,
+    },
+    bigAmount: {
+      fontSize: 34,
+      lineHeight: 40,
+      marginTop: Spacing.xs,
+    },
+    track: {
+      height: 6,
+      borderRadius: Radii.pill,
+      backgroundColor: colors.surfaceMuted,
+      marginTop: Spacing.small + 4,
+      marginBottom: Spacing.small,
+      overflow: 'hidden',
+    },
+    fill: {
+      height: '100%',
+      borderRadius: Radii.pill,
+      backgroundColor: colors.success,
+    },
+    actions: {
+      gap: Spacing.small,
+      marginBottom: Spacing.small,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      gap: Spacing.small,
+    },
+    flex: {
+      flex: 1,
+      minWidth: 0,
+    },
+    link: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 44,
+    },
+    linkText: {
+      marginLeft: Spacing.xs,
+    },
+  });

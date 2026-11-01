@@ -76,7 +76,7 @@ export default function LogSessionScreen({ route, navigation }: Props): React.JS
   return (
     <Screen footer={<Button title="Save session" onPress={() => void onSave()} loading={saving} />}>
       <AppText tone="secondary" style={{ marginBottom: Spacing.medium }}>
-        {relativeDayLabel(date)} · only fill in what you track.
+        {relativeDayLabel(date)}: only fill in what you track.
       </AppText>
       {fields.map((f) => (
         <TextField

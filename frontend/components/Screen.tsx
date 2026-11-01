@@ -1,16 +1,9 @@
 import React, { type ReactNode } from 'react';
-import {
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { Platform, RefreshControl, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing, webScrollFix } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '../app/contexts/ThemeContext';
 
 type Props = {
   children: ReactNode;
@@ -20,6 +13,8 @@ type Props = {
   padded?: boolean;
   /** Set when the screen has no navigation header so content clears the status bar. */
   noHeader?: boolean;
+  /** Set when the first child is a HeroHeader, which handles the status bar area itself. */
+  hero?: boolean;
   /** Pull-to-refresh. */
   refreshing?: boolean;
   onRefresh?: () => void;
@@ -38,25 +33,34 @@ export function Screen({
   scroll = true,
   padded = true,
   noHeader = false,
+  hero = false,
   refreshing,
   onRefresh,
   footer,
   contentStyle,
 }: Props): React.JSX.Element {
-  const edges: Edge[] = noHeader ? ['top', 'left', 'right'] : ['left', 'right'];
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const edges: Edge[] = noHeader && !hero ? ['top', 'left', 'right'] : ['left', 'right'];
   const padding = padded ? styles.padded : undefined;
 
   return (
     <SafeAreaView style={styles.root} edges={edges}>
       {scroll ? (
         <ScrollView
-          style={styles.scroll}
+          style={webScrollFix}
           contentContainerStyle={[padding, styles.scrollContent, contentStyle]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           refreshControl={
             onRefresh ? (
-              <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+              <RefreshControl
+                refreshing={!!refreshing}
+                onRefresh={onRefresh}
+                tintColor={hero ? colors.onBrand : colors.tint}
+                colors={[colors.tint]}
+                progressBackgroundColor={colors.surface}
+              />
             ) : undefined
           }
         >
@@ -70,30 +74,30 @@ export function Screen({
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  // On web a ScrollView with only flex: 1 does not scroll; height: 0 lets flex size it.
-  scroll: Platform.select({ web: { flex: 1, height: 0 }, default: { flex: 1 } }),
-  scrollContent: {
-    paddingBottom: Platform.OS === 'web' ? Spacing.large : 120,
-  },
-  fill: {
-    flex: 1,
-    minHeight: 0,
-  },
-  padded: {
-    paddingHorizontal: Spacing.medium,
-    paddingTop: Spacing.medium,
-  },
-  footer: {
-    paddingHorizontal: Spacing.medium,
-    paddingTop: Spacing.small,
-    paddingBottom: Spacing.medium,
-    backgroundColor: Colors.background,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
-  },
-});
+const makeStyles = ({ colors }: Theme) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    scrollContent: {
+      paddingBottom: Platform.OS === 'web' ? Spacing.xl : 120,
+    },
+    fill: {
+      flex: 1,
+      minHeight: 0,
+    },
+    padded: {
+      paddingHorizontal: Spacing.medium,
+      paddingTop: Spacing.medium,
+    },
+    footer: {
+      paddingHorizontal: Spacing.medium,
+      paddingTop: Spacing.small + Spacing.xs,
+      paddingBottom: Spacing.medium,
+      backgroundColor: colors.bg,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.separator,
+      gap: Spacing.xs,
+    },
+  });

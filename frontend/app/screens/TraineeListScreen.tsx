@@ -1,18 +1,22 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
-import { FlatList, Image, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { AppText } from '@/components/AppText';
+import { Avatar } from '@/components/Avatar';
+import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
 import { StarRating } from '@/components/StarRating';
 import { TextField } from '@/components/TextField';
-import { Colors, Radii, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '../contexts/ThemeContext';
 import { fetchAdherenceRoster } from '../services/adherenceService';
 import { errorMessage } from '../services/http';
 import { listTrainees, type TraineeStatusFilter } from '../services/traineeService';
@@ -41,6 +45,8 @@ function initialFilter(status: boolean | undefined): TraineeStatusFilter {
 export default function TraineeListScreen(): React.JSX.Element {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'Trainees'>>();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [filter, setFilter] = useState<TraineeStatusFilter>(initialFilter(route.params?.status));
   const [query, setQuery] = useState('');
   const [trainees, setTrainees] = useState<Trainee[]>([]);
@@ -122,56 +128,37 @@ export default function TraineeListScreen(): React.JSX.Element {
     const week = weeks.get(item.id);
     const due = dues.get(item.id) ?? 0;
     return (
-      <Pressable
+      <Card
         onPress={() => navigation.navigate('TraineeDetail', { trainee: { id: item.id, name: item.name } })}
-        accessibilityRole="button"
         accessibilityLabel={`Open ${item.name}`}
-        style={({ pressed }) => [styles.row, pressed ? styles.pressed : null]}
+        style={styles.row}
       >
-        {item.image_url ? (
-          <Image source={{ uri: item.image_url }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarFallback]}>
-            <AppText variant="subheading" tone="brand">
-              {(item.name || 'C').charAt(0).toUpperCase()}
+        <View style={styles.rowInner}>
+          <Avatar name={item.name} uri={item.image_url} size={48} style={styles.avatar} />
+          <View style={styles.rowBody}>
+            <AppText variant="subheading" numberOfLines={1}>
+              {item.name}
             </AppText>
-          </View>
-        )}
-        <View style={styles.rowBody}>
-          <AppText variant="subheading" numberOfLines={1}>
-            {item.name}
-          </AppText>
-          <View style={styles.meta}>
-            <View style={[styles.badge, item.user_id ? styles.badgeOn : styles.badgeOff]}>
-              <AppText variant="caption" style={{ color: item.user_id ? Colors.success : Colors.textSecondary }}>
-                {item.user_id ? 'On app' : 'Not on app yet'}
+            {week ? (
+              <AppText variant="caption" tone={week.at_risk ? 'error' : 'secondary'} numberOfLines={1}>
+                {lastLoggedLabel(week.last_activity_date)}
+                {week.at_risk ? ', slipping' : ''}
               </AppText>
-            </View>
-            {!item.active_status ? (
-              <AppText variant="caption" tone="muted">
-                Inactive
+            ) : item.goals ? (
+              <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                {item.goals}
               </AppText>
             ) : null}
-            {(item.rating_count ?? 0) > 0 ? <StarRating value={item.rating ?? 0} readonly size={14} showValue /> : null}
+            <View style={styles.meta}>
+              <Badge label={item.user_id ? 'On app' : 'Not on app yet'} tone={item.user_id ? 'success' : 'neutral'} />
+              {!item.active_status ? <Badge label="Inactive" tone="warning" /> : null}
+              {due > 0 ? <Badge label={`${formatRupees(due)} due`} tone="danger" /> : null}
+              {(item.rating_count ?? 0) > 0 ? <StarRating value={item.rating ?? 0} readonly size={13} showValue /> : null}
+            </View>
           </View>
-          {week ? (
-            <AppText variant="caption" tone={week.at_risk ? 'error' : 'secondary'} numberOfLines={1}>
-              {lastLoggedLabel(week.last_activity_date)}
-              {week.at_risk ? ', slipping' : ''}
-            </AppText>
-          ) : item.goals ? (
-            <AppText variant="caption" tone="secondary" numberOfLines={1}>
-              {item.goals}
-            </AppText>
-          ) : null}
-          {due > 0 ? (
-            <AppText variant="caption" tone="error" numberOfLines={1}>
-              {formatRupees(due)} due
-            </AppText>
-          ) : null}
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </View>
-        <Ionicons name="chevron-forward" size={20} color={Colors.textMuted} />
-      </Pressable>
+      </Card>
     );
   };
 
@@ -207,7 +194,9 @@ export default function TraineeListScreen(): React.JSX.Element {
               setRefreshing(true);
               void load();
             }}
-            tintColor={Colors.primary}
+            tintColor={colors.tint}
+            colors={[colors.tint]}
+            progressBackgroundColor={colors.surface}
           />
         }
         ListEmptyComponent={
@@ -225,83 +214,62 @@ export default function TraineeListScreen(): React.JSX.Element {
         }
       />
       <View style={styles.footer}>
-        <Button title="Add client" icon="person-add-outline" onPress={() => navigation.navigate('TraineeForm')} />
+        <Button title="Add client" icon="person-add" onPress={() => navigation.navigate('TraineeForm')} />
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  list: {
-    flex: 1,
-  },
-  content: {
-    padding: Spacing.medium,
-    flexGrow: 1,
-  },
-  note: {
-    marginBottom: Spacing.small,
-  },
-  filters: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: Spacing.small,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
-    padding: Spacing.medium,
-    marginBottom: Spacing.small,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: Spacing.medium,
-    backgroundColor: Colors.backgroundAlt,
-  },
-  avatarFallback: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primarySoft,
-  },
-  rowBody: {
-    flex: 1,
-    minWidth: 0,
-  },
-  meta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: Spacing.small,
-    marginVertical: Spacing.xs,
-  },
-  badge: {
-    paddingHorizontal: Spacing.small,
-    paddingVertical: 2,
-    borderRadius: Radii.pill,
-  },
-  badgeOn: {
-    backgroundColor: Colors.activeCard,
-  },
-  badgeOff: {
-    backgroundColor: Colors.backgroundAlt,
-  },
-  footer: {
-    padding: Spacing.medium,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.background,
-  },
-});
+const makeStyles = ({ colors }: Theme) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    list: {
+      flex: 1,
+    },
+    content: {
+      padding: Spacing.medium,
+      flexGrow: 1,
+    },
+    note: {
+      marginBottom: Spacing.small,
+    },
+    filters: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: Spacing.small,
+    },
+    row: {
+      marginBottom: Spacing.small + 2,
+      paddingVertical: Spacing.small + 4,
+    },
+    rowInner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    avatar: {
+      marginRight: Spacing.small + 4,
+    },
+    rowBody: {
+      flex: 1,
+      minWidth: 0,
+      marginRight: Spacing.small,
+    },
+    meta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: Spacing.xs + 2,
+      marginTop: Spacing.small - 2,
+    },
+    footer: {
+      paddingHorizontal: Spacing.medium,
+      paddingTop: Spacing.small + 4,
+      paddingBottom: Spacing.medium,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.separator,
+      backgroundColor: colors.bg,
+    },
+  });

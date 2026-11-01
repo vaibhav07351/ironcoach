@@ -6,9 +6,12 @@ import Toast from 'react-native-toast-message';
 import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
-import { Colors, Spacing } from '@/constants/theme';
+import { Radii, Spacing } from '@/constants/theme';
 import { config } from '../config';
+import { useAuth } from '../contexts/AuthContext';
+import { useThemedStyles, type Theme } from '../contexts/ThemeContext';
 import { errorMessage } from '../services/http';
 import { createInvite } from '../services/inviteService';
 import type { Invite } from '../types/auth';
@@ -29,6 +32,8 @@ function inviteMessage(invite: Invite, trainerName: string): string {
 /** Creates a single-use invite code for a client and shares it (WhatsApp or any app). */
 export default function InviteClientScreen({ route }: Props): React.JSX.Element {
   const { traineeId, traineeName } = route.params;
+  const { user } = useAuth();
+  const styles = useThemedStyles(makeStyles);
   const [invite, setInvite] = useState<Invite | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -45,34 +50,38 @@ export default function InviteClientScreen({ route }: Props): React.JSX.Element 
 
   const share = async (current: Invite): Promise<void> => {
     try {
-      await Share.share({ message: inviteMessage(current, 'Your coach') });
-    } catch {
+      await Share.share({ message: inviteMessage(current, user?.name || 'Your coach') });
+    } catch (e: unknown) {
+      console.warn('invite share failed', e instanceof Error ? e.message : String(e));
       Toast.show({ type: 'error', text1: 'Could not open sharing', text2: `Send the code ${current.code} yourself.` });
     }
   };
 
   return (
     <Screen>
-      <AppText variant="heading">Invite {traineeName}</AppText>
+      <IconBadge name="paper-plane" tone="accent" size={56} />
+      <AppText variant="title" style={styles.title} accessibilityRole="header">
+        Invite {traineeName}
+      </AppText>
       <AppText tone="secondary" style={styles.subtitle}>
-        Create a one-time code and send it on WhatsApp. When {traineeName.split(' ')[0]} joins, their logs
-        appear here automatically.
+        Create a one-time code and send it on WhatsApp. When {traineeName.split(' ')[0]} joins, their logs appear
+        here automatically.
       </AppText>
 
       {invite ? (
         <>
           <Card style={styles.codeCard}>
-            <AppText variant="caption" tone="secondary" center>
+            <AppText variant="label" tone="secondary" center>
               Invite code
             </AppText>
             <AppText style={styles.code} center selectable accessibilityLabel={`Invite code ${invite.code.split('').join(' ')}`}>
               {invite.code}
             </AppText>
             <AppText variant="caption" tone="muted" center>
-              Works once · expires {new Date(invite.expires_at).toLocaleDateString('en-IN')}
+              Works once, expires {new Date(invite.expires_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}
             </AppText>
           </Card>
-          <Button title="Share invite" icon="share-social-outline" onPress={() => void share(invite)} />
+          <Button title="Share on WhatsApp or any app" icon="share-social" onPress={() => void share(invite)} />
           <View style={styles.gap}>
             <Button title="Create a new code" variant="ghost" onPress={() => void generate()} loading={loading} />
             <AppText variant="caption" tone="muted" center>
@@ -81,30 +90,39 @@ export default function InviteClientScreen({ route }: Props): React.JSX.Element 
           </View>
         </>
       ) : (
-        <Button title="Create invite code" onPress={() => void generate()} loading={loading} />
+        <Button title="Create invite code" icon="key" onPress={() => void generate()} loading={loading} />
       )}
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  subtitle: {
-    marginTop: Spacing.small,
-    marginBottom: Spacing.large,
-  },
-  codeCard: {
-    marginBottom: Spacing.medium,
-    paddingVertical: Spacing.large,
-  },
-  code: {
-    fontSize: 36,
-    lineHeight: 44,
-    fontWeight: '800',
-    letterSpacing: 6,
-    color: Colors.primary,
-    marginVertical: Spacing.small,
-  },
-  gap: {
-    marginTop: Spacing.medium,
-  },
-});
+const makeStyles = ({ colors }: Theme) =>
+  StyleSheet.create({
+    title: {
+      marginTop: Spacing.medium,
+    },
+    subtitle: {
+      marginTop: Spacing.small,
+      marginBottom: Spacing.large,
+    },
+    codeCard: {
+      marginBottom: Spacing.medium,
+      paddingVertical: Spacing.large,
+      borderWidth: 2,
+      borderStyle: 'dashed',
+      borderColor: colors.accent,
+      borderRadius: Radii.xl,
+    },
+    code: {
+      fontSize: 40,
+      lineHeight: 48,
+      fontWeight: '800',
+      letterSpacing: 8,
+      fontVariant: ['tabular-nums'],
+      color: colors.tint,
+      marginVertical: Spacing.small,
+    },
+    gap: {
+      marginTop: Spacing.medium,
+    },
+  });

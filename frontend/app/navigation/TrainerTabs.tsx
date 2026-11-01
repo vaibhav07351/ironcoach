@@ -1,37 +1,28 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
 
-import { Colors } from '@/constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 import AccountScreen from '../screens/AccountScreen';
 import TraineeListScreen from '../screens/TraineeListScreen';
 import TrainerTodayScreen from '../screens/TrainerTodayScreen';
 import type { TrainerTabParamList } from '../types/navigation';
+import { tabListeners, tabScreenOptions, type TabIcon } from './tabOptions';
 
 const Tab = createBottomTabNavigator<TrainerTabParamList>();
 
-const icons: Record<keyof TrainerTabParamList, keyof typeof Ionicons.glyphMap> = {
-  Home: 'today-outline',
-  Clients: 'people-outline',
-  Account: 'person-circle-outline',
+const icons: Record<keyof TrainerTabParamList, TabIcon> = {
+  Home: 'today',
+  Clients: 'people',
+  Account: 'person-circle',
 };
 
 /** Trainer home: today's overview, the client list and account. */
 export function TrainerTabs(): React.JSX.Element {
+  const theme = useTheme();
+  const screenOptions = useMemo(() => tabScreenOptions<TrainerTabParamList>(theme, icons), [theme]);
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerStyle: { backgroundColor: Colors.background },
-        headerShadowVisible: false,
-        headerTitleStyle: { color: Colors.textPrimary },
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
-        tabBarStyle: { backgroundColor: Colors.surface, borderTopColor: Colors.border },
-        tabBarIcon: ({ color, size }) => <Ionicons name={icons[route.name]} size={size} color={color} />,
-        sceneStyle: { backgroundColor: Colors.background },
-      })}
-    >
-      <Tab.Screen name="Home" component={TrainerTodayScreen} options={{ title: 'Today' }} />
+    <Tab.Navigator screenOptions={screenOptions} screenListeners={tabListeners}>
+      <Tab.Screen name="Home" component={TrainerTodayScreen} options={{ title: 'Today', headerShown: false }} />
       <Tab.Screen name="Clients" component={TraineeListScreen} options={{ title: 'Clients' }} />
       <Tab.Screen name="Account" component={AccountScreen} options={{ title: 'Account' }} />
     </Tab.Navigator>

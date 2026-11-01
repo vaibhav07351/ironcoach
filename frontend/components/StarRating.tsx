@@ -1,7 +1,10 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/theme';
+
+import { useTheme } from '../app/contexts/ThemeContext';
+import { haptic } from '../app/utils/haptics';
+import { AppText } from './AppText';
 
 type Props = {
   value: number;
@@ -16,14 +19,9 @@ type Props = {
  * 5-star control with half-star steps (0.5 ... 5.0).
  * Tap left half of a star for *.5, right half for full.
  */
-export function StarRating({
-  value,
-  onChange,
-  readonly = false,
-  size = 28,
-  color = Colors.accent,
-  showValue = false,
-}: Props): React.JSX.Element {
+export function StarRating({ value, onChange, readonly = false, size = 28, color, showValue = false }: Props): React.JSX.Element {
+  const { colors } = useTheme();
+  const starColor = color ?? colors.accent;
   const clamped = Math.max(0, Math.min(5, value || 0));
 
   const starIcon = (index: number): 'star' | 'star-half' | 'star-outline' => {
@@ -41,25 +39,31 @@ export function StarRating({
     if (readonly || !onChange) {
       return;
     }
-    const score = half === 'left' ? starIndex + 0.5 : starIndex + 1;
-    onChange(score);
+    haptic('select');
+    onChange(half === 'left' ? starIndex + 0.5 : starIndex + 1);
   };
 
   return (
-    <View style={styles.row}>
+    <View
+      style={styles.row}
+      accessible={readonly}
+      accessibilityLabel={readonly ? `${clamped.toFixed(1)} out of 5 stars` : undefined}
+    >
       {[0, 1, 2, 3, 4].map((i) => (
         <View key={i} style={[styles.starWrap, { width: size, height: size }]}>
-          <Ionicons name={starIcon(i)} size={size} color={color} />
+          <Ionicons name={starIcon(i)} size={size} color={starColor} />
           {!readonly && (
             <View style={styles.hitRow}>
-              <TouchableOpacity
+              <Pressable
                 style={styles.hitHalf}
                 onPress={() => handlePress(i, 'left')}
+                accessibilityRole="button"
                 accessibilityLabel={`${i + 0.5} stars`}
               />
-              <TouchableOpacity
+              <Pressable
                 style={styles.hitHalf}
                 onPress={() => handlePress(i, 'right')}
+                accessibilityRole="button"
                 accessibilityLabel={`${i + 1} stars`}
               />
             </View>
@@ -67,7 +71,9 @@ export function StarRating({
         </View>
       ))}
       {showValue && clamped > 0 ? (
-        <Text style={styles.valueText}>{clamped.toFixed(1)}</Text>
+        <AppText variant="label" style={styles.valueText}>
+          {clamped.toFixed(1)}
+        </AppText>
       ) : null}
     </View>
   );
@@ -92,7 +98,5 @@ const styles = StyleSheet.create({
   valueText: {
     marginLeft: 6,
     fontWeight: '700',
-    color: Colors.textPrimary,
-    fontSize: 14,
   },
 });

@@ -11,8 +11,9 @@ import { ErrorState } from '@/components/ErrorState';
 import { LoadingState } from '@/components/LoadingState';
 import { MonthGrid } from '@/components/MonthGrid';
 import { Screen } from '@/components/Screen';
-import { Colors, Spacing, TouchTarget } from '@/constants/theme';
+import { Radii, Spacing, TouchTarget } from '@/constants/theme';
 import { useAuth } from '../app/contexts/AuthContext';
+import { useTheme } from '../app/contexts/ThemeContext';
 import { useTraineeRecord } from '../app/contexts/TraineeRecordContext';
 import { listAttendance, markAttended, unmarkAttended } from '../app/services/attendanceService';
 import { errorMessage } from '../app/services/http';
@@ -27,6 +28,7 @@ import { todayLocal } from '../app/utils/date';
 export function AttendanceSection(): React.JSX.Element {
   const record = useTraineeRecord();
   const { user } = useAuth();
+  const { colors } = useTheme();
   const isTrainer = user?.role === 'trainer';
   const [view, setView] = useState(() => {
     const now = new Date();
@@ -91,19 +93,19 @@ export function AttendanceSection(): React.JSX.Element {
     <Screen>
       <Card>
         <View style={styles.header}>
-          <Pressable onPress={() => changeMonth(-1)} accessibilityRole="button" accessibilityLabel="Previous month" style={styles.arrow}>
-            <Ionicons name="chevron-back" size={22} color={Colors.primary} />
+          <Pressable onPress={() => changeMonth(-1)} accessibilityRole="button" accessibilityLabel="Previous month" style={({ pressed }) => [styles.arrow, pressed ? { backgroundColor: colors.surfaceMuted } : null]}>
+            <Ionicons name="chevron-back" size={22} color={colors.tint} />
           </Pressable>
           <View style={styles.title}>
-            <AppText variant="subheading" center>
+            <AppText variant="heading" center>
               {monthLabel(view.year, view.month)}
             </AppText>
             <AppText variant="caption" tone="secondary" center>
               {attended.size} {attended.size === 1 ? 'session' : 'sessions'} attended
             </AppText>
           </View>
-          <Pressable onPress={() => changeMonth(1)} accessibilityRole="button" accessibilityLabel="Next month" style={styles.arrow}>
-            <Ionicons name="chevron-forward" size={22} color={Colors.primary} />
+          <Pressable onPress={() => changeMonth(1)} accessibilityRole="button" accessibilityLabel="Next month" style={({ pressed }) => [styles.arrow, pressed ? { backgroundColor: colors.surfaceMuted } : null]}>
+            <Ionicons name="chevron-forward" size={22} color={colors.tint} />
           </Pressable>
         </View>
         <MonthGrid year={view.year} month={view.month} attended={attended} onToggle={isTrainer ? (d) => void toggle(d) : undefined} />
@@ -126,11 +128,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.small,
+    marginBottom: Spacing.medium,
   },
   arrow: {
     width: TouchTarget,
     height: TouchTarget,
+    borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
   },

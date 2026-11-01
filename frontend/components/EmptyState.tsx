@@ -2,9 +2,10 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { AppText } from './AppText';
 import { Button } from './Button';
+import { IconBadge } from './IconBadge';
 
 type Props = {
   icon?: keyof typeof Ionicons.glyphMap;
@@ -18,12 +19,12 @@ type Props = {
 export function EmptyState({ icon = 'leaf-outline', title, message, actionLabel, onAction }: Props): React.JSX.Element {
   return (
     <View style={styles.center}>
-      <Ionicons name={icon} size={40} color={Colors.textMuted} />
-      <AppText variant="subheading" center style={styles.gap}>
+      <IconBadge name={icon} size={72} />
+      <AppText variant="heading" center style={styles.title}>
         {title}
       </AppText>
       {message ? (
-        <AppText tone="secondary" center style={styles.smallGap}>
+        <AppText tone="secondary" center style={styles.message}>
           {message}
         </AppText>
       ) : null}
@@ -37,14 +38,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.large,
-    minHeight: 240,
+    paddingHorizontal: Spacing.large,
+    paddingVertical: Spacing.xl,
+    minHeight: 260,
   },
-  gap: {
-    marginTop: Spacing.medium,
+  title: {
+    marginTop: Spacing.large,
   },
-  smallGap: {
+  message: {
     marginTop: Spacing.small,
+    maxWidth: 320,
   },
   action: {
     marginTop: Spacing.large,

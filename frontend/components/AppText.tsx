@@ -1,10 +1,21 @@
 import React from 'react';
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
-import { Colors, Fonts, Type } from '@/constants/theme';
+import { MaxFontScale, type Palette, type TypeVariant } from '@/constants/theme';
+import { useTheme } from '../app/contexts/ThemeContext';
 
-export type TextVariant = keyof typeof Type;
-export type TextTone = 'primary' | 'secondary' | 'muted' | 'error' | 'success' | 'onPrimary' | 'brand';
+export type TextVariant = TypeVariant;
+export type TextTone =
+  | 'primary'
+  | 'secondary'
+  | 'muted'
+  | 'error'
+  | 'success'
+  | 'warning'
+  | 'brand'
+  | 'onBrand'
+  | 'onBrandMuted'
+  | 'onAccent';
 
 type Props = TextProps & {
   variant?: TextVariant;
@@ -12,36 +23,32 @@ type Props = TextProps & {
   center?: boolean;
 };
 
-const toneColor: Record<TextTone, string> = {
-  primary: Colors.textPrimary,
-  secondary: Colors.textSecondary,
-  muted: Colors.textMuted,
-  error: Colors.error,
-  success: Colors.success,
-  onPrimary: Colors.textOnPrimary,
-  brand: Colors.primary,
+const toneKey: Record<TextTone, keyof Palette> = {
+  primary: 'text',
+  secondary: 'textSecondary',
+  muted: 'textMuted',
+  error: 'danger',
+  success: 'success',
+  warning: 'warning',
+  brand: 'tint',
+  onBrand: 'onBrand',
+  onBrandMuted: 'onBrandMuted',
+  onAccent: 'onAccent',
 };
 
-/** Text with the app's type scale and colour roles. */
+/** Text with the app's type scale and colour roles. Honours the phone's text size, up to a cap. */
 export function AppText({ variant = 'body', tone = 'primary', center, style, ...rest }: Props): React.JSX.Element {
+  const { type, colors } = useTheme();
   return (
     <Text
+      maxFontSizeMultiplier={MaxFontScale}
       {...rest}
-      style={[
-        Type[variant],
-        variant === 'title' ? styles.display : null,
-        { color: toneColor[tone] },
-        center ? styles.center : null,
-        style,
-      ]}
+      style={[type[variant], { color: colors[toneKey[tone]] }, center ? styles.center : null, style]}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  display: {
-    fontFamily: Fonts.display,
-  },
   center: {
     textAlign: 'center',
   },

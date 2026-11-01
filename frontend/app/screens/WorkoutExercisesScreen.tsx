@@ -9,9 +9,11 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { IconButton } from '@/components/IconButton';
 import { LoadingState } from '@/components/LoadingState';
 import { TextField } from '@/components/TextField';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing, webScrollFix } from '@/constants/theme';
+import { useThemedStyles, type Theme } from '../contexts/ThemeContext';
 import { errorMessage } from '../services/http';
 import { deleteExercise, listExercises } from '../services/workoutService';
 import type { RootStackParamList } from '../types/navigation';
@@ -23,6 +25,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutExercises'>;
 /** Step 2 of gym logging: pick the exercise (searchable). */
 export default function WorkoutExercisesScreen({ route, navigation }: Props): React.JSX.Element {
   const { traineeId, categoryId, categoryName, date } = route.params;
+  const styles = useThemedStyles(makeStyles);
   const [items, setItems] = useState<Exercise[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -72,12 +75,28 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props): Re
   return (
     <View style={styles.root}>
       <FlatList
+        style={webScrollFix}
         data={visible}
         keyExtractor={(e) => e.id}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={<TextField label="Search" value={query} onChangeText={setQuery} autoCorrect={false} />}
-        ListEmptyComponent={<EmptyState title="No exercises" message="Add the exercise you want to log." />}
+        ListHeaderComponent={
+          <TextField
+            label="Search exercises"
+            value={query}
+            onChangeText={setQuery}
+            placeholder={`Search ${categoryName}`}
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+        }
+        ListEmptyComponent={
+          query ? (
+            <EmptyState icon="search-outline" title="No matches" message={`No exercise named "${query}".`} />
+          ) : (
+            <EmptyState icon="barbell-outline" title="No exercises" message="Add the exercise you want to log." />
+          )
+        }
         renderItem={({ item }) => (
           <Card
             style={styles.card}
@@ -85,12 +104,12 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props): Re
             onPress={() => navigation.navigate('AddExerciseForm', { traineeId, exercise: item.name, exerciseId: item.id, date })}
           >
             <View style={styles.row}>
-              <AppText variant="subheading" style={styles.flex}>
+              <AppText variant="subheading" numberOfLines={2} style={styles.flex}>
                 {item.name}
               </AppText>
-              <Button
-                title="Rename"
-                variant="ghost"
+              <IconButton
+                icon="create-outline"
+                accessibilityLabel={`Rename ${item.name}`}
                 onPress={() =>
                   navigation.navigate('AddCustomExercise', {
                     traineeId,
@@ -101,7 +120,12 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props): Re
                   })
                 }
               />
-              <Button title="Delete" variant="ghost" onPress={() => void onDelete(item)} />
+              <IconButton
+                icon="trash-outline"
+                tone="danger"
+                accessibilityLabel={`Delete ${item.name}`}
+                onPress={() => void onDelete(item)}
+              />
             </View>
           </Card>
         )}
@@ -109,6 +133,7 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props): Re
       <View style={styles.footer}>
         <Button
           title="Add exercise"
+          variant="secondary"
           icon="add"
           onPress={() => navigation.navigate('AddCustomExercise', { traineeId, categoryId, categoryName })}
         />
@@ -117,11 +142,19 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props): Re
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.medium, flexGrow: 1 },
-  card: { marginBottom: Spacing.small, paddingVertical: Spacing.small },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  flex: { flex: 1 },
-  footer: { padding: Spacing.medium, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.border },
-});
+const makeStyles = ({ colors }: Theme) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: Spacing.medium, flexGrow: 1 },
+    card: { marginBottom: Spacing.small + 2, paddingVertical: Spacing.small + 2 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+    flex: { flex: 1, minWidth: 0 },
+    footer: {
+      paddingHorizontal: Spacing.medium,
+      paddingTop: Spacing.small + 4,
+      paddingBottom: Spacing.medium,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.separator,
+      backgroundColor: colors.bg,
+    },
+  });

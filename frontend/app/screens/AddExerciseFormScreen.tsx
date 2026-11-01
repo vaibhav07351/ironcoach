@@ -5,13 +5,14 @@ import Toast from 'react-native-toast-message';
 import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
-import { rowsToWorkout, SetEditor, type SetRow } from '@/components/SetEditor';
+import { SetEditor } from '@/components/SetEditor';
 import { Spacing } from '@/constants/theme';
 import { errorMessage } from '../services/http';
 import { createWorkoutLog } from '../services/workoutService';
 import type { RootStackParamList } from '../types/navigation';
 import { relativeDayLabel } from '../utils/date';
 import { newClientId } from '../utils/ids';
+import { rowsToWorkout, type SetRow } from '../utils/sets';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddExerciseForm'>;
 
@@ -49,7 +50,7 @@ export default function AddExerciseFormScreen({ route, navigation }: Props): Rea
   return (
     <Screen footer={<Button title="Save exercise" onPress={() => void onSave()} loading={saving} />}>
       <AppText tone="secondary" style={{ marginBottom: Spacing.medium }}>
-        {relativeDayLabel(date)} · enter reps and weight for each set.
+        {relativeDayLabel(date)}: enter reps and weight for each set.
       </AppText>
       <SetEditor rows={rows} onChange={setRows} />
       {error ? (

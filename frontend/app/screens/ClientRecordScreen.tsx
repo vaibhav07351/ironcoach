@@ -6,8 +6,8 @@ import { AttendanceSection } from '@/components/AttendanceSection';
 import { FeesSection } from '@/components/FeesSection';
 import { OverviewSection } from '@/components/OverviewSection';
 import { SectionTabs, type SectionOption } from '@/components/SectionTabs';
-import { Colors } from '@/constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemedStyles, type Theme } from '../contexts/ThemeContext';
 import { TraineeRecordProvider } from '../contexts/TraineeRecordContext';
 import type { ClientSection, RootStackParamList } from '../types/navigation';
 import AboutTraineeScreen from './AboutTraineeScreen';
@@ -35,6 +35,7 @@ const ALL_SECTIONS: SectionOption<ClientSection>[] = [
 export default function ClientRecordScreen({ route }: Props): React.JSX.Element {
   const { trainee, section: initial } = route.params;
   const { user } = useAuth();
+  const styles = useThemedStyles(makeStyles);
   const isTrainer = user?.role === 'trainer';
   const sections = useMemo(
     () => (isTrainer ? ALL_SECTIONS : ALL_SECTIONS.filter((s) => s.value !== 'overview')),
@@ -62,13 +63,14 @@ export default function ClientRecordScreen({ route }: Props): React.JSX.Element 
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  body: {
-    flex: 1,
-    minHeight: 0,
-  },
-});
+const makeStyles = ({ colors }: Theme) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    body: {
+      flex: 1,
+      minHeight: 0,
+    },
+  });

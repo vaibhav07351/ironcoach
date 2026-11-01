@@ -1,4 +1,4 @@
-import { rowsToWorkout, workoutToRows } from '../components/SetEditor';
+import { rowsToWorkout, workoutToRows } from '../app/utils/sets';
 
 describe('set editor conversion', () => {
   it('builds a workout with one reps and weight value per set', () => {

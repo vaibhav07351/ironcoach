@@ -1,16 +1,23 @@
 import React, { useState } from 'react';
-import { Image, Linking, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
 import { AppText } from '@/components/AppText';
+import { Avatar } from '@/components/Avatar';
+import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { IconBadge } from '@/components/IconBadge';
+import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
-import { Colors, Spacing } from '@/constants/theme';
+import { SectionHeader } from '@/components/SectionHeader';
+import { Spacing } from '@/constants/theme';
 import { config } from '../config';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { leaveCoach } from '../services/accountService';
 import { updateSettings } from '../services/authService';
 import { errorMessage } from '../services/http';
@@ -22,6 +29,7 @@ import { deviceTimeZone } from '../utils/date';
 export default function AccountScreen(): React.JSX.Element {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, signOut, setUser, refreshUser } = useAuth();
+  const { colors } = useTheme();
   const [busy, setBusy] = useState<'leave' | 'zone' | null>(null);
 
   if (!user) {
@@ -29,6 +37,7 @@ export default function AccountScreen(): React.JSX.Element {
   }
   const deviceZone = deviceTimeZone();
   const isTrainer = user.role === 'trainer';
+  const zoneDiffers = !!deviceZone && deviceZone !== user.timezone;
 
   const onLeaveCoach = async (): Promise<void> => {
     const ok = await confirmAction({
@@ -59,6 +68,7 @@ export default function AccountScreen(): React.JSX.Element {
     setBusy('zone');
     try {
       await setUser(await updateSettings(deviceZone));
+      Toast.show({ type: 'success', text1: 'Time zone updated' });
     } catch (e: unknown) {
       Toast.show({ type: 'error', text1: 'Could not update time zone', text2: errorMessage(e) });
     } finally {
@@ -66,74 +76,96 @@ export default function AccountScreen(): React.JSX.Element {
     }
   };
 
+  const external = <Ionicons name="open-outline" size={18} color={colors.textMuted} />;
+
   return (
     <Screen>
       <Card style={styles.profile}>
-        {user.picture ? <Image source={{ uri: user.picture }} style={styles.avatar} /> : null}
+        <Avatar name={user.name} uri={user.picture} size={60} />
         <View style={styles.profileText}>
-          <AppText variant="subheading" numberOfLines={1}>
+          <AppText variant="heading" numberOfLines={1}>
             {user.name}
           </AppText>
-          <AppText tone="secondary" numberOfLines={1}>
+          <AppText variant="caption" tone="secondary" numberOfLines={1}>
             {user.email}
           </AppText>
-          <AppText variant="caption" tone="muted">
-            {isTrainer ? 'Trainer account' : 'Client account'}
-          </AppText>
+          <Badge label={isTrainer ? 'Trainer' : 'Client'} tone={isTrainer ? 'accent' : 'brand'} style={styles.role} />
         </View>
       </Card>
 
       {isTrainer ? (
-        <Button
-          title="Edit coach profile"
-          variant="secondary"
-          icon="create-outline"
-          onPress={() => navigation.navigate('TrainerProfile')}
-          style={styles.gap}
-        />
+        <>
+          <SectionHeader title="Coaching" />
+          <ListRow
+            leading={<IconBadge name="id-card" size={40} />}
+            title="Coach profile"
+            subtitle="What clients see when they find you"
+            onPress={() => navigation.navigate('TrainerProfile')}
+          />
+        </>
       ) : user.trainee_id ? (
-        <Button
-          title="Leave my coach"
-          variant="secondary"
-          icon="exit-outline"
-          onPress={() => void onLeaveCoach()}
-          loading={busy === 'leave'}
-          style={styles.gap}
-        />
+        <>
+          <SectionHeader title="Coaching" />
+          <ListRow
+            leading={<IconBadge name="exit-outline" tone="warning" size={40} />}
+            title="Leave my coach"
+            subtitle="Stop sharing new logs with your coach"
+            onPress={busy === 'leave' ? undefined : () => void onLeaveCoach()}
+            right={busy === 'leave' ? <ActivityIndicator color={colors.tint} /> : undefined}
+          />
+        </>
       ) : null}
 
-      <Card style={styles.gap}>
-        <AppText variant="label" tone="secondary">
-          Time zone
-        </AppText>
-        <AppText style={styles.small}>{user.timezone}</AppText>
-        <AppText variant="caption" tone="muted">
-          Used for &quot;today&quot;, weeks and streaks.
-        </AppText>
-        {deviceZone && deviceZone !== user.timezone ? (
+      <SectionHeader title="Settings" />
+      <Card style={styles.zone}>
+        <View style={styles.zoneRow}>
+          <IconBadge name="globe-outline" tone="neutral" size={40} />
+          <View style={styles.profileText}>
+            <AppText variant="subheading">Time zone</AppText>
+            <AppText variant="caption" tone="secondary">
+              {user.timezone}. Used for today, weeks and streaks.
+            </AppText>
+          </View>
+        </View>
+        {zoneDiffers ? (
           <Button
             title={`Use this phone's zone (${deviceZone})`}
-            variant="ghost"
+            variant="secondary"
+            size="small"
             onPress={() => void onUseDeviceZone()}
             loading={busy === 'zone'}
+            style={styles.zoneButton}
           />
         ) : null}
       </Card>
 
-      <View style={styles.links}>
-        <Button title="Privacy policy" variant="ghost" onPress={() => void Linking.openURL(config.privacyPolicyUrl)} />
-        <Button title="Terms" variant="ghost" onPress={() => void Linking.openURL(config.termsUrl)} />
-      </View>
-
-      <Button title="Sign out" variant="secondary" icon="log-out-outline" onPress={() => void signOut()} style={styles.gap} />
-      <Button
-        title="Delete account"
-        variant="ghost"
-        onPress={() => navigation.navigate('DeleteAccount')}
-        style={styles.deleteLink}
+      <SectionHeader title="About" />
+      <ListRow
+        leading={<IconBadge name="shield-checkmark-outline" tone="neutral" size={40} />}
+        title="Privacy policy"
+        onPress={() => void Linking.openURL(config.privacyPolicyUrl)}
+        right={external}
       />
+      <ListRow
+        leading={<IconBadge name="document-text-outline" tone="neutral" size={40} />}
+        title="Terms"
+        onPress={() => void Linking.openURL(config.termsUrl)}
+        right={external}
+      />
+
+      <Button title="Sign out" variant="secondary" icon="log-out-outline" onPress={() => void signOut()} style={styles.signOut} />
+      <Pressable
+        onPress={() => navigation.navigate('DeleteAccount')}
+        accessibilityRole="button"
+        style={styles.delete}
+        hitSlop={8}
+      >
+        <AppText variant="label" tone="error" center>
+          Delete account
+        </AppText>
+      </Pressable>
       <AppText variant="caption" tone="muted" center style={styles.version}>
-        Version {config.appVersion}
+        TrainerNearMe {config.appVersion}
       </AppText>
     </Screen>
   );
@@ -143,31 +175,35 @@ const styles = StyleSheet.create({
   profile: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    marginRight: Spacing.medium,
-    backgroundColor: Colors.backgroundAlt,
+    gap: Spacing.medium,
   },
   profileText: {
     flex: 1,
     minWidth: 0,
   },
-  gap: {
-    marginTop: Spacing.medium,
+  role: {
+    marginTop: Spacing.small - 2,
   },
-  small: {
-    marginTop: Spacing.xs,
+  zone: {
+    marginBottom: Spacing.small + 2,
   },
-  links: {
-    marginTop: Spacing.medium,
+  zoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.small + 4,
   },
-  deleteLink: {
+  zoneButton: {
+    marginTop: Spacing.small + 4,
+  },
+  signOut: {
+    marginTop: Spacing.xl,
+  },
+  delete: {
+    minHeight: 44,
+    justifyContent: 'center',
     marginTop: Spacing.small,
   },
   version: {
-    marginTop: Spacing.large,
+    marginTop: Spacing.medium,
   },
 });

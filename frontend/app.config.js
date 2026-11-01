@@ -36,7 +36,7 @@ module.exports = {
     orientation: 'portrait',
     icon: './assets/images/trainernearme-icon.png',
     scheme: 'ironcoach',
-    userInterfaceStyle: 'light',
+    userInterfaceStyle: 'automatic',
     description: 'Free client manager for personal trainers: clients, workouts, diet and progress.',
     primaryColor: '#07173D',
     ios: {
