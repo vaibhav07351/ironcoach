@@ -14,7 +14,6 @@ import { config } from '../config';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme, useThemedStyles, type Theme } from '../contexts/ThemeContext';
 import { useGoogleSignIn } from '../hooks/useGoogleSignIn';
-import { useLightStatusBar } from '../hooks/useLightStatusBar';
 import { signInWithGoogle } from '../services/authService';
 import { ApiError, errorMessage } from '../services/http';
 import type { UserRole } from '../types/auth';
@@ -49,7 +48,6 @@ export default function SignInScreen(): React.JSX.Element {
   const [error, setError] = useState<string | null>(
     state.status === 'signedOut' && state.reason === 'expired' ? 'Your session ended. Please sign in again.' : null
   );
-  useLightStatusBar();
 
   const finish = async (idToken: string, options: { role?: UserRole; acceptTerms?: boolean }): Promise<void> => {
     const auth = await signInWithGoogle(idToken, { ...options, timezone: deviceTimeZone() });
@@ -138,7 +136,7 @@ export default function SignInScreen(): React.JSX.Element {
               {FEATURES.map((f) => (
                 <View key={f.icon} style={styles.feature}>
                   <View style={styles.featureIcon}>
-                    <Ionicons name={f.icon} size={18} color={colors.accent} />
+                    <Ionicons name={f.icon} size={18} color={colors.onBrandAccent} />
                   </View>
                   <AppText tone="onBrand" style={styles.flex}>
                     {f.text}
@@ -260,7 +258,7 @@ const makeStyles = ({ colors, elevation }: Theme) =>
       marginBottom: Spacing.large,
     },
     wordmarkAccent: {
-      color: colors.accent,
+      color: colors.onBrandAccent,
     },
     tagline: {
       marginTop: Spacing.small,

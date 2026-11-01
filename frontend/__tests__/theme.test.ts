@@ -28,6 +28,9 @@ const PAIRS: [keyof Palette, keyof Palette, number][] = [
   ['onAccent', 'accent', 4.5],
   ['onBrand', 'brand', 4.5],
   ['onBrandMuted', 'brand', 4.5],
+  // Wordmark, icons and alert numbers: large text or graphics, so 3:1.
+  ['onBrandAccent', 'brand', 3],
+  ['onBrandAction', 'brandAction', 4.5],
   ['danger', 'surface', 4.5],
   ['onDanger', 'danger', 4.5],
   ['success', 'surface', 4.5],
@@ -47,9 +50,26 @@ describe.each<ColorScheme>(['light', 'dark'])('%s palette', (scheme) => {
     expect(contrast(p[fg], p[bg])).toBeGreaterThanOrEqual(min);
   });
 
+  it('keeps the hero button visible on the hero block', () => {
+    expect(contrast(p.brandAction, p.brand)).toBeGreaterThanOrEqual(3);
+  });
+
   it('keeps avatar initials readable on their background', () => {
     for (const [bg, fg] of avatarColors[scheme]) {
       expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
     }
+  });
+});
+
+// Light hero tiles are solid white (dark ones are translucent, so only light is checked here).
+describe('light hero tiles', () => {
+  const p = palettes.light;
+
+  it.each<keyof Palette>(['onBrand', 'onBrandMuted'])('%s on brandRaised meets WCAG AA', (fg) => {
+    expect(contrast(p[fg], p.brandRaised)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('keeps alert numbers readable on brandRaised', () => {
+    expect(contrast(p.onBrandAccent, p.brandRaised)).toBeGreaterThanOrEqual(3);
   });
 });

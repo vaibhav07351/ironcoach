@@ -5,7 +5,6 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Radii, Spacing } from '@/constants/theme';
 import { useThemedStyles, type Theme } from '../app/contexts/ThemeContext';
-import { useLightStatusBar } from '../app/hooks/useLightStatusBar';
 import { AppText } from './AppText';
 
 type Props = {
@@ -18,13 +17,13 @@ type Props = {
 };
 
 /**
- * The navy block at the top of a home screen. It runs under the status bar, and a navy strip above
- * it fills the iOS overscroll gap so pulling down never shows a white seam.
+ * The hero block at the top of a home screen (cream in light, navy in dark). It runs under the
+ * status bar, and a strip of the same color above it fills the iOS overscroll gap so pulling down
+ * never shows a seam.
  */
 export function HeroHeader({ title, subtitle, accessory, children }: Props): React.JSX.Element {
   const styles = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
-  useLightStatusBar();
 
   return (
     <View style={[styles.hero, { paddingTop: insets.top + Spacing.medium }]}>

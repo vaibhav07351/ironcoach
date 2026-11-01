@@ -16,6 +16,8 @@ import { AuthProvider } from './app/contexts/AuthContext';
 import { ThemeProvider, useTheme } from './app/contexts/ThemeContext';
 import { useWantsLightStatusBar } from './app/hooks/useLightStatusBar';
 import { RootNavigator } from './app/navigation/RootNavigator';
+import { loadThemePreference } from './app/services/themePreferenceStore';
+import type { ThemePreference } from '@/constants/theme';
 
 /** Longest the native splash waits for the brand font before the app starts on the system font. */
 const FONT_TIMEOUT_MS = 3000;
@@ -40,6 +42,25 @@ function useBrandFont(): { ready: boolean; loaded: boolean } {
   }, [error]);
 
   return { ready: loaded || !!error || timedOut, loaded };
+}
+
+/** The saved Light / Dark / System choice; null until read. A failed read resolves to the default. */
+function useSavedThemePreference(): ThemePreference | null {
+  const [preference, setPreference] = useState<ThemePreference | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void loadThemePreference().then((saved) => {
+      if (active) {
+        setPreference(saved);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return preference;
 }
 
 function ThemedApp(): React.JSX.Element {
@@ -77,22 +98,24 @@ function ThemedApp(): React.JSX.Element {
 
 export default function App(): React.JSX.Element | null {
   const font = useBrandFont();
+  const themePreference = useSavedThemePreference();
+  const ready = font.ready && themePreference !== null;
 
   useEffect(() => {
-    if (font.ready) {
+    if (ready) {
       SplashScreen.hideAsync().catch((e: unknown) => {
         console.warn('splash screen not hidden', e instanceof Error ? e.message : String(e));
       });
     }
-  }, [font.ready]);
+  }, [ready]);
 
-  if (!font.ready) {
+  if (!ready) {
     return null;
   }
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider brandFont={font.loaded}>
+      <ThemeProvider brandFont={font.loaded} initialPreference={themePreference}>
         <AuthProvider>
           <ThemedApp />
         </AuthProvider>

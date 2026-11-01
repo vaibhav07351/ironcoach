@@ -1,16 +1,19 @@
-import React, { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
-import { useColorScheme, type ViewStyle } from 'react-native';
+import React, { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Appearance, Platform, useColorScheme, type ViewStyle } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
 
 import {
+  DEFAULT_THEME_PREFERENCE,
   elevation,
   palettes,
   typeScale,
   type ColorScheme,
   type ElevationLevel,
   type Palette,
+  type ThemePreference,
   type TypeScale,
 } from '@/constants/theme';
+import { saveThemePreference } from '../services/themePreferenceStore';
 
 export type Theme = {
   scheme: ColorScheme;
@@ -40,16 +43,51 @@ const themes: Record<`${ColorScheme}-${boolean}`, Theme> = {
 
 const ThemeContext = createContext<Theme>(themes['light-false']);
 
+type PreferenceState = {
+  preference: ThemePreference;
+  setPreference: (preference: ThemePreference) => void;
+};
+
+const PreferenceContext = createContext<PreferenceState>({
+  preference: DEFAULT_THEME_PREFERENCE,
+  setPreference: () => undefined,
+});
+
 type Props = {
   children: ReactNode;
   /** True once the brand font has loaded; until then (or if it fails) the system font is used. */
   brandFont: boolean;
+  /** The saved choice, read before the splash hides so the first frame has the right theme. */
+  initialPreference: ThemePreference;
 };
 
-/** Follows the phone's light/dark setting. */
-export function ThemeProvider({ children, brandFont }: Props): React.JSX.Element {
-  const scheme: ColorScheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+/** Light unless the user picked Dark, or System and the phone is dark. */
+export function ThemeProvider({ children, brandFont, initialPreference }: Props): React.JSX.Element {
+  const [preference, setPreferenceState] = useState<ThemePreference>(initialPreference);
+  const systemScheme = useColorScheme();
+  const scheme: ColorScheme = preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference;
   const theme = themes[`${scheme}-${brandFont}`];
+
+  const preferenceState = useMemo<PreferenceState>(
+    () => ({
+      preference,
+      setPreference: (next) => {
+        // Switch now; if saving fails the choice still holds until the app restarts.
+        setPreferenceState(next);
+        saveThemePreference(next).catch((e: unknown) => {
+          console.warn('theme preference not saved', e instanceof Error ? e.message : String(e));
+        });
+      },
+    }),
+    [preference]
+  );
+
+  useEffect(() => {
+    // Native alerts and the keyboard follow the app's choice, not the phone's. Web has no override.
+    if (Platform.OS !== 'web') {
+      Appearance.setColorScheme(preference === 'system' ? 'unspecified' : preference);
+    }
+  }, [preference]);
 
   useEffect(() => {
     // Root view color shows behind screens during transitions and under the Android nav bar.
@@ -58,11 +96,20 @@ export function ThemeProvider({ children, brandFont }: Props): React.JSX.Element
     });
   }, [theme]);
 
-  return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
+  return (
+    <PreferenceContext.Provider value={preferenceState}>
+      <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>
+    </PreferenceContext.Provider>
+  );
 }
 
 export function useTheme(): Theme {
   return useContext(ThemeContext);
+}
+
+/** The Light / Dark / System choice and its setter (Account > Appearance). */
+export function useThemePreference(): PreferenceState {
+  return useContext(PreferenceContext);
 }
 
 const styleCache = new WeakMap<object, { theme: Theme; styles: unknown }>();

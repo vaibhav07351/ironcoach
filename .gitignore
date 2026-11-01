@@ -30,3 +30,6 @@ build/
 # OS-specific files
 .DS_Store
 Thumbs.db
+# Impeccable design tool: per-developer settings and cache
+frontend/.impeccable/config.local.json
+frontend/.impeccable/hook.cache.json

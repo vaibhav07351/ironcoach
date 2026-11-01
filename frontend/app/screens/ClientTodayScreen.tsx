@@ -171,7 +171,7 @@ export default function ClientTodayScreen(): React.JSX.Element {
             <Ionicons
               name={week.trained_today ? 'checkmark-circle' : 'ellipse-outline'}
               size={20}
-              color={week.trained_today ? colors.accent : colors.onBrandMuted}
+              color={week.trained_today ? colors.onBrandAccent : colors.onBrandMuted}
             />
             <AppText variant="label" tone="onBrand" style={styles.statusText}>
               {week.trained_today ? 'Workout logged today. Nice.' : 'No workout logged yet today'}

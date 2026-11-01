@@ -4,7 +4,7 @@ Things only you can do (accounts, secrets, consoles, commits). Do them all at th
 order. Each item says why it matters and exactly what to run or click. Claude keeps this file
 up to date as phases finish.
 
-Last updated: 2026-11-01 (UI redesign section added).
+Last updated: 2026-11-02 (light mode by default, Appearance switch).
 
 ---
 
@@ -137,10 +137,15 @@ below needs a real phone.
   npm install
   npx eas-cli build --profile development --platform android
   ```
-- [ ] **Look at it on the phone** (20 minutes), in light AND dark (phone Settings, Display):
-  1. Sign in screen: navy, gold "NearMe", button at the bottom, status bar icons white.
-  2. Trainer Today: navy header with your Google photo, three stat tiles, Slipping / Fees due /
-     Trained today with avatars; pull down to refresh (no white gap above the navy).
+- [ ] **Look at it on the phone** (20 minutes). The app now opens in LIGHT whatever the phone's
+  setting is; switch with Account > Settings > Appearance (Light / Dark / System). Check both:
+  1. Sign in screen: light: warm cream, navy "Trainer" + amber "NearMe", solid navy Google
+     button, dark status bar icons. Dark: navy, white button, white status bar icons.
+  2. Trainer Today: cream header (navy in dark) with your Google photo, three white stat tiles,
+     Slipping / Fees due / Trained today with avatars; pull down to refresh (no seam above the
+     header). Status bar icons dark in light mode.
+  2b. Appearance: pick Dark, close the app fully, reopen: it should open in dark straight away
+     (no light flash). Pick System and change the phone's dark mode: the app follows.
   3. Tap around: buttons and cards shrink slightly on press; selecting chips and tabs gives a
      soft vibration. With Settings, Accessibility, "Remove animations" on, things fade instead.
   4. Open a client: the sliding pill tabs, Fees (big amount, progress bar), Attendance calendar,
@@ -153,3 +158,8 @@ below needs a real phone.
   Remove-Item "D:\Project Apps\ironcoach\ironcoach\frontend\components\TodayRow.tsx"
   ```
 - [ ] **New store screenshots** once you like it on the phone: the old ones show the cream design.
+- [ ] **(Optional) Light splash screen.** The first second after tapping the app icon (the native
+  splash, and the "restoring session" screen after it) stays navy, because
+  `assets/images/trainernearme-logo.png` has the navy background baked into the image. For a
+  light splash, export the logo with a transparent background (dark "Trainer" text), save it as
+  `assets/images/trainernearme-logo-light.png`, and ask Claude to wire it up (needs a new build).

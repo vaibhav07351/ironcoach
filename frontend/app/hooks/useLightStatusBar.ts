@@ -2,7 +2,7 @@ import { useCallback, useSyncExternalStore } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 
 /*
- * Screens with a navy top need light status bar icons. Each focused screen registers a request,
+ * Screens with a navy top in both themes (the loading splash) need light status bar icons. Each focused screen registers a request,
  * and one <StatusBar> at the root renders from the count, so there is a single owner of the style
  * and no race between screens setting it imperatively.
  */

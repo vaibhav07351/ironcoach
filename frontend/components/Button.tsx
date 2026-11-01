@@ -9,7 +9,8 @@ import { PressableScale } from './PressableScale';
 
 /**
  * primary: gold, the one main action on a screen. secondary: tinted, supporting actions.
- * ghost: text only. danger: destructive. onBrand: white, for use on navy hero blocks.
+ * ghost: text only. danger: destructive. onBrand: solid, for use on hero blocks (navy in light,
+ * white in dark).
  */
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'onBrand';
 type Size = 'regular' | 'small';
@@ -77,7 +78,7 @@ function foreground(variant: Variant, colors: Theme['colors']): string {
     case 'danger':
       return colors.onDanger;
     case 'onBrand':
-      return colors.brand;
+      return colors.onBrandAction;
   }
 }
 
@@ -109,7 +110,7 @@ const makeStyles = ({ colors }: Theme) =>
       backgroundColor: colors.danger,
     },
     onBrand: {
-      backgroundColor: '#FFFFFF',
+      backgroundColor: colors.brandAction,
     },
     disabled: {
       opacity: 0.45,

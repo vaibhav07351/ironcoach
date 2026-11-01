@@ -9,7 +9,7 @@ import { PressableScale } from './PressableScale';
 type Props = {
   value: string | number;
   label: string;
-  /** 'hero' sits on a navy HeroHeader; 'surface' on a normal card. */
+  /** 'hero' sits on a HeroHeader; 'surface' on a normal card. */
   on?: 'hero' | 'surface';
   /** Draws the value in the alert color (e.g. clients slipping). */
   alert?: boolean;
@@ -22,7 +22,7 @@ export function StatTile({ value, label, on = 'surface', alert = false, onPress,
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const hero = on === 'hero';
-  const valueColor = alert ? (hero ? colors.accent : colors.danger) : hero ? colors.onBrand : colors.text;
+  const valueColor = alert ? (hero ? colors.onBrandAccent : colors.danger) : hero ? colors.onBrand : colors.text;
   const body = (
     <>
       <AppText variant="number" style={{ color: valueColor }} numberOfLines={1} adjustsFontSizeToFit>

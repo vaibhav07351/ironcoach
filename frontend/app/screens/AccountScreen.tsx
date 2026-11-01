@@ -14,10 +14,11 @@ import { IconBadge } from '@/components/IconBadge';
 import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
-import { Spacing } from '@/constants/theme';
+import { SegmentedControl, type SegmentOption } from '@/components/SegmentedControl';
+import { Spacing, type ThemePreference } from '@/constants/theme';
 import { config } from '../config';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme, useThemePreference } from '../contexts/ThemeContext';
 import { leaveCoach } from '../services/accountService';
 import { updateSettings } from '../services/authService';
 import { errorMessage } from '../services/http';
@@ -25,11 +26,18 @@ import type { RootStackParamList } from '../types/navigation';
 import { confirmAction } from '../utils/confirm';
 import { deviceTimeZone } from '../utils/date';
 
+const APPEARANCE_OPTIONS: SegmentOption<ThemePreference>[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
+];
+
 /** Account and settings for both roles. */
 export default function AccountScreen(): React.JSX.Element {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, signOut, setUser, refreshUser } = useAuth();
   const { colors } = useTheme();
+  const themePreference = useThemePreference();
   const [busy, setBusy] = useState<'leave' | 'zone' | null>(null);
 
   if (!user) {
@@ -119,6 +127,24 @@ export default function AccountScreen(): React.JSX.Element {
       <SectionHeader title="Settings" />
       <Card style={styles.zone}>
         <View style={styles.zoneRow}>
+          <IconBadge name="contrast-outline" tone="neutral" size={40} />
+          <View style={styles.profileText}>
+            <AppText variant="subheading">Appearance</AppText>
+            <AppText variant="caption" tone="secondary">
+              System follows your phone&apos;s setting.
+            </AppText>
+          </View>
+        </View>
+        <SegmentedControl
+          options={APPEARANCE_OPTIONS}
+          value={themePreference.preference}
+          onChange={themePreference.setPreference}
+          accessibilityLabel="Appearance"
+          style={styles.appearance}
+        />
+      </Card>
+      <Card style={styles.zone}>
+        <View style={styles.zoneRow}>
           <IconBadge name="globe-outline" tone="neutral" size={40} />
           <View style={styles.profileText}>
             <AppText variant="subheading">Time zone</AppText>
@@ -193,6 +219,9 @@ const styles = StyleSheet.create({
     gap: Spacing.small + 4,
   },
   zoneButton: {
+    marginTop: Spacing.small + 4,
+  },
+  appearance: {
     marginTop: Spacing.small + 4,
   },
   signOut: {

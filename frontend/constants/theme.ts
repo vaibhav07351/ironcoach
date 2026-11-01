@@ -3,10 +3,16 @@ import { Platform, type TextStyle, type ViewStyle } from 'react-native';
 /**
  * Design tokens. Colors are semantic (what a color is for, not what it looks like) and come in a
  * light and a dark palette; screens read the active one through `useTheme()`.
- * Brand: navy (#07173D) and gold (#FDBF27), from the logo and store graphics.
+ * Brand: navy (#07173D) and gold (#FDBF27), from the logo and store graphics. Light is the
+ * default; in light mode navy is text and accents, not big blocks.
  */
 
 export type ColorScheme = 'light' | 'dark';
+
+/** What the user picked in Account > Appearance. 'system' follows the phone. */
+export type ThemePreference = ColorScheme | 'system';
+
+export const DEFAULT_THEME_PREFERENCE: ThemePreference = 'light';
 
 export type Palette = {
   /** Screen background. */
@@ -23,12 +29,17 @@ export type Palette = {
   /** Content drawn on top of `tint`. */
   onTint: string;
   tintSoft: string;
-  /** Navy hero blocks (home headers, sign in). Same in both schemes, deeper in dark. */
+  /** Hero blocks (home headers, sign in): warm cream in light, navy in dark. */
   brand: string;
   onBrand: string;
   onBrandMuted: string;
-  /** Translucent tile on top of `brand`. */
+  /** Gold that stays readable on `brand`: icons, the wordmark, alert numbers. */
+  onBrandAccent: string;
+  /** Tile on top of `brand`. */
   brandRaised: string;
+  /** Solid button on top of `brand`. */
+  brandAction: string;
+  onBrandAction: string;
   /** Gold: the single most important action on a screen. */
   accent: string;
   onAccent: string;
@@ -49,7 +60,7 @@ export type Palette = {
 };
 
 const light: Palette = {
-  bg: '#F4F6FA',
+  bg: '#F8F7F3',
   surface: '#FFFFFF',
   surfaceMuted: '#EBEEF4',
   text: '#0E1526',
@@ -58,10 +69,13 @@ const light: Palette = {
   tint: '#07173D',
   onTint: '#FFFFFF',
   tintSoft: '#E3E8F4',
-  brand: '#07173D',
-  onBrand: '#FFFFFF',
-  onBrandMuted: '#B8C1D9',
-  brandRaised: 'rgba(255, 255, 255, 0.09)',
+  brand: '#FFF5DD',
+  onBrand: '#07173D',
+  onBrandMuted: '#4A5168',
+  onBrandAccent: '#8F5F00',
+  brandRaised: '#FFFFFF',
+  brandAction: '#07173D',
+  onBrandAction: '#FFFFFF',
   accent: '#FDBF27',
   onAccent: '#07173D',
   accentSoft: '#FFF1C7',
@@ -91,7 +105,10 @@ const dark: Palette = {
   brand: '#0D1D46',
   onBrand: '#FFFFFF',
   onBrandMuted: '#B3BEDA',
+  onBrandAccent: '#FDBF27',
   brandRaised: 'rgba(255, 255, 255, 0.08)',
+  brandAction: '#FFFFFF',
+  onBrandAction: '#07173D',
   accent: '#FDBF27',
   onAccent: '#07173D',
   accentSoft: 'rgba(253, 191, 39, 0.16)',
