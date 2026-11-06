@@ -6,6 +6,7 @@ import (
 	"ironcoach/database"
 	"ironcoach/models"
 	"log"
+	"regexp"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -115,7 +116,7 @@ func (r *ExerciseRepository) CascadeDeleteExerciseFromWorkoutLogs(exerciseID str
 
 	logs := r.collection.Database().Collection("workout_logs")
 
-	// Pull matching workout entries only — do not wipe entire logs.
+	// Pull matching workout entries only: do not wipe entire logs.
 	if _, err = logs.UpdateMany(
 		ctx,
 		bson.M{"workouts.exercise_id": objectId},
@@ -300,4 +301,56 @@ func (r *ExerciseRepository) AddMany(exercises []models.Exercise) error {
 	}
 	_, err := r.collection.InsertMany(ctx, docs, options.InsertMany().SetOrdered(false))
 	return err
+}
+
+// SearchInCategories finds exercises in the given categories whose name contains q
+// (case-insensitive; q is matched literally, never as a pattern), sorted by name.
+func (r *ExerciseRepository) SearchInCategories(categoryIDs []primitive.ObjectID, q string, limit int) ([]models.Exercise, error) {
+	out := []models.Exercise{}
+	if len(categoryIDs) == 0 {
+		return out, nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"category_id": bson.M{"$in": categoryIDs}}
+	if q != "" {
+		filter["name"] = primitive.Regex{Pattern: regexp.QuoteMeta(q), Options: "i"}
+	}
+	opts := options.Find().SetSort(bson.D{{Key: "name", Value: 1}}).SetLimit(int64(limit))
+	cursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	if err := cursor.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TypesByIDs returns each exercise's stored type (empty for exercises created before types
+// existed), keyed by hex id, in one query.
+func (r *ExerciseRepository) TypesByIDs(ids []primitive.ObjectID) (map[string]string, error) {
+	out := make(map[string]string, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cursor, err := r.collection.Find(ctx, bson.M{"_id": bson.M{"$in": ids}}, options.Find().SetProjection(bson.M{"type": 1}))
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		ID   primitive.ObjectID `bson:"_id"`
+		Type string             `bson:"type"`
+	}
+	if err := cursor.All(ctx, &rows); err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		out[row.ID.Hex()] = row.Type
+	}
+	return out, nil
 }

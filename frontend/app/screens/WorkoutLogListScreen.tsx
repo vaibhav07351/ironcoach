@@ -4,29 +4,41 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Toast from 'react-native-toast-message';
 
+import { ActivityLogButtons } from '@/components/ActivityLogButtons';
 import { AppText } from '@/components/AppText';
 import { Card } from '@/components/Card';
-import { Chip } from '@/components/Chip';
 import { DayNavigator } from '@/components/DayNavigator';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { ExerciseDayCard } from '@/components/ExerciseDayCard';
 import { IconBadge } from '@/components/IconBadge';
 import { IconButton } from '@/components/IconButton';
 import { LoadingState } from '@/components/LoadingState';
 import { SectionHeader } from '@/components/SectionHeader';
-import { Radii, Spacing, webScrollFix } from '@/constants/theme';
+import { WorkoutCalendar } from '@/components/WorkoutCalendar';
+import { Spacing, webScrollFix } from '@/constants/theme';
 import { summarizeMetrics } from '../constants/activityFields';
-import { ACTIVITY_OPTIONS, expertiseLabel } from '../constants/expertise';
+import { expertiseLabel } from '../constants/expertise';
 import { useTheme, useThemedStyles, type Theme } from '../contexts/ThemeContext';
 import { useTraineeRecord } from '../contexts/TraineeRecordContext';
 import { errorMessage } from '../services/http';
 import { deleteWorkoutLog, listWorkoutLogs } from '../services/workoutService';
 import type { RootStackParamList } from '../types/navigation';
-import type { WorkoutLog } from '../types/workout';
+import type { ExerciseType, WorkoutLog } from '../types/workout';
 import { confirmAction } from '../utils/confirm';
 import { todayLocal } from '../utils/date';
+import { entriesOf } from '../utils/sets';
 
-/** One day's workouts and sport sessions for the current client record. */
+/** A day's logs in the order they were done; exercise logs and sport sessions are kept apart. */
+function splitLogs(logs: WorkoutLog[]): { exercises: WorkoutLog[]; sessions: WorkoutLog[] } {
+  const ordered = [...logs].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  return {
+    exercises: ordered.filter((l) => (l.workouts?.length ?? 0) > 0),
+    sessions: ordered.filter((l) => (l.workouts?.length ?? 0) === 0),
+  };
+}
+
+/** One day of training for the current client record, like a page of a gym notebook. */
 export default function WorkoutLogListScreen(): React.JSX.Element {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const record = useTraineeRecord();
@@ -36,10 +48,11 @@ export default function WorkoutLogListScreen(): React.JSX.Element {
   const [logs, setLogs] = useState<WorkoutLog[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setLogs(await listWorkoutLogs(record.id, date));
+      setLogs(await listWorkoutLogs(record.id, date, 100));
       setLoadError(null);
     } catch (e: unknown) {
       setLoadError(errorMessage(e));
@@ -57,12 +70,13 @@ export default function WorkoutLogListScreen(): React.JSX.Element {
   const changeDate = (next: string): void => {
     setLogs(null);
     setDate(next);
+    setShowCalendar(false);
   };
 
-  const onDelete = async (log: WorkoutLog): Promise<void> => {
+  const onDelete = async (log: WorkoutLog, what: string): Promise<void> => {
     const ok = await confirmAction({
-      title: 'Delete this log?',
-      message: 'The whole session is removed. This cannot be undone.',
+      title: `Delete ${what}?`,
+      message: 'It is removed from this day. This cannot be undone.',
       confirmLabel: 'Delete',
       destructive: true,
     });
@@ -75,13 +89,7 @@ export default function WorkoutLogListScreen(): React.JSX.Element {
     }
   };
 
-  const startLog = (code: string): void => {
-    if (code === 'gym') {
-      navigation.navigate('WorkoutCategories', { traineeId: record.id, date });
-    } else {
-      navigation.navigate('LogSession', { traineeId: record.id, date, activityType: code });
-    }
-  };
+  const { exercises, sessions } = splitLogs(logs ?? []);
 
   return (
     <ScrollView
@@ -100,7 +108,18 @@ export default function WorkoutLogListScreen(): React.JSX.Element {
         />
       }
     >
-      <DayNavigator date={date} onChange={changeDate} />
+      <View style={styles.dayRow}>
+        <View style={styles.flex}>
+          <DayNavigator date={date} onChange={changeDate} />
+        </View>
+        <IconButton
+          icon={showCalendar ? 'close' : 'calendar-outline'}
+          accessibilityLabel={showCalendar ? 'Hide calendar' : 'Show calendar'}
+          onPress={() => setShowCalendar((v) => !v)}
+          style={styles.calendarButton}
+        />
+      </View>
+      {showCalendar ? <WorkoutCalendar traineeId={record.id} date={date} onPick={changeDate} /> : null}
 
       {logs === null ? (
         loadError ? (
@@ -111,70 +130,67 @@ export default function WorkoutLogListScreen(): React.JSX.Element {
       ) : logs.length === 0 ? (
         <EmptyState icon="barbell-outline" title="Nothing logged" message="Pick what was trained below to add it." />
       ) : (
-        logs.map((log) => {
-          const isGym = (log.activity_type ?? 'gym') === 'gym';
-          return (
+        <>
+          {exercises.map((log) =>
+            (log.workouts ?? []).map((w, i) => {
+              const keyed = !!log.exercise_key;
+              const type: ExerciseType = w.type ?? 'weight_reps';
+              const canOpen = keyed && !!w.exercise_id;
+              return (
+                <ExerciseDayCard
+                  key={`${log.id}-${i}`}
+                  name={w.exercise}
+                  type={type}
+                  entries={entriesOf(w)}
+                  onOpen={
+                    canOpen
+                      ? () =>
+                          navigation.navigate('Exercise', {
+                            traineeId: record.id,
+                            exerciseId: w.exercise_id as string,
+                            exerciseName: w.exercise,
+                            exerciseType: type,
+                            date,
+                          })
+                      : undefined
+                  }
+                  onEditLegacy={keyed ? undefined : () => navigation.navigate('WorkoutLogForm', { traineeId: record.id, log })}
+                  onDelete={() =>
+                    void onDelete(log, keyed || (log.workouts?.length ?? 0) === 1 ? w.exercise : 'this whole workout (all its exercises)')
+                  }
+                />
+              );
+            })
+          )}
+          {sessions.map((log) => (
             <Card key={log.id} style={styles.card}>
               <View style={styles.cardHeader}>
-                <IconBadge name={isGym ? 'barbell' : 'fitness'} size={36} />
+                <IconBadge name="fitness" size={36} />
                 <AppText variant="subheading" style={styles.flex} numberOfLines={1}>
-                  {expertiseLabel(log.activity_type ?? 'gym')}
+                  {expertiseLabel(log.activity_type ?? 'other')}
                 </AppText>
-                {isGym ? (
-                  <IconButton
-                    icon="create-outline"
-                    accessibilityLabel="Edit this workout"
-                    onPress={() => navigation.navigate('WorkoutLogForm', { traineeId: record.id, log })}
-                  />
-                ) : null}
-                <IconButton
-                  icon="trash-outline"
-                  tone="danger"
-                  accessibilityLabel="Delete this log"
-                  onPress={() => void onDelete(log)}
-                />
+                <IconButton icon="trash-outline" tone="danger" accessibilityLabel="Delete this session" onPress={() => void onDelete(log, 'this session')} />
               </View>
-              {isGym ? (
-                (log.workouts ?? []).map((w, i) => (
-                  <View key={`${w.exercise}-${i}`} style={styles.exercise}>
-                    <AppText variant="label">
-                      {w.exercise}
-                      <AppText variant="caption" tone="muted">
-                        {`  ${w.sets} ${w.sets === 1 ? 'set' : 'sets'}`}
-                      </AppText>
-                    </AppText>
-                    <View style={styles.sets}>
-                      {(w.reps ?? []).map((r, si) => (
-                        <View key={si} style={styles.set}>
-                          <AppText variant="caption" style={styles.setText}>
-                            {`${r} x ${w.weight?.[si] ?? 0} kg`}
-                          </AppText>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                ))
-              ) : (
-                <AppText tone="secondary" style={styles.metrics}>
-                  {summarizeMetrics(log.activity_type ?? 'other', log.metrics) || 'Session'}
-                </AppText>
-              )}
+              <AppText tone="secondary" style={styles.metrics}>
+                {summarizeMetrics(log.activity_type ?? 'other', log.metrics) || 'Session'}
+              </AppText>
               {log.notes ? (
                 <AppText variant="caption" tone="secondary" style={styles.notes}>
                   {log.notes}
                 </AppText>
               ) : null}
             </Card>
-          );
-        })
+          ))}
+        </>
       )}
 
       <SectionHeader title="Add to this day" />
-      <View style={styles.chips}>
-        {ACTIVITY_OPTIONS.map((o) => (
-          <Chip key={o.code} label={o.label} icon="add" onPress={() => startLog(o.code)} />
-        ))}
-      </View>
+      <ActivityLogButtons traineeId={record.id} clientName={record.name} date={date} />
+      {exercises.length > 0 ? (
+        <AppText variant="caption" tone="secondary" style={styles.hint}>
+          Tap an exercise above to add sets, or to see its history and graph.
+        </AppText>
+      ) : null}
     </ScrollView>
   );
 }
@@ -183,24 +199,12 @@ const makeStyles = ({ colors }: Theme) =>
   StyleSheet.create({
     root: { backgroundColor: colors.bg },
     content: { padding: Spacing.medium, paddingBottom: Spacing.xxl },
+    dayRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.xs },
+    calendarButton: { marginTop: Spacing.small },
     card: { marginBottom: Spacing.small + 4 },
     cardHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.small },
     flex: { flex: 1, minWidth: 0 },
-    exercise: {
-      marginTop: Spacing.small + 4,
-      paddingTop: Spacing.small + 4,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.separator,
-    },
-    sets: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs + 2, marginTop: Spacing.small },
-    set: {
-      backgroundColor: colors.surfaceMuted,
-      borderRadius: Radii.sm,
-      paddingHorizontal: Spacing.small,
-      paddingVertical: 3,
-    },
-    setText: { fontWeight: '600', fontVariant: ['tabular-nums'], color: colors.text },
     metrics: { marginTop: Spacing.small },
     notes: { marginTop: Spacing.small + 4, fontStyle: 'italic' },
-    chips: { flexDirection: 'row', flexWrap: 'wrap' },
+    hint: { marginTop: Spacing.small },
   });

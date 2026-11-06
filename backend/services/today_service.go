@@ -3,6 +3,7 @@ package services
 import (
 	"ironcoach/models"
 	"ironcoach/repositories"
+	"log/slog"
 	"sort"
 	"time"
 )
@@ -10,6 +11,8 @@ import (
 const (
 	todaySlippingMax = 20
 	todayDuesMax     = 20
+	todayWinsMax     = 10
+	todayWinsDays    = 7
 )
 
 // TodayService builds the trainer's Today screen: who trained, who is slipping, requests and
@@ -20,6 +23,7 @@ type TodayService struct {
 	attendance *repositories.AttendanceRepository
 	adherence  *AdherenceService
 	fees       *FeesService
+	insights   *ProgressInsightsService
 }
 
 func NewTodayService() *TodayService {
@@ -29,6 +33,7 @@ func NewTodayService() *TodayService {
 		attendance: repositories.NewAttendanceRepository(),
 		adherence:  NewAdherenceService(),
 		fees:       NewFeesService(),
+		insights:   NewProgressInsightsService(),
 	}
 }
 
@@ -71,6 +76,7 @@ func (s *TodayService) Overview(p Principal) (models.TodayOverview, error) {
 		Slipping:        []models.AdherenceSummary{},
 		Dues:            []models.DueItem{},
 		PendingRequests: pending,
+		Wins:            []models.PREvent{},
 	}
 	for _, sum := range summaries {
 		if sum.TrainedToday {
@@ -86,6 +92,19 @@ func (s *TodayService) Overview(p Principal) (models.TodayOverview, error) {
 		}
 	}
 	out.Dues, out.DuesTotalPaise = topDues(dues, byID, todayDuesMax)
+
+	names := make(map[string]string, len(roster))
+	for _, t := range roster {
+		names[t.ID] = t.Name
+	}
+	winsSince := localDate(time.Now().AddDate(0, 0, -todayWinsDays), loc)
+	wins, err := s.insights.RecentPRsForTrainees(ids, names, winsSince, todayWinsMax)
+	if err != nil {
+		// Wins are a nice-to-have; the rest of Today must still load.
+		slog.Warn("today wins failed", "trainer_id", p.TrainerKey, "err", err)
+	} else {
+		out.Wins = wins
+	}
 	return out, nil
 }
 

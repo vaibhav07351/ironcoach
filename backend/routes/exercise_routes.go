@@ -13,6 +13,7 @@ func RegisterExerciseRoutes(router *gin.Engine) {
 
 	protected.POST("", exerciseController.AddExercise)
 	protected.GET("/category/:category_id", exerciseController.GetExercisesByCategory)
+	protected.GET("/search", exerciseController.SearchExercises)
 	protected.PUT("/:id", exerciseController.UpdateExercise)
 	protected.DELETE("/:id", exerciseController.DeleteExercise)
 }

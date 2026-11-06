@@ -1,4 +1,4 @@
-import type { Workout } from '../types/workout';
+import type { SetEntry, Workout } from '../types/workout';
 
 /** One set as typed (strings until saved). */
 export type SetRow = { reps: string; weight: string };
@@ -24,4 +24,14 @@ export function rowsToWorkout(exercise: string, exerciseId: string | undefined, 
 
 export function workoutToRows(w: Workout): SetRow[] {
   return w.reps.map((r, i) => ({ reps: String(r), weight: String(w.weight[i] ?? 0) }));
+}
+
+/**
+ * A workout's sets in the current format: `entries` when present, otherwise built from the old
+ * parallel reps / weight arrays (pairing only indexes present in both).
+ */
+export function entriesOf(w: Workout): SetEntry[] {
+  if (w.entries && w.entries.length > 0) return w.entries;
+  const n = Math.min(w.reps?.length ?? 0, w.weight?.length ?? 0);
+  return Array.from({ length: n }, (_, i) => ({ weight_kg: w.weight[i], reps: w.reps[i] }));
 }

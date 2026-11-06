@@ -453,8 +453,8 @@ func TestIntegrationCatalogSeededOnce(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	if got := countDocs(t, "categories", bson.M{"trainee_id": traineeID}); got != 8 {
-		t.Fatalf("categories = %d, want 8 (seeded once)", got)
+	if got := countDocs(t, "categories", bson.M{"trainee_id": traineeID}); got != int64(len(defaultCatalog)) {
+		t.Fatalf("categories = %d, want %d (seeded once, Cardio included)", got, len(defaultCatalog))
 	}
 
 	// Deleting everything must not bring the defaults back.

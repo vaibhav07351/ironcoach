@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import FirstRunHints, { hasCompletedFirstRunHints } from '@/components/FirstRunHints';
+import { ActivityLogButtons } from '@/components/ActivityLogButtons';
 import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
 import { ErrorState } from '@/components/ErrorState';
@@ -12,7 +13,6 @@ import { HeroHeader } from '@/components/HeroHeader';
 import { IconBadge, type IconTone } from '@/components/IconBadge';
 import { ListRow } from '@/components/ListRow';
 import { LoadingState } from '@/components/LoadingState';
-import { QuickLogChips } from '@/components/QuickLogChips';
 import { RateCoachCard } from '@/components/RateCoachCard';
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -127,11 +127,12 @@ export default function ClientTodayScreen(): React.JSX.Element {
   const shortcuts: Shortcut[] = [
     { section: 'workouts', label: 'History', detail: 'Your workouts', icon: 'barbell', tone: 'brand' },
     { section: 'diet', label: 'Meals', detail: 'Log and review your diet', icon: 'restaurant', tone: 'success' },
+    { section: 'progress', label: 'Progress', detail: 'Records, trends and comparisons', icon: 'trending-up', tone: 'accent' },
     {
       section: 'weight',
-      label: 'Weight',
-      detail: latestWeight !== undefined ? `Latest: ${latestWeight} kg` : 'Add your first weigh-in',
-      icon: 'scale',
+      label: 'Body',
+      detail: latestWeight !== undefined ? `Weight ${latestWeight} kg, measurements` : 'Weight and measurements',
+      icon: 'body',
       tone: 'neutral',
     },
     {
@@ -186,7 +187,7 @@ export default function ClientTodayScreen(): React.JSX.Element {
 
         <View style={styles.body}>
           <SectionHeader title="Log a session" style={styles.firstSection} />
-          <QuickLogChips traineeId={traineeId} codes={user?.interests} />
+          <ActivityLogButtons traineeId={traineeId} />
 
           <SectionHeader title="Your record" />
           {shortcuts.map((s) => (

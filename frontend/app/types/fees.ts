@@ -1,4 +1,5 @@
 import type { AdherenceSummary } from './auth';
+import type { PREvent } from './progress';
 
 export type PackageKind = 'sessions' | 'monthly';
 export type PackageStatus = 'active' | 'used_up' | 'expired';
@@ -79,6 +80,8 @@ export type TodayOverview = {
   pending_requests: number;
   dues: DueItem[];
   dues_total_paise: number;
+  /** Recent personal records across active clients (last 7 days). Absent on older servers. */
+  wins?: PREvent[];
 };
 
 /** GET /dues (trainer). */

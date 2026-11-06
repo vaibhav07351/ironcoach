@@ -46,6 +46,9 @@ const lazy = {
   AddCustomExercise: () => require('../screens/AddCustomExerciseScreen').default,
   AddExerciseForm: () => require('../screens/AddExerciseFormScreen').default,
   LogSession: () => require('../screens/LogSessionScreen').default,
+  Exercise: () => require('../screens/ExerciseScreen').default,
+  BodyMetric: () => require('../screens/BodyMetricScreen').default,
+  CompareProgress: () => require('../screens/CompareProgressScreen').default,
   AddFood: () => require('../screens/AddFoodScreen').default,
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -160,6 +163,9 @@ const sharedClientScreens = (
     <Stack.Screen name="AddCustomExercise" getComponent={lazy.AddCustomExercise} options={{ title: 'Exercise' }} />
     <Stack.Screen name="AddExerciseForm" getComponent={lazy.AddExerciseForm} options={{ title: 'Log exercise' }} />
     <Stack.Screen name="LogSession" getComponent={lazy.LogSession} options={{ title: 'Log session' }} />
+    <Stack.Screen name="Exercise" getComponent={lazy.Exercise} options={{ title: 'Exercise' }} />
+    <Stack.Screen name="BodyMetric" getComponent={lazy.BodyMetric} options={{ title: 'Body' }} />
+    <Stack.Screen name="CompareProgress" getComponent={lazy.CompareProgress} options={{ title: 'Compare' }} />
     <Stack.Screen name="AddFood" getComponent={lazy.AddFood} options={{ title: 'Add food' }} />
   </>
 );

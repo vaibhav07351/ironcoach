@@ -2,10 +2,14 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 
 import type { Food } from './food';
 import type { Trainee } from './trainee';
-import type { WorkoutLog } from './workout';
+import type { BodyMetric } from './body';
+import type { ExerciseType, WorkoutLog } from './workout';
 
 /** Sections of one client record screen. Trainers see all of them; clients do not see Overview. */
-export type ClientSection = 'overview' | 'workouts' | 'diet' | 'weight' | 'attendance' | 'fees' | 'profile';
+export type ClientSection = 'overview' | 'workouts' | 'progress' | 'diet' | 'weight' | 'attendance' | 'fees' | 'profile';
+
+/** Tabs of the exercise screen. */
+export type ExerciseTab = 'track' | 'history' | 'graph';
 
 /** Trainer bottom tabs. */
 export type TrainerTabParamList = {
@@ -67,6 +71,16 @@ export type RootStackParamList = {
   };
   AddExerciseForm: { traineeId: string; exercise: string; exerciseId: string; date: string };
   LogSession: { traineeId: string; date: string; activityType: string };
+  Exercise: {
+    traineeId: string;
+    exerciseId: string;
+    exerciseName: string;
+    exerciseType?: ExerciseType;
+    date: string;
+    tab?: ExerciseTab;
+  };
+  BodyMetric: { traineeId: string; metric: BodyMetric };
+  CompareProgress: { traineeId: string; since?: string };
   AddFood: {
     traineeId: string;
     date: string;

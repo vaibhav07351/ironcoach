@@ -297,3 +297,59 @@ func (r *TraineeRepository) ReleaseCatalogSeed(traineeID string) error {
 	_, err = r.collection.UpdateOne(ctx, bson.M{"_id": oid}, bson.M{"$unset": bson.M{"catalog_seeded": ""}})
 	return err
 }
+
+// ClaimFlag sets a one-time boolean flag on a trainee (e.g. "cardio_seeded"). It returns true
+// only for the first caller, so one-time work runs once even under concurrent requests.
+func (r *TraineeRepository) ClaimFlag(traineeID, flag string) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	oid, err := primitive.ObjectIDFromHex(traineeID)
+	if err != nil {
+		return false, nil
+	}
+	res, err := r.collection.UpdateOne(ctx,
+		bson.M{"_id": oid, flag: bson.M{"$ne": true}},
+		bson.M{"$set": bson.M{flag: true}},
+	)
+	if err != nil {
+		return false, err
+	}
+	return res.ModifiedCount > 0, nil
+}
+
+// ReleaseFlag clears a one-time flag after the work it guarded failed, so it can be retried.
+func (r *TraineeRepository) ReleaseFlag(traineeID, flag string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	oid, err := primitive.ObjectIDFromHex(traineeID)
+	if err != nil {
+		return nil
+	}
+	_, err = r.collection.UpdateOne(ctx, bson.M{"_id": oid}, bson.M{"$unset": bson.M{flag: ""}})
+	return err
+}
+
+// SetActivitiesIfEmpty stores activities only when the trainee has none yet, so a trainer's
+// choice is never overwritten by the client's sign-up interests.
+func (r *TraineeRepository) SetActivitiesIfEmpty(traineeID string, activities []string) error {
+	if len(activities) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	oid, err := primitive.ObjectIDFromHex(traineeID)
+	if err != nil {
+		return nil
+	}
+	_, err = r.collection.UpdateOne(ctx,
+		bson.M{"_id": oid, "$or": bson.A{
+			bson.M{"activities": bson.M{"$exists": false}},
+			bson.M{"activities": bson.M{"$size": 0}},
+		}},
+		bson.M{"$set": bson.M{"activities": activities, "updated_at": time.Now().UTC()}},
+	)
+	return err
+}

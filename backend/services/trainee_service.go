@@ -195,6 +195,13 @@ func traineeFieldsFromInput(in models.TraineeInput, isTrainer bool) (bson.M, err
 		}
 		set["lab_tests"] = *in.LabTests
 	}
+	if in.Activities != nil {
+		activities, err := normalizeActivities(*in.Activities)
+		if err != nil {
+			return nil, err
+		}
+		set["activities"] = activities
+	}
 	if in.HealthQuestionnaire != nil {
 		q := in.HealthQuestionnaire
 		if len(q.Responses) > 100 {
@@ -268,4 +275,45 @@ func applyTraineeFields(t *models.Trainee, set bson.M) {
 	if v, ok := set["health_questionnaire"].(*models.HealthQuestionnaire); ok {
 		t.HealthQuestionnaire = v
 	}
+	if v, ok := set["activities"].([]string); ok {
+		t.Activities = v
+	}
+}
+
+// maxActivities bounds the activities list (there are only a handful of codes).
+const maxActivities = 12
+
+// normalizeActivities validates activity codes and removes duplicates, keeping the given order.
+func normalizeActivities(in []string) ([]string, error) {
+	if len(in) > maxActivities {
+		return nil, ErrValidation("too many activities")
+	}
+	out := make([]string, 0, len(in))
+	seen := make(map[string]bool, len(in))
+	for _, code := range in {
+		code = strings.TrimSpace(code)
+		if !models.IsValidActivityType(code) {
+			return nil, ErrValidation("activities contains an unknown activity")
+		}
+		if !seen[code] {
+			seen[code] = true
+			out = append(out, code)
+		}
+	}
+	return out, nil
+}
+
+// activitiesFromInterests keeps the sign-up interests that are known activity codes, so a client
+// who joins a coach starts with what they said they train. Unknown codes are dropped silently
+// (interests are a superset used for coach discovery).
+func activitiesFromInterests(interests []string) []string {
+	out := make([]string, 0, len(interests))
+	seen := map[string]bool{}
+	for _, code := range interests {
+		if models.IsValidActivityType(code) && !seen[code] && len(out) < maxActivities {
+			seen[code] = true
+			out = append(out, code)
+		}
+	}
+	return out
 }

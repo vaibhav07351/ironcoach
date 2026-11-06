@@ -9,13 +9,15 @@ import (
 )
 
 type ProgressController struct {
-	service *services.ProgressService
+	service  *services.ProgressService
+	insights *services.ProgressInsightsService
 }
 
 // Constructor for ProgressController
 func NewProgressController() *ProgressController {
 	return &ProgressController{
-		service: services.NewProgressService(),
+		service:  services.NewProgressService(),
+		insights: services.NewProgressInsightsService(),
 	}
 }
 
@@ -53,4 +55,24 @@ func (ctrl *ProgressController) AddWeightProgress(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Weight progress added successfully"})
+}
+
+// GetSummary returns "since joining" and month-on-month progress.
+func (ctrl *ProgressController) GetSummary(c *gin.Context) {
+	summary, err := ctrl.insights.Summary(principal(c), c.Param("trainee_id"))
+	if err != nil {
+		respondError(c, err, "summary_failed")
+		return
+	}
+	c.JSON(http.StatusOK, summary)
+}
+
+// Compare shows body metrics and lifts at two dates. Query: from, to (YYYY-MM-DD).
+func (ctrl *ProgressController) Compare(c *gin.Context) {
+	result, err := ctrl.insights.Compare(principal(c), c.Param("trainee_id"), c.Query("from"), c.Query("to"))
+	if err != nil {
+		respondError(c, err, "compare_failed")
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }

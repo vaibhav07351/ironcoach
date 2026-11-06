@@ -71,6 +71,8 @@ export type Trainee = {
     social_handle?: string;
     image_url?: string;
     active_supplements?: string;
+    /** What this client trains (activity codes such as gym, cardio); shown first when logging. */
+    activities?: string[] | null;
     /** Set when the client already has an app account linked (invite redeemed or discovery accepted). */
     user_id?: string;
     email?: string;
@@ -187,4 +189,5 @@ export type TraineeInput = Partial<
     >
 > & {
     health_questionnaire?: { responses: HealthQuestionnaireResponses; comments?: string };
+    activities?: string[];
 };

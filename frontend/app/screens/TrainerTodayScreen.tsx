@@ -19,6 +19,7 @@ import { LoadingState } from '@/components/LoadingState';
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
 import { StatTile } from '@/components/StatTile';
+import { WinsList } from '@/components/WinsList';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -77,7 +78,7 @@ export default function TrainerTodayScreen(): React.JSX.Element {
     }, [load])
   );
 
-  const openClient = (id: string, name: string, section?: 'fees'): void =>
+  const openClient = (id: string, name: string, section?: 'fees' | 'progress'): void =>
     navigation.navigate('TraineeDetail', { trainee: { id, name }, section });
 
   if (!today) {
@@ -230,6 +231,8 @@ export default function TrainerTodayScreen(): React.JSX.Element {
                   ))}
                 </>
               ) : null}
+
+              <WinsList wins={today.wins ?? []} onOpen={(id, name) => openClient(id, name, 'progress')} />
             </>
           )}
         </View>

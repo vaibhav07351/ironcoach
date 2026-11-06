@@ -5,6 +5,8 @@ import (
 	"ironcoach/models"
 	"ironcoach/repositories"
 	"log/slog"
+	"sort"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -53,6 +55,12 @@ func (s *CategoryService) GetCategories(traineeID string) ([]models.Category, er
 		return nil, err
 	}
 	if len(categories) > 0 {
+		categories, err = s.ensureCardio(traineeID, categories)
+		if err != nil {
+			// The catalog itself loaded; a failed Cardio back-fill is retried on the next load.
+			slog.Warn("add cardio category failed", "trainee_id", traineeID, "err", err)
+		}
+		sortCategories(categories)
 		return categories, nil
 	}
 	if err := s.SeedDefaultCatalog(traineeID); err != nil {
@@ -98,6 +106,53 @@ func (s *CategoryService) DeleteCategory(id string, traineeID string) error {
 	return s.exerciseRepo.DeleteExercisesByCategoryID(category.ID.Hex())
 }
 
+// catalogSeedCategory is one default category and its exercises. Exercises not listed in
+// exerciseTypes are weight x reps.
+type catalogSeedCategory struct {
+	Name      string
+	Exercises []string
+}
+
+var defaultCatalog = []catalogSeedCategory{
+	{"Abs", []string{"Crunches", "Plank", "Leg Raises", "Russian Twists"}},
+	{"Back", []string{"Pull-Ups", "Deadlift", "Lat Pulldowns", "Bent Over Rows", "Seated Cable Row"}},
+	{"Biceps", []string{"Barbell Curl", "Hammer Curl", "Dumbbell Curls", "Chin-Ups"}},
+	{"Cardio", cardioExercises},
+	{"Chest", []string{"Bench Press", "Push-Ups", "Incline Bench Press", "Dumbbell Flyes"}},
+	{"Forearms", []string{"Wrist Curls", "Reverse Wrist Curls", "Farmer's Walk", "Grip Squeeze"}},
+	{"Legs", []string{"Squats", "Lunges", "Leg Press", "Calf Raises"}},
+	{"Shoulders", []string{"Shoulder Press", "Lateral Raise", "Arnold Press", "Upright Rows"}},
+	{"Triceps", []string{"Tricep Dips", "Overhead Extension", "Close-Grip Bench Press", "Tricep Pushdowns"}},
+}
+
+const cardioCategoryName = "Cardio"
+
+var cardioExercises = []string{
+	"Running (Treadmill)", "Running (Outdoor)", "Walking", "Cycling", "Stationary Bike",
+	"Rowing Machine", "Elliptical Trainer", "Stair Climber", "Swimming",
+}
+
+// exerciseTypes gives the non-default type of seeded exercises.
+var exerciseTypes = func() map[string]string {
+	m := map[string]string{
+		"Plank":       models.ExerciseTime,
+		"Crunches":    models.ExerciseReps,
+		"Leg Raises":  models.ExerciseReps,
+		"Pull-Ups":    models.ExerciseReps,
+		"Chin-Ups":    models.ExerciseReps,
+		"Push-Ups":    models.ExerciseReps,
+		"Tricep Dips": models.ExerciseReps,
+	}
+	for _, name := range cardioExercises {
+		m[name] = models.ExerciseDistanceTime
+	}
+	return m
+}()
+
+// cardioSeededFlag marks a trainee whose catalog already has the Cardio category (new catalogs
+// include it; older ones get it added once).
+const cardioSeededFlag = "cardio_seeded"
+
 // SeedDefaultCatalog creates the default workout categories and exercises for a trainee, at most
 // once per trainee (guarded by an atomic flag on the trainee), in two bulk inserts.
 func (s *CategoryService) SeedDefaultCatalog(traineeID string) error {
@@ -108,45 +163,12 @@ func (s *CategoryService) SeedDefaultCatalog(traineeID string) error {
 	if err != nil || !claimed {
 		return err
 	}
-
-	defaultData := []struct {
-		CategoryName string
-		Exercises    []string
-	}{
-		{"Abs", []string{"Crunches", "Plank", "Leg Raises", "Russian Twists"}},
-		{"Back", []string{"Pull-Ups", "Deadlift", "Lat Pulldowns", "Bent Over Rows"}},
-		{"Biceps", []string{"Barbell Curl", "Hammer Curl", "Dumbbell Curls", "Chin-Ups"}},
-		{"Chest", []string{"Bench Press", "Push-Ups", "Incline Bench Press", "Dumbbell Flyes"}},
-		{"Forearms", []string{"Wrist Curls", "Reverse Wrist Curls", "Farmer's Walk", "Grip Squeeze"}},
-		{"Legs", []string{"Squats", "Lunges", "Leg Press", "Calf Raises"}},
-		{"Shoulders", []string{"Shoulder Press", "Lateral Raise", "Arnold Press", "Upright Rows"}},
-		{"Triceps", []string{"Tricep Dips", "Overhead Extension", "Close-Grip Bench Press", "Tricep Pushdowns"}},
+	// New catalogs already include Cardio; mark it so ensureCardio never adds a second one.
+	if _, err := s.traineeRepo.ClaimFlag(traineeID, cardioSeededFlag); err != nil {
+		slog.Warn("mark cardio seeded failed", "trainee_id", traineeID, "err", err)
 	}
 
-	now := time.Now()
-	categories := make([]models.Category, 0, len(defaultData))
-	var exercises []models.Exercise
-	for _, data := range defaultData {
-		category := models.Category{
-			ID:        primitive.NewObjectID(),
-			Name:      data.CategoryName,
-			TraineeID: traineeID,
-			CreatedAt: now,
-			UpdatedAt: now,
-		}
-		categories = append(categories, category)
-		for _, exerciseName := range data.Exercises {
-			exercises = append(exercises, models.Exercise{
-				ID:         primitive.NewObjectID(),
-				Name:       exerciseName,
-				Category:   data.CategoryName,
-				CategoryID: category.ID,
-				CreatedAt:  now,
-				UpdatedAt:  now,
-			})
-		}
-	}
-
+	categories, exercises := buildCatalog(traineeID, defaultCatalog, time.Now())
 	if err := s.repository.AddMany(categories); err != nil {
 		if relErr := s.traineeRepo.ReleaseCatalogSeed(traineeID); relErr != nil {
 			slog.Error("release catalog seed flag failed", "trainee_id", traineeID, "err", relErr)
@@ -154,4 +176,65 @@ func (s *CategoryService) SeedDefaultCatalog(traineeID string) error {
 		return err
 	}
 	return s.exerciseRepo.AddMany(exercises)
+}
+
+// ensureCardio adds the Cardio category once to catalogs created before it existed. A client who
+// already made their own "Cardio" category keeps it untouched.
+func (s *CategoryService) ensureCardio(traineeID string, existing []models.Category) ([]models.Category, error) {
+	claimed, err := s.traineeRepo.ClaimFlag(traineeID, cardioSeededFlag)
+	if err != nil || !claimed {
+		return existing, err
+	}
+	for _, c := range existing {
+		if strings.EqualFold(c.Name, cardioCategoryName) {
+			return existing, nil
+		}
+	}
+	categories, exercises := buildCatalog(traineeID, []catalogSeedCategory{{cardioCategoryName, cardioExercises}}, time.Now())
+	if err := s.repository.AddMany(categories); err != nil {
+		if relErr := s.traineeRepo.ReleaseFlag(traineeID, cardioSeededFlag); relErr != nil {
+			slog.Error("release cardio seed flag failed", "trainee_id", traineeID, "err", relErr)
+		}
+		return existing, err
+	}
+	if err := s.exerciseRepo.AddMany(exercises); err != nil {
+		return existing, err
+	}
+	return append(existing, categories...), nil
+}
+
+// buildCatalog turns seed data into category and exercise documents.
+func buildCatalog(traineeID string, data []catalogSeedCategory, now time.Time) ([]models.Category, []models.Exercise) {
+	categories := make([]models.Category, 0, len(data))
+	var exercises []models.Exercise
+	for _, d := range data {
+		category := models.Category{
+			ID:        primitive.NewObjectID(),
+			Name:      d.Name,
+			TraineeID: traineeID,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		categories = append(categories, category)
+		for _, name := range d.Exercises {
+			exercises = append(exercises, models.Exercise{
+				ID:         primitive.NewObjectID(),
+				Name:       name,
+				Category:   d.Name,
+				CategoryID: category.ID,
+				Type:       models.NormalizeExerciseType(exerciseTypes[name]),
+				CreatedAt:  now,
+				UpdatedAt:  now,
+			})
+		}
+	}
+	return categories, exercises
+}
+
+// sortCategories orders categories by name (case-insensitive), so a back-filled Cardio category
+// sits in its alphabetical place like the rest.
+func sortCategories(categories []models.Category) {
+	sort.SliceStable(categories, func(i, j int) bool {
+		return strings.ToLower(categories[i].Name) < strings.ToLower(categories[j].Name)
+	})
 }

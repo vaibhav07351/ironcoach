@@ -53,6 +53,15 @@ func indexPlan() []collectionIndexes {
 			// Idempotency for retried creates from the app.
 			{Keys: bson.D{{Key: "trainee_id", Value: 1}, {Key: "client_id", Value: 1}}, Options: options.Index().SetName("uniq_trainee_client_id").SetUnique(true).SetPartialFilterExpression(nonEmptyString("client_id"))},
 			{Keys: bson.D{{Key: "workouts.exercise_id", Value: 1}}, Options: options.Index().SetName("workout_exercise_id")},
+			// Per-exercise history and graphs: one client's sessions of one exercise by date.
+			{Keys: bson.D{{Key: "trainee_id", Value: 1}, {Key: "workouts.exercise_id", Value: 1}, {Key: "date", Value: -1}}, Options: options.Index().SetName("trainee_exercise_date")},
+			// One keyed log per client, day and exercise (only logs written by the per-exercise
+			// endpoint have exercise_key, so older logs can never conflict).
+			{Keys: bson.D{{Key: "trainee_id", Value: 1}, {Key: "date", Value: 1}, {Key: "exercise_key", Value: 1}}, Options: options.Index().SetName("uniq_trainee_date_exercise").SetUnique(true).SetPartialFilterExpression(nonEmptyString("exercise_key"))},
+		}},
+		{"body_measurements", []mongo.IndexModel{
+			// One value per client, metric and day; also serves series reads by metric.
+			{Keys: bson.D{{Key: "trainee_id", Value: 1}, {Key: "metric", Value: 1}, {Key: "date", Value: -1}}, Options: options.Index().SetName("uniq_trainee_metric_date").SetUnique(true)},
 		}},
 		{"diet_entries", []mongo.IndexModel{
 			// One diet entry per client per day.

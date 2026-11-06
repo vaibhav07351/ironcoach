@@ -19,10 +19,12 @@ import { Spacing, type ThemePreference } from '@/constants/theme';
 import { config } from '../config';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme, useThemePreference } from '../contexts/ThemeContext';
+import { setLengthUnit, useLengthUnit } from '../hooks/useLengthUnit';
 import { leaveCoach } from '../services/accountService';
 import { updateSettings } from '../services/authService';
 import { errorMessage } from '../services/http';
 import type { RootStackParamList } from '../types/navigation';
+import type { LengthUnit } from '../utils/bodyMetrics';
 import { confirmAction } from '../utils/confirm';
 import { deviceTimeZone } from '../utils/date';
 
@@ -32,12 +34,18 @@ const APPEARANCE_OPTIONS: SegmentOption<ThemePreference>[] = [
   { value: 'system', label: 'System' },
 ];
 
+const LENGTH_OPTIONS: SegmentOption<LengthUnit>[] = [
+  { value: 'in', label: 'Inches' },
+  { value: 'cm', label: 'Centimetres' },
+];
+
 /** Account and settings for both roles. */
 export default function AccountScreen(): React.JSX.Element {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, signOut, setUser, refreshUser } = useAuth();
   const { colors } = useTheme();
   const themePreference = useThemePreference();
+  const lengthUnit = useLengthUnit();
   const [busy, setBusy] = useState<'leave' | 'zone' | null>(null);
 
   if (!user) {
@@ -140,6 +148,28 @@ export default function AccountScreen(): React.JSX.Element {
           value={themePreference.preference}
           onChange={themePreference.setPreference}
           accessibilityLabel="Appearance"
+          style={styles.appearance}
+        />
+      </Card>
+      <Card style={styles.zone}>
+        <View style={styles.zoneRow}>
+          <IconBadge name="resize-outline" tone="neutral" size={40} />
+          <View style={styles.profileText}>
+            <AppText variant="subheading">Body measurements</AppText>
+            <AppText variant="caption" tone="secondary">
+              Unit for waist, chest, arms and the rest on this phone.
+            </AppText>
+          </View>
+        </View>
+        <SegmentedControl
+          options={LENGTH_OPTIONS}
+          value={lengthUnit}
+          onChange={(u) => {
+            setLengthUnit(u).catch((e: unknown) => {
+              Toast.show({ type: 'error', text1: 'Unit not saved on this device', text2: errorMessage(e) });
+            });
+          }}
+          accessibilityLabel="Body measurement unit"
           style={styles.appearance}
         />
       </Card>

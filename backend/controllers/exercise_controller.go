@@ -26,6 +26,7 @@ func (c *ExerciseController) AddExercise(ctx *gin.Context) {
 		Category   string `json:"category"`
 		CategoryID string `json:"category_id" binding:"required"`
 		TraineeID  string `json:"trainee_id" binding:"required"`
+		Type       string `json:"type"`
 	}
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "validation_error", "message": err.Error()}})
@@ -46,6 +47,7 @@ func (c *ExerciseController) AddExercise(ctx *gin.Context) {
 		Name:       body.Name,
 		Category:   body.Category,
 		CategoryID: categoryOID,
+		Type:       body.Type,
 	}
 
 	if err := c.service.AddExercise(exercise, body.TraineeID); err != nil {
@@ -57,7 +59,7 @@ func (c *ExerciseController) AddExercise(ctx *gin.Context) {
 		case "forbidden":
 			ctx.JSON(http.StatusForbidden, gin.H{"error": gin.H{"code": "forbidden", "message": "forbidden"}})
 		default:
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "create_failed", "message": err.Error()}})
+			respondError(ctx, err, "create_failed")
 		}
 		return
 	}
@@ -150,4 +152,24 @@ func (c *ExerciseController) DeleteExercise(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Exercise deleted successfully"})
+}
+
+// SearchExercises finds exercises by name across all of a client's categories.
+// Query: trainee_id (required), q (optional; empty lists the first 50 by name).
+func (c *ExerciseController) SearchExercises(ctx *gin.Context) {
+	traineeID := ctx.Query("trainee_id")
+	if traineeID == "" {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": gin.H{"code": "validation_error", "message": "trainee_id query param is required"}})
+		return
+	}
+	if msg := middlewares.AuthorizeTraineeAccess(ctx, traineeID); msg != "" {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": gin.H{"code": "forbidden", "message": msg}})
+		return
+	}
+	exercises, err := c.service.SearchExercises(traineeID, ctx.Query("q"))
+	if err != nil {
+		respondError(ctx, err, "search_failed")
+		return
+	}
+	ctx.JSON(http.StatusOK, exercises)
 }

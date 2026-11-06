@@ -13,6 +13,7 @@ type dataCleaner struct {
 	workoutLogs *repositories.WorkoutLogRepository
 	diets       *repositories.DietEntryRepository
 	progress    *repositories.ProgressRepository
+	body        *repositories.BodyMeasurementRepository
 	categories  *repositories.CategoryRepository
 	exercises   *repositories.ExerciseRepository
 	invites     *repositories.InviteRepository
@@ -30,6 +31,7 @@ func newDataCleaner() *dataCleaner {
 		workoutLogs: repositories.NewWorkoutLogRepository(),
 		diets:       repositories.NewDietEntryRepository(),
 		progress:    repositories.NewProgressRepository(),
+		body:        repositories.NewBodyMeasurementRepository(),
 		categories:  repositories.NewCategoryRepository(),
 		exercises:   repositories.NewExerciseRepository(),
 		invites:     repositories.NewInviteRepository(),
@@ -64,6 +66,9 @@ func (d *dataCleaner) deleteTrainees(ids []string) error {
 		return err
 	}
 	if err := d.progress.DeleteProgressByTrainees(ids); err != nil {
+		return err
+	}
+	if err := d.body.DeleteByTrainees(ids); err != nil {
 		return err
 	}
 	categoryIDs, err := d.categories.IDsByTrainees(ids)

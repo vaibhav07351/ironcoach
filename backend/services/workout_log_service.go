@@ -169,6 +169,9 @@ func averageByExercise(logs []models.WorkoutLog) map[string]ExerciseAverage {
 	acc := map[string]*totals{}
 	for _, log := range logs {
 		for _, w := range log.Workouts {
+			if !isLoadedExercise(w.Type) {
+				continue
+			}
 			n := len(w.Reps)
 			if len(w.Weight) < n {
 				n = len(w.Weight)

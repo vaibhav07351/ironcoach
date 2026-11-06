@@ -4,13 +4,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
+import { ActivityLogButtons } from '@/components/ActivityLogButtons';
 import { AppText } from '@/components/AppText';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { ErrorState } from '@/components/ErrorState';
 import { IconBadge } from '@/components/IconBadge';
 import { LoadingState } from '@/components/LoadingState';
-import { QuickLogChips } from '@/components/QuickLogChips';
 import { SectionHeader } from '@/components/SectionHeader';
 import { StatTile } from '@/components/StatTile';
 import { Spacing, webScrollFix } from '@/constants/theme';
@@ -136,7 +136,7 @@ export function OverviewSection({ onOpenSection }: Props): React.JSX.Element {
       </Card>
 
       <SectionHeader title={`Log for ${record.name}`} />
-      <QuickLogChips traineeId={record.id} />
+      <ActivityLogButtons traineeId={record.id} clientName={record.name} />
       <Button
         title={markedToday ? 'Attended today' : 'Mark attended today'}
         icon={markedToday ? 'checkmark-circle' : 'checkmark-circle-outline'}

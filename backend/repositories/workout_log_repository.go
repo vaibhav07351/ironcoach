@@ -2,8 +2,10 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"ironcoach/database"
 	"ironcoach/models"
+	"sort"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -183,4 +185,210 @@ func toDocWithID(v interface{}, oid primitive.ObjectID) (bson.M, error) {
 	}
 	doc["_id"] = oid
 	return doc, nil
+}
+
+// exerciseDayFilter matches the one keyed log of an exercise on a day.
+func exerciseDayFilter(traineeID, date, exerciseKey string) bson.M {
+	return bson.M{"trainee_id": traineeID, "date": date, "exercise_key": exerciseKey}
+}
+
+// FindExerciseDay returns the keyed log of an exercise on a day, or nil when there is none.
+func (r *WorkoutLogRepository) FindExerciseDay(traineeID, date, exerciseKey string) (*models.WorkoutLog, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var log models.WorkoutLog
+	err := r.collection.FindOne(ctx, exerciseDayFilter(traineeID, date, exerciseKey)).Decode(&log)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &log, nil
+}
+
+// UpsertExerciseDay creates or replaces the keyed log of an exercise on a day and returns it.
+// The unique (trainee_id, date, exercise_key) index makes concurrent first saves safe: the loser
+// of the race gets a duplicate-key error and is retried once as a plain update.
+func (r *WorkoutLogRepository) UpsertExerciseDay(traineeID, date, exerciseKey string, set bson.M) (models.WorkoutLog, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+
+	now := time.Now().UTC()
+	set["updated_at"] = now
+	update := bson.M{
+		"$set":         set,
+		"$setOnInsert": bson.M{"created_at": now},
+	}
+	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+
+	var log models.WorkoutLog
+	err := r.collection.FindOneAndUpdate(ctx, exerciseDayFilter(traineeID, date, exerciseKey), update, opts).Decode(&log)
+	if mongo.IsDuplicateKeyError(err) {
+		err = r.collection.FindOneAndUpdate(ctx, exerciseDayFilter(traineeID, date, exerciseKey), update, opts).Decode(&log)
+	}
+	return log, err
+}
+
+// DeleteExerciseDay removes the keyed log of an exercise on a day (no error when absent).
+func (r *WorkoutLogRepository) DeleteExerciseDay(traineeID, date, exerciseKey string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := r.collection.DeleteOne(ctx, exerciseDayFilter(traineeID, date, exerciseKey))
+	return err
+}
+
+// ExerciseLogQuery narrows FindByExercise. Dates are YYYY-MM-DD; empty means unbounded.
+type ExerciseLogQuery struct {
+	TraineeID  string
+	ExerciseID primitive.ObjectID
+	From       string // date >= From
+	Before     string // date < Before
+	Limit      int
+	Offset     int
+}
+
+// FindByExercise lists logs containing an exercise, newest first, projecting only that exercise's
+// entry (old logs may hold several exercises).
+func (r *WorkoutLogRepository) FindByExercise(q ExerciseLogQuery) ([]models.WorkoutLog, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+
+	filter := bson.M{"trainee_id": q.TraineeID, "workouts.exercise_id": q.ExerciseID}
+	dateRange := bson.M{}
+	if q.From != "" {
+		dateRange["$gte"] = q.From
+	}
+	if q.Before != "" {
+		dateRange["$lt"] = q.Before
+	}
+	if len(dateRange) > 0 {
+		filter["date"] = dateRange
+	}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "date", Value: -1}, {Key: "created_at", Value: -1}}).
+		SetProjection(bson.M{
+			"trainee_id": 1, "date": 1, "notes": 1, "exercise_key": 1, "activity_type": 1, "created_at": 1,
+			"workouts": bson.M{"$elemMatch": bson.M{"exercise_id": q.ExerciseID}},
+		}).
+		SetLimit(int64(q.Limit)).
+		SetSkip(int64(q.Offset))
+
+	cursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	logs := []models.WorkoutLog{}
+	if err := cursor.All(ctx, &logs); err != nil {
+		return nil, err
+	}
+	return logs, nil
+}
+
+// ExerciseLogsSince lists the exercise logs (gym and cardio, not sport sessions) of the given
+// trainees on or after since, newest first, projecting only what stats need. limit caps the read.
+func (r *WorkoutLogRepository) ExerciseLogsSince(traineeIDs []string, since string, limit int) ([]models.WorkoutLog, error) {
+	logs := []models.WorkoutLog{}
+	if len(traineeIDs) == 0 {
+		return logs, nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{"trainee_id": bson.M{"$in": traineeIDs}, "workouts.0": bson.M{"$exists": true}}
+	if since != "" {
+		filter["date"] = bson.M{"$gte": since}
+	}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "date", Value: -1}}).
+		SetProjection(bson.M{"trainee_id": 1, "date": 1, "workouts": 1, "exercise_key": 1}).
+		SetLimit(int64(limit))
+	cursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	if err := cursor.All(ctx, &logs); err != nil {
+		return nil, err
+	}
+	return logs, nil
+}
+
+// LogsForExercises lists logs of the given trainees that contain any of the exercises, oldest
+// first, capped by limit. Used to find earlier bests for recent personal records.
+func (r *WorkoutLogRepository) LogsForExercises(traineeIDs []string, exerciseIDs []primitive.ObjectID, limit int) ([]models.WorkoutLog, error) {
+	logs := []models.WorkoutLog{}
+	if len(traineeIDs) == 0 || len(exerciseIDs) == 0 {
+		return logs, nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{"trainee_id": bson.M{"$in": traineeIDs}, "workouts.exercise_id": bson.M{"$in": exerciseIDs}}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "date", Value: -1}}).
+		SetProjection(bson.M{"trainee_id": 1, "date": 1, "workouts": 1}).
+		SetLimit(int64(limit))
+	cursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	if err := cursor.All(ctx, &logs); err != nil {
+		return nil, err
+	}
+	return logs, nil
+}
+
+// ActivityDayCounts counts, per activity type, the distinct days a trainee logged it on or after
+// since. Logs without a type are gym logs from before types existed.
+func (r *WorkoutLogRepository) ActivityDayCounts(traineeID, since string) ([]models.ActivityCount, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.M{"trainee_id": traineeID, "date": bson.M{"$gte": since}}}},
+		{{Key: "$group", Value: bson.M{"_id": bson.M{
+			"a": bson.M{"$ifNull": bson.A{"$activity_type", "gym"}},
+			"d": "$date",
+		}}}},
+		{{Key: "$group", Value: bson.M{"_id": "$_id.a", "days": bson.M{"$sum": 1}}}},
+		{{Key: "$sort", Value: bson.D{{Key: "days", Value: -1}, {Key: "_id", Value: 1}}}},
+	}
+	cursor, err := r.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		ID   string `bson:"_id"`
+		Days int    `bson:"days"`
+	}
+	if err := cursor.All(ctx, &rows); err != nil {
+		return nil, err
+	}
+	out := make([]models.ActivityCount, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, models.ActivityCount{ActivityType: row.ID, Days: row.Days})
+	}
+	return out, nil
+}
+
+// LoggedDates returns the distinct dates (YYYY-MM-DD, ascending) with any log for a trainee in
+// [from, to]. A month has at most 31, so the result is small.
+func (r *WorkoutLogRepository) LoggedDates(traineeID, from, to string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	raw, err := r.collection.Distinct(ctx, "date", bson.M{"trainee_id": traineeID, "date": bson.M{"$gte": from, "$lte": to}})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(raw))
+	for _, v := range raw {
+		if s, ok := v.(string); ok {
+			out = append(out, s)
+		}
+	}
+	sort.Strings(out)
+	return out, nil
 }

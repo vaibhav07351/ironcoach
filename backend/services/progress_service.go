@@ -76,6 +76,9 @@ func calculateExerciseProgress(workoutLogs []models.WorkoutLog) []models.Exercis
 	exerciseMap := map[string][]models.ExerciseRecord{}
 	for _, log := range workoutLogs {
 		for _, workout := range log.Workouts {
+			if !isLoadedExercise(workout.Type) {
+				continue
+			}
 			n := len(workout.Weight)
 			if len(workout.Reps) < n {
 				n = len(workout.Reps)
@@ -110,4 +113,11 @@ func calculateExerciseProgress(workoutLogs []models.WorkoutLog) []models.Exercis
 	}
 	sort.Slice(exercises, func(i, j int) bool { return exercises[i].Exercise < exercises[j].Exercise })
 	return exercises
+}
+
+// isLoadedExercise reports whether an exercise entry is a weight exercise (cardio and timed
+// holds have no meaningful weight x reps, so they stay out of weight-based summaries).
+func isLoadedExercise(exerciseType string) bool {
+	t := models.NormalizeExerciseType(exerciseType)
+	return t == models.ExerciseWeightReps || t == models.ExerciseReps
 }

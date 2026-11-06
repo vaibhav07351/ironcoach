@@ -1,14 +1,4 @@
-import { addDays, parseLocalDate, todayLocal } from './date';
-
-/** Whole days between two local dates (b - a). */
-function daysBetween(a: string, b: string): number | null {
-  const da = parseLocalDate(a);
-  const db = parseLocalDate(b);
-  if (!da || !db) {
-    return null;
-  }
-  return Math.round((db.getTime() - da.getTime()) / 86_400_000);
-}
+import { addDays, daysBetween, parseLocalDate, todayLocal } from './date';
 
 /**
  * "Logged today", "Logged yesterday", "Logged 3 days ago", or "No logs yet". The server only looks

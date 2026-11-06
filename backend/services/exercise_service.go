@@ -4,6 +4,7 @@ import (
 	"errors"
 	"ironcoach/models"
 	"ironcoach/repositories"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -38,6 +39,10 @@ func (s *ExerciseService) AddExercise(exercise models.Exercise, traineeID string
 	}
 
 	exercise.Category = category.Name
+	exercise.Type = models.NormalizeExerciseType(exercise.Type)
+	if !models.IsValidExerciseType(exercise.Type) {
+		return ErrValidation("type must be weight_reps, reps, distance_time or time")
+	}
 
 	duplicate, err := s.repository.IsExerciseExists(exercise.Name, exercise.CategoryID.Hex())
 	if err != nil {
@@ -64,7 +69,42 @@ func (s *ExerciseService) GetExercisesByCategoryID(categoryID string, traineeID 
 	if category.TraineeID != traineeID {
 		return nil, errors.New("forbidden")
 	}
-	return s.repository.GetExercisesByCategoryID(categoryID)
+	exercises, err := s.repository.GetExercisesByCategoryID(categoryID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range exercises {
+		exercises[i].Type = models.NormalizeExerciseType(exercises[i].Type)
+	}
+	return exercises, nil
+}
+
+// maxExerciseSearchResults bounds one search response.
+const maxExerciseSearchResults = 50
+
+// SearchExercises finds exercises across all of a trainee's categories by name (access is
+// checked by the caller).
+func (s *ExerciseService) SearchExercises(traineeID, q string) ([]models.Exercise, error) {
+	q = strings.TrimSpace(q)
+	if err := validateText("q", q, false, 60); err != nil {
+		return nil, err
+	}
+	categories, err := s.categoryRepo.GetCategoriesByTrainee(traineeID)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]primitive.ObjectID, 0, len(categories))
+	for _, c := range categories {
+		ids = append(ids, c.ID)
+	}
+	exercises, err := s.repository.SearchInCategories(ids, q, maxExerciseSearchResults)
+	if err != nil {
+		return nil, err
+	}
+	for i := range exercises {
+		exercises[i].Type = models.NormalizeExerciseType(exercises[i].Type)
+	}
+	return exercises, nil
 }
 
 func (s *ExerciseService) UpdateExercise(id string, updatedName string, traineeID string) error {

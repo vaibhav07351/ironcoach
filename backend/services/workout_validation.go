@@ -106,3 +106,88 @@ func normalizeWorkoutLogInput(in *models.WorkoutLogInput) error {
 	}
 	return validateClientID(in.ClientID)
 }
+
+const (
+	maxSetWeightKg  = 1000
+	maxSetReps      = 1000
+	maxSetDistanceM = 500_000
+	maxSetDurationS = 24 * 60 * 60
+	maxSetNoteLen   = 200
+)
+
+// validateSetEntries checks one exercise's sets for its type and clears fields the type does
+// not use, so stray values (e.g. reps on a treadmill run) never reach the stats.
+func validateSetEntries(exerciseType string, entries []models.SetEntry) error {
+	if len(entries) > maxSetsPerWorkout {
+		return ErrValidation(fmt.Sprintf("an exercise can have at most %d sets", maxSetsPerWorkout))
+	}
+	for i := range entries {
+		e := &entries[i]
+		label := fmt.Sprintf("set %d", i+1)
+		if err := validateText(label+" note", e.Note, false, maxSetNoteLen); err != nil {
+			return err
+		}
+		if err := validateNumber(label+" weight", e.WeightKg, 0, maxSetWeightKg); err != nil {
+			return err
+		}
+		if e.Reps < 0 || e.Reps > maxSetReps {
+			return ErrValidation(fmt.Sprintf("%s reps must be between 0 and %d", label, maxSetReps))
+		}
+		if err := validateNumber(label+" distance", e.DistanceM, 0, maxSetDistanceM); err != nil {
+			return err
+		}
+		if e.DurationS < 0 || e.DurationS > maxSetDurationS {
+			return ErrValidation(label + " time must be under 24 hours")
+		}
+
+		switch exerciseType {
+		case models.ExerciseWeightReps, models.ExerciseReps:
+			if e.Reps < 1 {
+				return ErrValidation(label + " needs at least 1 rep")
+			}
+			e.DistanceM, e.DurationS = 0, 0
+		case models.ExerciseDistanceTime:
+			if e.DistanceM <= 0 && e.DurationS <= 0 {
+				return ErrValidation(label + " needs a distance or a time")
+			}
+			e.WeightKg, e.Reps = 0, 0
+		case models.ExerciseTime:
+			if e.DurationS <= 0 {
+				return ErrValidation(label + " needs a time")
+			}
+			e.Reps, e.DistanceM = 0, 0
+		default:
+			return ErrValidation("unknown exercise type")
+		}
+	}
+	return nil
+}
+
+// workoutFromEntries builds the stored exercise entry, mirroring sets into the legacy parallel
+// arrays so readers that predate Entries keep working.
+func workoutFromEntries(exercise models.Exercise, entries []models.SetEntry) models.Workout {
+	reps := make([]int, len(entries))
+	weight := make([]float64, len(entries))
+	for i, e := range entries {
+		reps[i] = e.Reps
+		weight[i] = e.WeightKg
+	}
+	return models.Workout{
+		Exercise:   exercise.Name,
+		ExerciseID: exercise.ID,
+		Type:       exercise.Type,
+		Sets:       len(entries),
+		Reps:       reps,
+		Weight:     weight,
+		Entries:    entries,
+	}
+}
+
+// activityForExercise tags a log with cardio for distance/time exercises and gym otherwise, so
+// "trained today: cardio" reads right.
+func activityForExercise(exerciseType string) string {
+	if exerciseType == models.ExerciseDistanceTime {
+		return models.ActivityCardio
+	}
+	return models.ActivityGym
+}

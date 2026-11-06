@@ -105,3 +105,36 @@ export function packageEndDate(start: string, months: number): string {
   renewal.setDate(renewal.getDate() - 1);
   return toLocalDate(renewal);
 }
+
+/** Short day and month for chart axes, e.g. "17 May". */
+export function shortDayMonth(value: string): string {
+  const date = parseLocalDate(value);
+  return date ? date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : value;
+}
+
+/** Whole days from one date to another (b - a); null if either is invalid. */
+export function daysBetween(a: string, b: string): number | null {
+  const da = parseLocalDate(a);
+  const db = parseLocalDate(b);
+  if (!da || !db) return null;
+  return Math.round((db.getTime() - da.getTime()) / 86_400_000);
+}
+
+/** "today", "yesterday", "3 days ago", "2 weeks ago", "5 months ago". */
+export function agoLabel(value: string, now: Date = new Date()): string {
+  const days = daysBetween(value, todayLocal(now));
+  if (days === null) return value;
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) {
+    const w = Math.floor(days / 7);
+    return w === 1 ? '1 week ago' : `${w} weeks ago`;
+  }
+  if (days < 365) {
+    const m = Math.floor(days / 30);
+    return m === 1 ? '1 month ago' : `${m} months ago`;
+  }
+  const y = Math.floor(days / 365);
+  return y === 1 ? '1 year ago' : `${y} years ago`;
+}

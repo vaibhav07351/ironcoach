@@ -157,6 +157,10 @@ func (s *InviteService) RedeemInvite(p Principal, code string, shareConsent bool
 	if err != nil {
 		return nil, err
 	}
+	// The coach may already have picked activities; only fill them in when empty.
+	if err := s.trainees.SetActivitiesIfEmpty(invite.TraineeID, activitiesFromInterests(user.Interests)); err != nil {
+		slog.Warn("seed activities from interests failed", "trainee_id", invite.TraineeID, "err", err)
+	}
 	token, err := issueToken(user)
 	if err != nil {
 		return nil, err

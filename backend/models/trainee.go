@@ -28,6 +28,9 @@ type Trainee struct {
 	UpdatedAt         time.Time          `json:"updated_at" bson:"updated_at"`
 	ImageURL          string             `json:"image_url,omitempty" bson:"image_url,omitempty"`
 	ActiveSupplements string             `json:"active_supplements" bson:"active_supplements"`
+	// Activities is what this client trains (activity codes, e.g. gym, cardio). The app shows
+	// these first when logging; everything else stays one tap away.
+	Activities []string `json:"activities" bson:"activities,omitempty"`
 
 	FitnessTests        []FitnessTest        `json:"fitness_tests,omitempty" bson:"fitness_tests,omitempty"`
 	LabTests            []LabTest            `json:"lab_tests,omitempty" bson:"lab_tests,omitempty"`
@@ -65,23 +68,24 @@ type HealthQuestionnaire struct {
 // optional on edit (nil = unchanged). Linkage and server-owned fields (trainer_id, user_id,
 // rating, timestamps) are never accepted from the client.
 type TraineeInput struct {
-	Name              *string  `json:"name"`
-	PhoneNumber       *string  `json:"phone_number"`
-	Email             *string  `json:"email"`
-	DOB               *string  `json:"dob"`
-	Gender            *string  `json:"gender"`
-	Profession        *string  `json:"profession"`
-	Height            *float64 `json:"height"`
-	StartDate         *string  `json:"start_date"`
-	MembershipType    *string  `json:"membership_type"`
-	EmergencyContact  *string  `json:"emergency_contact"`
-	MedicalHistory    *string  `json:"medical_history"`
-	SocialHandle      *string  `json:"social_handle"`
-	Goals             *string  `json:"goals"`
-	Notes             *string  `json:"notes"`
-	ActiveStatus      *bool    `json:"active_status"`
-	ImageURL          *string  `json:"image_url"`
-	ActiveSupplements *string  `json:"active_supplements"`
+	Name              *string   `json:"name"`
+	PhoneNumber       *string   `json:"phone_number"`
+	Email             *string   `json:"email"`
+	DOB               *string   `json:"dob"`
+	Gender            *string   `json:"gender"`
+	Profession        *string   `json:"profession"`
+	Height            *float64  `json:"height"`
+	StartDate         *string   `json:"start_date"`
+	MembershipType    *string   `json:"membership_type"`
+	EmergencyContact  *string   `json:"emergency_contact"`
+	MedicalHistory    *string   `json:"medical_history"`
+	SocialHandle      *string   `json:"social_handle"`
+	Goals             *string   `json:"goals"`
+	Notes             *string   `json:"notes"`
+	ActiveStatus      *bool     `json:"active_status"`
+	ImageURL          *string   `json:"image_url"`
+	ActiveSupplements *string   `json:"active_supplements"`
+	Activities        *[]string `json:"activities"`
 
 	FitnessTests        *[]FitnessTest       `json:"fitness_tests"`
 	LabTests            *[]LabTest           `json:"lab_tests"`

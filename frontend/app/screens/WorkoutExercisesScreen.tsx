@@ -101,7 +101,15 @@ export default function WorkoutExercisesScreen({ route, navigation }: Props): Re
           <Card
             style={styles.card}
             accessibilityLabel={`Log ${item.name}`}
-            onPress={() => navigation.navigate('AddExerciseForm', { traineeId, exercise: item.name, exerciseId: item.id, date })}
+            onPress={() =>
+              navigation.navigate('Exercise', {
+                traineeId,
+                exerciseId: item.id,
+                exerciseName: item.name,
+                exerciseType: item.type,
+                date,
+              })
+            }
           >
             <View style={styles.row}>
               <AppText variant="subheading" numberOfLines={2} style={styles.flex}>

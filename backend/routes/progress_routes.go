@@ -13,4 +13,6 @@ func RegisterProgressRoutes(router *gin.Engine) {
 
 	protected.GET("/:trainee_id", middlewares.EnforceTraineeAccess("trainee_id"), progressController.GetProgress)
 	protected.POST("", progressController.AddWeightProgress)
+	protected.GET("/:trainee_id/summary", middlewares.EnforceTraineeAccess("trainee_id"), progressController.GetSummary)
+	protected.GET("/:trainee_id/compare", middlewares.EnforceTraineeAccess("trainee_id"), progressController.Compare)
 }

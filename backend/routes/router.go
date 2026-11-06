@@ -60,6 +60,8 @@ func NewRouter(cfg RouterConfig) (*gin.Engine, error) {
 	RegisterWorkoutLogRoutes(router)
 	RegisterCategoryRoutes(router)
 	RegisterExerciseRoutes(router)
+	RegisterExerciseLogRoutes(router)
+	RegisterBodyMeasurementRoutes(router)
 	RegisterDietEntryRoutes(router)
 	RegisterProgressRoutes(router)
 	RegisterImageRoutes(router)

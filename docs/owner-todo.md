@@ -4,7 +4,7 @@ Things only you can do (accounts, secrets, consoles, commits). Do them all at th
 order. Each item says why it matters and exactly what to run or click. Claude keeps this file
 up to date as phases finish.
 
-Last updated: 2026-11-02 (light mode by default, Appearance switch).
+Last updated: 2026-11-06 (FitNotes-style logging, body tracker, progress and compare).
 
 ---
 
@@ -182,3 +182,39 @@ below needs a real phone.
 - [ ] **(Optional, Snookit repo) Rename Snookit's compose service from `api` to `snookit-api`**
   (and the `docker compose ... api` commands in its deploy workflow). Not needed for the fix, but
   it stops the name `api` from pointing at two apps on IronCoach's network.
+
+## 9. FitNotes-style logging, body tracker, progress (2026-11-06)
+
+Plan: `../plans/2026-11-06-fitnotes-style-logging/overview.md`. Backend build, vet and tests pass;
+frontend type-check, lint and 129 tests pass; screens checked on web with mock data.
+
+- [ ] **Deploy the backend first** (push; the deploy workflow runs tests). The new endpoints are
+  additive and old app versions keep working. New indexes are created at start-up; check the log
+  shows no index errors. Existing clients get the new Cardio category the first time their
+  categories load.
+- [ ] **Then ship the app over the air** (no new native libraries, so no new build is needed),
+  the same way as the last update.
+- [ ] **Run the integration tests once against a local MongoDB** (they skip without one). In
+  PowerShell 5.1, from `ironcoach/backend`, with a local mongod on port 27017:
+  ```powershell
+  $env:MONGODB_TEST_URI = "mongodb://localhost:27017"
+  go test ./services ./routes
+  ```
+- [ ] **On the phone (15 minutes):**
+  1. Client Today: two big buttons (your activities), plus "Other activity" and "Edit activities".
+  2. Log gym workout, Back, Seated Cable Row: the "Last time" line, steppers pre-filled, Save set,
+     the rest timer counts down and buzzes, tap a set to edit, add a note or delete it.
+  3. History and Graph tabs (ranges, tap a point, Personal records).
+  4. Log cardio, Running (Treadmill): distance and time, the pace shows on the set.
+  5. Client record: Workouts (calendar icon), Progress (Compare two dates), Body (each measurement).
+  6. Trainer: the client form has "What they train"; Today shows "Wins this week" after a PR.
+- [ ] **Delete three files nothing uses any more**, if you agree (all tracked in git, so they can
+  be recovered): the old one-exercise log form, the old 9-chip quick log and the old Weight screen
+  (replaced by Exercise, ActivityLogButtons and Body). In PowerShell 5.1:
+  ```powershell
+  Remove-Item "D:\Project Apps\ironcoach\ironcoach\frontend\app\screens\AddExerciseFormScreen.tsx"
+  Remove-Item "D:\Project Apps\ironcoach\ironcoach\frontend\components\QuickLogChips.tsx"
+  Remove-Item "D:\Project Apps\ironcoach\ironcoach\frontend\app\screens\ProgressScreen.tsx"
+  ```
+  Then ask Claude to remove the `AddExerciseForm` route from `RootNavigator.tsx` and
+  `types/navigation.ts`.

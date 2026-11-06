@@ -3,6 +3,7 @@ package models
 // Activity type codes for session logging (aligned with expertise where possible).
 const (
 	ActivityGym       = "gym"
+	ActivityCardio    = "cardio"
 	ActivitySwimming  = "swimming"
 	ActivityBadminton = "badminton"
 	ActivityYoga      = "yoga"
@@ -16,6 +17,7 @@ const (
 // AllActivityTypes is the ordered launch set.
 var AllActivityTypes = []string{
 	ActivityGym,
+	ActivityCardio,
 	ActivitySwimming,
 	ActivityBadminton,
 	ActivityYoga,

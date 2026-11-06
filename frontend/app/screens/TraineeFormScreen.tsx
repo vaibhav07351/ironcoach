@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
 
+import { ActivityPicker } from '@/components/ActivityPicker';
 import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
@@ -43,6 +44,7 @@ type Form = {
   active_supplements: string;
   active_status: boolean;
   image_url: string;
+  activities: string[];
 };
 
 const GENDERS = ['Female', 'Male', 'Other'];
@@ -63,6 +65,7 @@ function toForm(t?: Trainee): Form {
     active_supplements: t?.active_supplements ?? '',
     active_status: t?.active_status ?? true,
     image_url: t?.image_url ?? '',
+    activities: t?.activities ?? ['gym'],
   };
 }
 
@@ -93,12 +96,16 @@ function toInput(f: Form, original?: Form): TraineeInput {
     active_supplements: f.active_supplements.trim(),
     active_status: f.active_status,
     image_url: f.image_url,
+    activities: f.activities,
   };
   if (!original) return full;
   const before = toInput(original);
-  return Object.fromEntries(
-    Object.entries(full).filter(([k, v]) => before[k as keyof TraineeInput] !== v)
+  const changed = Object.fromEntries(
+    Object.entries(full).filter(([k, v]) => k !== 'activities' && before[k as keyof TraineeInput] !== v)
   ) as TraineeInput;
+  // Arrays never compare equal by reference; send activities only when the selection changed.
+  if (f.activities.join(',') !== original.activities.join(',')) changed.activities = f.activities;
+  return changed;
 }
 
 /** Add or edit a client (trainer only). */
@@ -265,6 +272,10 @@ export default function TraineeFormScreen({ navigation, route }: Props): React.J
       {field('profession', 'Profession')}
 
       <SectionHeader title="Training" />
+      <AppText variant="label" tone="secondary" style={styles.label}>
+        What they train (shown first when logging)
+      </AppText>
+      <ActivityPicker value={form.activities} onChange={(v) => set('activities', v)} />
       {field('goals', 'Goals', { multiline: true, placeholder: 'e.g. Lose 5 kg, run a 10K' })}
       <View style={styles.row}>
         <View style={styles.flex}>{field('start_date', 'Start date', { placeholder: 'YYYY-MM-DD' })}</View>

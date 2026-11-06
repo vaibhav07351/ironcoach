@@ -162,6 +162,7 @@ func (s *CoachRequestService) Accept(p Principal, requestID string) (models.Publ
 		Email:        user.Email,
 		UserID:       user.ID,
 		TrainerID:    p.TrainerKey,
+		Activities:   activitiesFromInterests(user.Interests),
 		ActiveStatus: true,
 		CreatedAt:    now,
 		UpdatedAt:    now,

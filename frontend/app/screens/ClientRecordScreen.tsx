@@ -3,8 +3,10 @@ import { StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AttendanceSection } from '@/components/AttendanceSection';
+import { BodyTrackerSection } from '@/components/BodyTrackerSection';
 import { FeesSection } from '@/components/FeesSection';
 import { OverviewSection } from '@/components/OverviewSection';
+import { ProgressSummarySection } from '@/components/ProgressSummarySection';
 import { SectionTabs, type SectionOption } from '@/components/SectionTabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemedStyles, type Theme } from '../contexts/ThemeContext';
@@ -12,7 +14,6 @@ import { TraineeRecordProvider } from '../contexts/TraineeRecordContext';
 import type { ClientSection, RootStackParamList } from '../types/navigation';
 import AboutTraineeScreen from './AboutTraineeScreen';
 import DietListScreen from './DietListScreen';
-import ProgressScreen from './ProgressScreen';
 import WorkoutLogListScreen from './WorkoutLogListScreen';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TraineeDetail'>;
@@ -20,15 +21,16 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TraineeDetail'>;
 const ALL_SECTIONS: SectionOption<ClientSection>[] = [
   { value: 'overview', label: 'Overview' },
   { value: 'workouts', label: 'Workouts' },
+  { value: 'progress', label: 'Progress' },
+  { value: 'weight', label: 'Body' },
   { value: 'diet', label: 'Diet' },
-  { value: 'weight', label: 'Weight' },
   { value: 'attendance', label: 'Attendance' },
   { value: 'fees', label: 'Fees' },
   { value: 'profile', label: 'Profile' },
 ];
 
 /**
- * One client record: a section switcher over the client's workouts, diet, weight, attendance,
+ * One client record: a section switcher over the client's workouts, progress, body, diet, attendance,
  * fees and profile. Used by the trainer for a client and by a client for themselves (clients do
  * not get the trainer-only Overview). Sections read the record through TraineeRecordContext.
  */
@@ -52,8 +54,9 @@ export default function ClientRecordScreen({ route }: Props): React.JSX.Element 
         <View style={styles.body}>
           {section === 'overview' ? <OverviewSection onOpenSection={setSection} /> : null}
           {section === 'workouts' ? <WorkoutLogListScreen /> : null}
+          {section === 'progress' ? <ProgressSummarySection /> : null}
+          {section === 'weight' ? <BodyTrackerSection /> : null}
           {section === 'diet' ? <DietListScreen /> : null}
-          {section === 'weight' ? <ProgressScreen /> : null}
           {section === 'attendance' ? <AttendanceSection /> : null}
           {section === 'fees' ? <FeesSection /> : null}
           {section === 'profile' ? <AboutTraineeScreen /> : null}

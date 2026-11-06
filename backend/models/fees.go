@@ -109,4 +109,6 @@ type TodayOverview struct {
 	PendingRequests int64              `json:"pending_requests"`
 	Dues            []DueItem          `json:"dues"`
 	DuesTotalPaise  int64              `json:"dues_total_paise"`
+	// Wins are recent personal records across the trainer's active clients (last 7 days).
+	Wins []PREvent `json:"wins"`
 }
